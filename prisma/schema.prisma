@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  name         String
+  prefix       String?       // Prefix for generating Asset IDs (e.g., 'IT', 'FUR')
+  assets       Asset[]
+  customFields CustomField[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model CustomField {
+  id         String   @id @default(uuid())
+  name       String
+  type       String   // text, number, date, dropdown
+  options    String?  // JSON string for dropdown options if any
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Property {
+  id     String  @id @default(uuid())
+  name   String
+  prefix String?
+  assets Asset[]
+  licenses License[]
+}
+
+model Asset {
+  id           String    @id @default(uuid())
+  assetId      String    @unique
+  name         String    // Used as Device Name
+  
+  // New Fields
+  ipAddress    String?
+  department   String?
+  owner        String?
+  os           String?
+  location     String?   // Changed to String instead of relation
+  
+  purchaseDate DateTime?
+  status       String    @default("Available") // Available, In-use, Repairing, Disposed
+  userId       String?   // Holder of the asset
+  
+  categoryId   String
+  category     Category  @relation(fields: [categoryId], references: [id])
+  propertyId   String?
+  property     Property? @relation(fields: [propertyId], references: [id])
+  
+  parentId     String?
+  parent       Asset?    @relation("AssetHierarchy", fields: [parentId], references: [id])
+  children     Asset[]   @relation("AssetHierarchy")
+  
+  customData   String?   // JSON string storing custom field data
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("STAFF") // ADMIN or STAFF
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model License {
+  id             String    @id @default(uuid())
+  name           String    // e.g., "Microsoft 365 Family"
+  accountEmail   String?
+  productKey     String?
+  totalSlots     Int       @default(1)
+  purchaseDate   DateTime?
+  expirationDate DateTime?
+  status         String    @default("Active") // Active, Expired
+  
+  propertyId     String?
+  property       Property? @relation(fields: [propertyId], references: [id])
+  
+  assignments    LicenseAssignment[]
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model LicenseAssignment {
+  id            String   @id @default(uuid())
+  licenseId     String
+  license       License  @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  assignedTo    String   // Person's name
+  assignedEmail String?  // Person's email
+  createdAt     DateTime @default(now())
+}

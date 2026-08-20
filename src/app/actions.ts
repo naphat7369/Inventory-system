@@ -184,7 +184,40 @@ export async function updateAssetStatus(id: string, status: string) {
 
 export async function deleteAsset(id: string) {
   await requireAdmin();
+  await prisma.asset.update({ 
+    where: { id },
+    data: { isDeleted: true }
+  });
+  revalidatePath('/assets');
+}
+
+export async function softDeleteAssets(ids: string[]) {
+  await requireAdmin();
+  await prisma.asset.updateMany({
+    where: { id: { in: ids } },
+    data: { isDeleted: true }
+  });
+  revalidatePath('/assets');
+}
+
+export async function restoreAsset(id: string) {
+  await requireAdmin();
+  await prisma.asset.update({ 
+    where: { id },
+    data: { isDeleted: false }
+  });
+  revalidatePath('/assets');
+}
+
+export async function hardDeleteAsset(id: string) {
+  await requireAdmin();
   await prisma.asset.delete({ where: { id } });
+  revalidatePath('/assets');
+}
+
+export async function hardDeleteAssets(ids: string[]) {
+  await requireAdmin();
+  await prisma.asset.deleteMany({ where: { id: { in: ids } } });
   revalidatePath('/assets');
 }
 
@@ -376,4 +409,136 @@ export async function removeLicenseSlot(assignmentId: string) {
   
   revalidatePath(`/licenses/${assignment.licenseId}`);
   revalidatePath('/licenses');
+}
+
+export async function importAssets(rows: any[]) {
+  await requireAdmin();
+  if (!rows || rows.length === 0) return { success: true, count: 0 };
+
+  let importedCount = 0;
+
+  await prisma.$transaction(async (tx) => {
+    // Cache for categories and properties to avoid redundant creates
+    const categoryCache = new Map<string, string>();
+    const propertyCache = new Map<string, string>();
+    // Cache for asset counts to auto-generate IDs safely without race conditions
+    const countCache = new Map<string, number>();
+
+    for (const rawRow of rows) {
+      const row: Record<string, any> = {};
+      for (const k of Object.keys(rawRow)) {
+        row[k.trim()] = rawRow[k];
+      }
+
+      const categoryName = (row['Category']?.toString().trim() || row['Asset Type']?.toString().trim()) || 'Uncategorized';
+      let categoryId = categoryCache.get(categoryName);
+      let catPrefix = '';
+
+      if (!categoryId) {
+        let category = await tx.category.findFirst({ where: { name: categoryName } });
+        if (!category) {
+          catPrefix = categoryName.substring(0, 3).toUpperCase();
+          category = await tx.category.create({
+            data: { name: categoryName, prefix: catPrefix }
+          });
+        } else {
+          catPrefix = category.prefix || category.name.substring(0, 3).toUpperCase();
+        }
+        categoryId = category.id;
+        categoryCache.set(categoryName, categoryId);
+      } else {
+        const cat = await tx.category.findUnique({ where: { id: categoryId } });
+        catPrefix = cat?.prefix || cat?.name.substring(0, 3).toUpperCase() || 'CAT';
+      }
+
+      let propertyId = null;
+      let propPrefix = '';
+      if (row['Property']) {
+        const propertyName = row['Property'].toString().trim();
+        propertyId = propertyCache.get(propertyName);
+        if (!propertyId) {
+          let property = await tx.property.findFirst({ where: { name: propertyName } });
+          if (!property) {
+            propPrefix = propertyName.substring(0, 3).toUpperCase();
+            property = await tx.property.create({
+              data: { name: propertyName, prefix: propPrefix }
+            });
+          } else {
+            propPrefix = property.prefix || property.name.substring(0, 3).toUpperCase();
+          }
+          propertyId = property.id;
+          propertyCache.set(propertyName, propertyId);
+        } else {
+          const prop = await tx.property.findUnique({ where: { id: propertyId } });
+          propPrefix = prop?.prefix || prop?.name.substring(0, 3).toUpperCase() || 'PRP';
+        }
+        propPrefix += '-';
+      }
+
+      // Generate Asset ID
+      const countKey = `${categoryId}-${propertyId || 'none'}`;
+      let currentCount = countCache.get(countKey);
+      if (currentCount === undefined) {
+        currentCount = await tx.asset.count({
+          where: { categoryId, propertyId: propertyId || null }
+        });
+      }
+      currentCount++;
+      countCache.set(countKey, currentCount);
+
+      const assetId = `${propPrefix}${catPrefix}-${currentCount.toString().padStart(4, '0')}`;
+
+      // Core fields
+      const name = (row['Asset Name']?.toString().trim() || row['Device Name']?.toString().trim()) || 'Unknown Asset';
+      const status = row['Usage Status'] || row['Status'] || 'Available';
+      const location = row['Location'] || null;
+      const ipAddress = row['IP Address'] || null;
+      const department = row['Department']?.toString().trim() || row['Departments']?.toString().trim() || null;
+      const owner = row['Owner']?.toString().trim() || null;
+      const os = row['OS']?.toString().trim() || row['Operating System']?.toString().trim() || null;
+      
+      let purchaseDate = null;
+      if (row['Purchase Date']) {
+        purchaseDate = new Date(row['Purchase Date']);
+        if (isNaN(purchaseDate.getTime())) purchaseDate = null;
+      }
+
+      // Custom Data
+      const customDataObj: Record<string, any> = {};
+      const coreKeys = ['Category', 'Asset Type', 'Property', 'Asset Name', 'Usage Status', 'Status', 'Location', 'IP Address', 'Department', 'Departments', 'Owner', 'OS', 'Operating System', 'Purchase Date', 'ID', 'Asset ID', 'Asset Code'];
+      
+      for (const key of Object.keys(row)) {
+        if (!coreKeys.includes(key)) {
+          customDataObj[key] = row[key];
+        }
+      }
+
+      await tx.asset.create({
+        data: {
+          assetId,
+          name: name.toString(),
+          categoryId,
+          propertyId,
+          status: status.toString(),
+          location: location?.toString(),
+          ipAddress: ipAddress?.toString(),
+          department: department?.toString(),
+          owner: owner?.toString(),
+          os: os?.toString(),
+          purchaseDate,
+          customData: Object.keys(customDataObj).length > 0 ? JSON.stringify(customDataObj) : null
+        }
+      });
+      importedCount++;
+    }
+  }, {
+    maxWait: 15000,
+    timeout: 60000 // Extended timeout for bulk imports
+  });
+
+  revalidatePath('/assets');
+  revalidatePath('/categories');
+  revalidatePath('/properties');
+  revalidatePath('/');
+  return { success: true, count: importedCount };
 }

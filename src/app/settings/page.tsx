@@ -10,28 +10,28 @@ export default async function SettingsPage() {
   });
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Settings className="text-gray-600" /> Settings (Custom Fields)
         </h1>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 mb-8">
         <h2 className="text-lg font-semibold mb-4">Add Custom Field (Dynamic Column)</h2>
         <form action={createCustomField} className="flex flex-col gap-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4 w-full">
             <input
               type="text"
               name="name"
               placeholder="Field Name (e.g. MAC Address)"
               required
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
             />
             <select
               name="type"
               required
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
               <option value="text">Text</option>
               <option value="number">Number</option>
@@ -40,7 +40,7 @@ export default async function SettingsPage() {
             <select
               name="categoryId"
               required
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
               <option value="">Select Category</option>
               {categories.map(cat => (
@@ -48,14 +48,15 @@ export default async function SettingsPage() {
               ))}
             </select>
           </div>
-          <button type="submit" className="self-end px-6 py-2 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900">
+          <button type="submit" className="w-full md:w-auto md:self-end px-6 py-2 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900">
             Add Field
           </button>
         </form>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left whitespace-nowrap">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="p-4 font-semibold text-gray-600">Field Name</th>
@@ -86,6 +87,7 @@ export default async function SettingsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

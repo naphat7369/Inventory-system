@@ -65,6 +65,7 @@ model Asset {
   children     Asset[]   @relation("AssetHierarchy")
   
   customData   String?   // JSON string storing custom field data
+  isDeleted    Boolean   @default(false)
   
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

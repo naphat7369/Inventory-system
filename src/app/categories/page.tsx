@@ -9,38 +9,39 @@ export default async function CategoriesPage() {
   });
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Tag className="text-blue-600" /> Categories
         </h1>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 mb-8">
         <h2 className="text-lg font-semibold mb-4">Add New Category</h2>
-        <form action={createCategory} className="flex gap-4">
+        <form action={createCategory} className="flex flex-col md:flex-row gap-4">
           <input
             type="text"
             name="name"
             placeholder="Category Name (e.g. IT Equipment)"
             required
-            className="flex-[2] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-[2] w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="text"
             name="prefix"
             placeholder="Prefix (e.g. IT)"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
+            className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
             maxLength={5}
           />
-          <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+          <button type="submit" className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
             Add
           </button>
         </form>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left whitespace-nowrap">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="p-4 font-semibold text-gray-600">Name</th>
@@ -66,11 +67,12 @@ export default async function CategoriesPage() {
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={3} className="p-8 text-center text-gray-500">No categories found.</td>
+                <td colSpan={4} className="p-8 text-center text-gray-500">No categories found.</td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

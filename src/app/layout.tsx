@@ -20,9 +20,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} flex min-h-screen bg-gray-50 text-gray-900 print:block print:bg-white print:min-h-0`}>
+      <body className={`${inter.className} flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900 print:block print:bg-white print:min-h-0`}>
         {session && <Sidebar user={session} />}
-        <main className="flex-1 overflow-auto print:overflow-visible">
+        <main className="flex-1 w-full overflow-x-hidden overflow-y-auto print:overflow-visible">
           {children}
         </main>
       </body>

@@ -1,48 +1,51 @@
-import prisma from '@/lib/prisma';
-import { Package, MapPin, Tag, Wrench } from 'lucide-react';
+import { Suspense } from 'react';
+import { StatsSummary } from './components/StatsSummary';
+import { AnalyticsPanel } from './components/AnalyticsPanel';
+import { DepartmentBorrowAnalytics } from './components/DepartmentBorrowAnalytics';
+import { QuantityAssetStock } from './components/QuantityAssetStock';
+import { RecentActivity } from './components/RecentActivity';
+import { StatsSummarySkeleton, AnalyticsPanelSkeleton, RecentActivitySkeleton } from './components/Skeletons';
+import { DashboardTabs } from './components/DashboardTabs';
 
-export default async function Dashboard() {
-  const [totalAssets, totalCategories, availableAssets, assetsInRepair] = await Promise.all([
-    prisma.asset.count(),
-    prisma.category.count(),
-    prisma.asset.count({ where: { status: 'Available' } }),
-    prisma.asset.count({ where: { status: 'Repairing' } })
-  ]);
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
+  const resolvedParams = await searchParams;
 
-  const stats = [
-    { name: 'Total Assets', value: totalAssets, icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { name: 'Categories', value: totalCategories, icon: Tag, color: 'text-purple-600', bg: 'bg-purple-100' },
-    { name: 'Available', value: availableAssets, icon: Package, color: 'text-green-600', bg: 'bg-green-100' },
-    { name: 'In Repair', value: assetsInRepair, icon: Wrench, color: 'text-red-600', bg: 'bg-red-100' },
-  ];
+  const overviewContent = (
+    <div className="space-y-8">
+      <Suspense fallback={<StatsSummarySkeleton />} key={`stats-${JSON.stringify(resolvedParams)}`}>
+        <StatsSummary searchParams={resolvedParams} />
+      </Suspense>
+
+      <Suspense fallback={<AnalyticsPanelSkeleton />} key={`analytics-${JSON.stringify(resolvedParams)}`}>
+        <AnalyticsPanel searchParams={resolvedParams} />
+      </Suspense>
+    </div>
+  );
+
+  const recentActivityContent = (
+    <Suspense fallback={<RecentActivitySkeleton />}>
+      <RecentActivity />
+    </Suspense>
+  );
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div key={stat.name} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center space-x-4">
-              <div className={`p-4 rounded-lg ${stat.bg}`}>
-                <Icon className={stat.color} size={24} />
-              </div>
-              <div>
-                <p className="text-gray-500 text-sm font-medium">{stat.name}</p>
-                <p className="text-2xl font-bold">{stat.value}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-        <div className="text-gray-500 flex justify-center items-center h-48 border-2 border-dashed border-gray-200 rounded-lg">
-          No recent activity to display.
+    <div className="p-8 max-w-7xl mx-auto">
+      <header className="mb-8 border-b border-border pb-6 flex items-end justify-between">
+        <div>
+          <p className="font-mono text-accent-primary text-xs uppercase tracking-[0.2em] mb-2">[ SYS_ID: INV-001 ]</p>
+          <h1 className="font-display text-4xl tracking-tight text-text">Warehouse Overview</h1>
         </div>
-      </div>
+        <div className="hidden md:block">
+          <div className="barcode-divider w-32 opacity-50 mix-blend-multiply"></div>
+        </div>
+      </header>
+
+      <DashboardTabs
+        overviewComponent={overviewContent}
+        quantityStockComponent={<QuantityAssetStock />}
+        departmentStatsComponent={<DepartmentBorrowAnalytics />}
+        recentActivityComponent={recentActivityContent}
+      />
     </div>
   );
 }

@@ -64,20 +64,90 @@ model Asset {
   parent       Asset?    @relation("AssetHierarchy", fields: [parentId], references: [id])
   children     Asset[]   @relation("AssetHierarchy")
   
-  customData   String?   // JSON string storing custom field data
-  isDeleted    Boolean   @default(false)
+  customData       String?   // JSON string storing custom field data
+  isDeleted        Boolean   @default(false)
+  isBorrowable     Boolean   @default(true) // Admin flag whether asset can be borrowed
   
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  isQuantityBased  Boolean   @default(false)
+  totalQuantity    Int       @default(1)
+  availableQuantity Int       @default(1)
+  
+  repairLogs       RepairLog[]
+  borrowLogs       BorrowLog[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model RepairLog {
+  id             String        @id @default(uuid())
+  assetId        String
+  asset          Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  reason         String
+  status         String        @default("IN_PROGRESS") // IN_PROGRESS, WAITING_FOR_PARTS, COMPLETED
+  technician     String?       // in-house tech name or external vendor
+  sentDate       DateTime      @default(now())
+  completionDate DateTime?
+  costCents      Int?          // store money as integer cents, not Float
+  resolution     String?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([assetId, status])
+  @@index([status])
+}
+
+model BorrowLog {
+  id                 String    @id @default(uuid())
+  assetId            String
+  asset              Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  userId             String?
+  user               User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  borrowerName       String
+  borrowerDept       String?
+  borrowerContact    String?
+
+  quantity           Int       @default(1)
+
+  borrowDate         DateTime  @default(now())
+  expectedReturnDate DateTime
+  originalReturnDate DateTime
+  actualReturnDate   DateTime?
+
+  status             String    @default("BORROWED") // PENDING_APPROVAL, BORROWED, REJECTED, RETURNED, VOIDED
+  purpose            String?
+  borrowNotes        String?
+  returnNotes        String?
+  returnCondition    String?   // GOOD, DAMAGED
+
+  approvedBy         String?
+  approvedAt         DateTime?
+  rejectReason       String?
+
+  voidReason         String?
+  voidedBy           String?
+  voidedAt           DateTime?
+
+  handledBy          String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([assetId, status])
+  @@index([status])
 }
 
 model User {
-  id           String   @id @default(uuid())
-  username     String   @unique
+  id           String      @id @default(uuid())
+  username     String      @unique
   passwordHash String
-  role         String   @default("STAFF") // ADMIN or STAFF
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         String      @default("STAFF") // ADMIN or STAFF
+  borrowLogs   BorrowLog[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model License {
@@ -106,4 +176,19 @@ model LicenseAssignment {
   assignedTo    String   // Person's name
   assignedEmail String?  // Person's email
   createdAt     DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // "CREATED", "UPDATED", "DELETED"
+  entity    String   // "ASSET", "REPAIR", "LICENSE"
+  entityId  String
+  userId    String?  // null until auth exists
+  oldValue  String?  // previous state (JSON string)
+  newValue  String?  // new state (JSON string)
+  details   String?  // optional free-text note
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
 }

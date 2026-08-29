@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { verifySession } from './lib/auth';
 
 // Paths that require authentication
-const protectedPaths = ['/assets', '/licenses', '/categories', '/properties', '/settings', '/users', '/'];
+const protectedPaths = ['/assets', '/quantity-assets', '/borrows', '/licenses', '/categories', '/properties', '/settings', '/users', '/'];
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -29,10 +29,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
     
-    // Admins only for settings, users, categories, properties
-    const adminOnlyPaths = ['/users', '/settings', '/categories', '/properties'];
-    if (adminOnlyPaths.some(p => path.startsWith(p)) && session.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/assets', request.url));
+    // Non-Admin (STAFF) users are strictly restricted to /borrows (Borrow Form Portal)
+    if (session.role !== 'ADMIN' && !path.startsWith('/borrows')) {
+      return NextResponse.redirect(new URL('/borrows', request.url));
     }
   }
 

@@ -2,15 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Pencil, Trash2, CheckSquare, Square } from 'lucide-react';
+import { Eye, Pencil, Trash2, CheckSquare, Square, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { DeleteAssetButton } from './DeleteAssetButton';
 import { RestoreAssetButton } from './RestoreAssetButton';
+import { InlineStatusSelect } from './InlineStatusSelect';
 import { hardDeleteAssets, hardDeleteAsset, softDeleteAssets } from '@/app/actions';
 
 export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: string, isTrash: boolean }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'assetId', direction: 'asc' });
 
   const toggleSelectAll = () => {
     if (selectedIds.length === assets.length) {
@@ -50,6 +52,43 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
     if (confirm('Are you sure you want to PERMANENTLY delete this asset? This cannot be undone.')) {
       await hardDeleteAsset(id);
     }
+  };
+
+  const sortedAssets = [...assets].sort((a, b) => {
+    let aValue = a[sortConfig.key] || '';
+    let bValue = b[sortConfig.key] || '';
+
+    if (sortConfig.key === 'property') {
+      aValue = a.property?.name || '';
+      bValue = b.property?.name || '';
+    } else if (sortConfig.key === 'category') {
+      aValue = a.category?.name || '';
+      bValue = b.category?.name || '';
+    }
+
+    if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+    if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+    if (aValue < bValue) {
+      return sortConfig.direction === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortConfig.direction === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortConfig.key !== columnKey) return <ArrowUpDown size={14} className="ml-1 opacity-40 inline" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1 inline text-blue-600" /> : <ArrowDown size={14} className="ml-1 inline text-blue-600" />;
   };
 
   return (
@@ -96,20 +135,44 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
                   </button>
                 </th>
               )}
-              <th className="p-4 font-semibold text-gray-600">Asset ID</th>
-              <th className="p-4 font-semibold text-gray-600">Name</th>
-              <th className="p-4 font-semibold text-gray-600">Owner</th>
-              <th className="p-4 font-semibold text-gray-600">Dept</th>
-              <th className="p-4 font-semibold text-gray-600">Property</th>
-              <th className="p-4 font-semibold text-gray-600">Category</th>
-              <th className="p-4 font-semibold text-gray-600">Location</th>
-              <th className="p-4 font-semibold text-gray-600">Status</th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('assetId')}>
+                Asset ID <SortIcon columnKey="assetId" />
+              </th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('name')}>
+                Name <SortIcon columnKey="name" />
+              </th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('owner')}>
+                Owner <SortIcon columnKey="owner" />
+              </th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('department')}>
+                Dept <SortIcon columnKey="department" />
+              </th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('property')}>
+                Property <SortIcon columnKey="property" />
+              </th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('category')}>
+                Category <SortIcon columnKey="category" />
+              </th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('location')}>
+                Location <SortIcon columnKey="location" />
+              </th>
+              <th className="p-4 font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('status')}>
+                Status <SortIcon columnKey="status" />
+              </th>
               <th className="p-4 font-semibold text-gray-600">Action</th>
             </tr>
           </thead>
           <tbody>
-            {assets.map(asset => (
-              <tr key={asset.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+            {sortedAssets.map(asset => (
+              <tr 
+                key={asset.id} 
+                className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 ${isSelectionMode ? 'cursor-pointer' : ''}`}
+                onClick={(e) => {
+                  if (isSelectionMode && !(e.target as HTMLElement).closest('a, button')) {
+                    toggleSelect(asset.id);
+                  }
+                }}
+              >
                 {role === 'ADMIN' && isSelectionMode && (
                   <td className="p-4 text-center">
                     <button onClick={() => toggleSelect(asset.id)} className="text-gray-400 hover:text-blue-600">
@@ -126,19 +189,12 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
                 <td className="p-4">{asset.owner || '-'}</td>
                 <td className="p-4 text-gray-600">{asset.department || '-'}</td>
                 <td className="p-4 text-gray-600">{asset.property?.name || '-'}</td>
-                <td className={`p-4 ${asset.category.name === 'Uncategorized' ? 'text-red-500 font-semibold' : 'text-gray-600'}`}>
-                  {asset.category.name}
+                <td className={`p-4 ${asset.category?.name === 'Uncategorized' ? 'text-red-500 font-semibold' : 'text-gray-600'}`}>
+                  {asset.category?.name || '-'}
                 </td>
                 <td className="p-4 text-gray-600">{asset.location || '-'}</td>
                 <td className="p-4">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    asset.status === 'Available' ? 'bg-green-100 text-green-700' :
-                    asset.status === 'In-use' ? 'bg-blue-100 text-blue-700' :
-                    asset.status === 'Repairing' ? 'bg-orange-100 text-orange-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {asset.status}
-                  </span>
+                  <InlineStatusSelect id={asset.id} currentStatus={asset.status} role={role} />
                 </td>
                 <td className="p-4 flex gap-2">
                   <Link 

@@ -11,6 +11,48 @@ async function requireAdmin() {
   if (session?.role !== 'ADMIN') throw new Error('Unauthorized');
 }
 
+export async function getAssetSuggestions(query: string) {
+  if (!query || query.length < 2) return [];
+  
+  return prisma.asset.findMany({
+    where: {
+      OR: [
+        { name: { contains: query } },
+        { assetId: { contains: query } },
+        { owner: { contains: query } },
+      ],
+      isDeleted: false
+    },
+    select: {
+      id: true,
+      name: true,
+      assetId: true,
+      owner: true,
+    },
+    take: 5
+  });
+}
+
+export async function createAuditLog(
+  tx: any, 
+  action: string, 
+  entity: string, 
+  entityId: string, 
+  data?: { oldValue?: any, newValue?: any, details?: string, userId?: string | null }
+) {
+  return tx.auditLog.create({
+    data: {
+      action,
+      entity,
+      entityId,
+      oldValue: data?.oldValue ? JSON.stringify(data.oldValue) : null,
+      newValue: data?.newValue ? JSON.stringify(data.newValue) : null,
+      details: data?.details,
+      userId: data?.userId || null
+    }
+  });
+}
+
 // Categories
 export async function initAdmin() {
   const count = await prisma.user.count();
@@ -96,12 +138,21 @@ export async function createAsset(data: any) {
     assetId = `ASSET-${Date.now()}`;
   }
 
-  await prisma.asset.create({
-    data: {
-      ...data,
-      assetId
-    }
+  await prisma.$transaction(async (tx) => {
+    const newAsset = await tx.asset.create({
+      data: {
+        ...data,
+        assetId
+      }
+    });
+
+    const session = await getSession();
+    await createAuditLog(tx, 'CREATED', 'ASSET', newAsset.id, {
+      newValue: newAsset,
+      userId: session?.id
+    });
   });
+
   revalidatePath('/assets');
   revalidatePath('/');
 }
@@ -154,12 +205,25 @@ export async function deleteProperty(id: string) {
 
 export async function updateAsset(id: string, data: any) {
   await requireAdmin();
-  await prisma.asset.update({
-    where: { id },
-    data,
+  
+  await prisma.$transaction(async (tx) => {
+    const oldAsset = await tx.asset.findUnique({ where: { id } });
+    const newAsset = await tx.asset.update({
+      where: { id },
+      data,
+    });
+    
+    const session = await getSession();
+    await createAuditLog(tx, 'UPDATED', 'ASSET', id, {
+      oldValue: oldAsset,
+      newValue: newAsset,
+      userId: session?.id
+    });
   });
+
   revalidatePath('/assets');
   revalidatePath(`/assets/${id}`);
+  revalidatePath('/');
 }
 
 export async function unlinkAsset(id: string) {
@@ -174,21 +238,96 @@ export async function unlinkAsset(id: string) {
 
 export async function updateAssetStatus(id: string, status: string) {
   await requireAdmin();
-  await prisma.asset.update({
-    where: { id },
-    data: { status }
+  const session = await getSession();
+
+  await prisma.$transaction(async (tx) => {
+    const oldAsset = await tx.asset.findUnique({ where: { id } });
+
+    // 1. If changing to Repairing, auto-create a RepairLog if one doesn't exist
+    if (status === 'Repairing' && oldAsset?.status !== 'Repairing') {
+      const existingRepair = await tx.repairLog.findFirst({
+        where: { assetId: id, status: { in: ['IN_PROGRESS', 'WAITING_FOR_PARTS'] } }
+      });
+      
+      if (!existingRepair) {
+        const newRepair = await tx.repairLog.create({
+          data: {
+            assetId: id,
+            reason: 'Status changed to Repairing via Asset Table',
+            status: 'IN_PROGRESS'
+          }
+        });
+        await createAuditLog(tx, 'CREATED', 'REPAIR', newRepair.id, {
+          newValue: newRepair,
+          userId: session?.id
+        });
+      }
+    }
+
+    // 2. If changing from Repairing to Available, auto-complete the active RepairLog
+    if (status === 'Available' && oldAsset?.status === 'Repairing') {
+      const existingRepair = await tx.repairLog.findFirst({
+        where: { assetId: id, status: { in: ['IN_PROGRESS', 'WAITING_FOR_PARTS'] } }
+      });
+      
+      if (existingRepair) {
+        const updatedRepair = await tx.repairLog.update({
+          where: { id: existingRepair.id },
+          data: { 
+            status: 'COMPLETED', 
+            completionDate: new Date(), 
+            resolution: 'Status changed to Available via Asset Table' 
+          }
+        });
+        await createAuditLog(tx, 'UPDATED', 'REPAIR', updatedRepair.id, {
+          newValue: updatedRepair,
+          userId: session?.id
+        });
+      }
+    }
+
+    // 3. Update the Asset
+    const newAsset = await tx.asset.update({
+      where: { id },
+      data: { status }
+    });
+
+    // 4. Audit the Asset update
+    await createAuditLog(tx, 'UPDATED', 'ASSET', id, {
+      oldValue: oldAsset,
+      newValue: newAsset,
+      userId: session?.id
+    });
   });
+
   revalidatePath('/assets');
   revalidatePath(`/assets/${id}`);
+  revalidatePath('/repairs');
+  revalidatePath('/');
 }
 
 export async function deleteAsset(id: string) {
   await requireAdmin();
-  await prisma.asset.update({ 
-    where: { id },
-    data: { isDeleted: true }
-  });
-  revalidatePath('/assets');
+  const session = await getSession();
+  
+  try {
+    await prisma.$transaction(async (tx) => {
+      const oldAsset = await tx.asset.findUnique({ where: { id } });
+      await tx.asset.delete({ where: { id } });
+      
+      await createAuditLog(tx, 'DELETED', 'ASSET', id, {
+        oldValue: oldAsset,
+        userId: session?.id
+      });
+    });
+    revalidatePath('/assets');
+    revalidatePath('/');
+  } catch (err: any) {
+    if (err.code === 'P2003') {
+      throw new Error("Cannot delete: this asset has repair history.");
+    }
+    throw err;
+  }
 }
 
 export async function softDeleteAssets(ids: string[]) {
@@ -211,14 +350,28 @@ export async function restoreAsset(id: string) {
 
 export async function hardDeleteAsset(id: string) {
   await requireAdmin();
-  await prisma.asset.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.repairLog.deleteMany({ where: { assetId: id } });
+    await tx.borrowLog.deleteMany({ where: { assetId: id } });
+    await tx.asset.delete({ where: { id } });
+  });
   revalidatePath('/assets');
+  revalidatePath('/borrows');
+  revalidatePath('/repairs');
+  revalidatePath('/');
 }
 
 export async function hardDeleteAssets(ids: string[]) {
   await requireAdmin();
-  await prisma.asset.deleteMany({ where: { id: { in: ids } } });
+  await prisma.$transaction(async (tx) => {
+    await tx.repairLog.deleteMany({ where: { assetId: { in: ids } } });
+    await tx.borrowLog.deleteMany({ where: { assetId: { in: ids } } });
+    await tx.asset.deleteMany({ where: { id: { in: ids } } });
+  });
   revalidatePath('/assets');
+  revalidatePath('/borrows');
+  revalidatePath('/repairs');
+  revalidatePath('/');
 }
 
 // === User Authentication & Management Actions ===
@@ -245,7 +398,11 @@ export async function login(formData: FormData) {
     role: user.role
   });
 
-  redirect('/assets');
+  if (user.role === 'STAFF') {
+    redirect('/borrows');
+  } else {
+    redirect('/assets');
+  }
 }
 
 export async function logout() {
@@ -320,19 +477,29 @@ export async function createLicense(formData: FormData) {
 
   if (!name) throw new Error('Name is required');
 
-  await prisma.license.create({
-    data: {
-      name,
-      accountEmail: accountEmail || null,
-      productKey: productKey || null,
-      totalSlots,
-      purchaseDate: purchaseDateStr ? new Date(purchaseDateStr) : null,
-      expirationDate: expirationDateStr ? new Date(expirationDateStr) : null,
-      propertyId: propertyId || null
-    }
+  let createdLicense;
+  await prisma.$transaction(async (tx) => {
+    createdLicense = await tx.license.create({
+      data: {
+        name,
+        accountEmail: accountEmail || null,
+        productKey: productKey || null,
+        totalSlots,
+        purchaseDate: purchaseDateStr ? new Date(purchaseDateStr) : null,
+        expirationDate: expirationDateStr ? new Date(expirationDateStr) : null,
+        propertyId: propertyId || null
+      }
+    });
+
+    const session = await getSession();
+    await createAuditLog(tx, 'CREATED', 'LICENSE', createdLicense.id, {
+      newValue: createdLicense,
+      userId: session?.id
+    });
   });
 
   revalidatePath('/licenses');
+  revalidatePath('/');
   redirect('/licenses');
 }
 
@@ -542,3 +709,292 @@ export async function importAssets(rows: any[]) {
   revalidatePath('/');
   return { success: true, count: importedCount };
 }
+
+// === Repair Actions ===
+
+export async function createRepairLog(assetId: string, reason: string, technician?: string) {
+  await requireAdmin();
+  if (!reason || reason.trim() === '') throw new Error('Reason is required');
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Guard against duplicate active repairs
+    const existing = await tx.repairLog.findFirst({
+      where: {
+        assetId,
+        status: { in: ['IN_PROGRESS', 'WAITING_FOR_PARTS'] }
+      }
+    });
+    
+    if (existing) {
+      throw new Error('This asset already has an active repair log.');
+    }
+
+    // 2. Create Repair Log
+    const newRepair = await tx.repairLog.create({
+      data: {
+        assetId,
+        reason,
+        technician: technician || null,
+        status: 'IN_PROGRESS'
+      }
+    });
+
+    // 3. Update Asset Status
+    await tx.asset.update({
+      where: { id: assetId },
+      data: { status: 'Repairing' }
+    });
+
+    // 4. Audit Log
+    const session = await getSession();
+    await createAuditLog(tx, 'CREATED', 'REPAIR', newRepair.id, {
+      newValue: newRepair,
+      userId: session?.id
+    });
+  });
+
+  revalidatePath('/assets');
+  revalidatePath(`/assets/${assetId}`);
+  revalidatePath('/repairs');
+  revalidatePath('/');
+}
+
+export async function updateRepairLog(repairId: string, data: { status?: string; costCents?: number; resolution?: string; technician?: string }) {
+  await requireAdmin();
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Update RepairLog
+    const updateData: any = { ...data };
+    if (data.status === 'COMPLETED') {
+      updateData.completionDate = new Date();
+    }
+    
+    const repairLog = await tx.repairLog.update({
+      where: { id: repairId },
+      data: updateData
+    });
+
+    // 2. Auto-update Asset if completed and currently in "Repairing"
+    if (data.status === 'COMPLETED') {
+      const asset = await tx.asset.findUnique({
+        where: { id: repairLog.assetId },
+        select: { status: true }
+      });
+      
+      if (asset?.status === 'Repairing') {
+        await tx.asset.update({
+          where: { id: repairLog.assetId },
+          data: { status: 'Available' }
+        });
+      }
+    }
+    // 3. Audit Log
+    const session = await getSession();
+    await createAuditLog(tx, 'UPDATED', 'REPAIR', repairLog.id, {
+      newValue: repairLog,
+      userId: session?.id
+    });
+  });
+
+  revalidatePath('/assets');
+  revalidatePath('/repairs');
+  revalidatePath('/');
+}
+
+/**
+ * Server action to adjust stock quantities with detailed audit logging
+ */
+export async function adjustQuantityStock(
+  id: string,
+  data: {
+    name?: string;
+    totalQuantity: number;
+    availableQuantity: number;
+    propertyId?: string | null;
+    department?: string | null;
+    location?: string | null;
+    notes?: string | null;
+  }
+) {
+  await requireAdmin();
+  const session = await getSession();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const oldAsset = await tx.asset.findUnique({
+      where: { id },
+      include: { property: true },
+    });
+
+    if (!oldAsset) {
+      throw new Error('ไม่พบรายการอุปกรณ์');
+    }
+
+    const newTotal = Math.max(1, data.totalQuantity);
+    const newAvail = Math.max(0, data.availableQuantity);
+    const newStatus = newAvail > 0 ? 'Available' : 'Borrowed';
+
+    const updatePayload: any = {
+      totalQuantity: newTotal,
+      availableQuantity: newAvail,
+      status: newStatus,
+    };
+
+    if (data.name) updatePayload.name = data.name.trim();
+    if (data.propertyId !== undefined) updatePayload.propertyId = data.propertyId || null;
+    if (data.department !== undefined) updatePayload.department = data.department ? data.department.trim() : null;
+    if (data.location !== undefined) updatePayload.location = data.location ? data.location.trim() : null;
+
+    const newAsset = await tx.asset.update({
+      where: { id },
+      data: updatePayload,
+      include: { property: true },
+    });
+
+    // Calculate diffs
+    const diffTotal = newTotal - (oldAsset.totalQuantity || 1);
+    const diffAvailable = newAvail - (oldAsset.availableQuantity || 1);
+
+    const diffParts: string[] = [];
+    if (diffTotal !== 0) {
+      diffParts.push(`สต็อกรวม: ${oldAsset.totalQuantity} ➔ ${newTotal} ชิ้น (${diffTotal >= 0 ? '+' : ''}${diffTotal} ชิ้น)`);
+    } else {
+      diffParts.push(`สต็อกรวม: ${newTotal} ชิ้น`);
+    }
+
+    if (diffAvailable !== 0) {
+      diffParts.push(`พร้อมยืม: ${oldAsset.availableQuantity} ➔ ${newAvail} ชิ้น (${diffAvailable >= 0 ? '+' : ''}${diffAvailable} ชิ้น)`);
+    } else {
+      diffParts.push(`พร้อมยืม: ${newAvail} ชิ้น`);
+    }
+
+    if (oldAsset.propertyId !== newAsset.propertyId) {
+      diffParts.push(`สาขา: "${oldAsset.property?.name || 'ไม่ระบุ'}" ➔ "${newAsset.property?.name || 'ไม่ระบุ'}"`);
+    }
+
+    let detailMsg = `ปรับปรุงสต็อกอุปกรณ์ "${newAsset.name}" โดยคุณ ${session?.username || 'Admin'}: ` + diffParts.join(', ');
+    if (data.notes && data.notes.trim()) {
+      detailMsg += ` (หมายเหตุ: ${data.notes.trim()})`;
+    }
+
+    await createAuditLog(tx, 'STOCK_ADJUSTMENT', 'ASSET', id, {
+      oldValue: oldAsset,
+      newValue: newAsset,
+      details: detailMsg,
+      userId: session?.id ? String(session.id) : null,
+    });
+
+    return newAsset;
+  });
+
+  revalidatePath('/quantity-assets');
+  revalidatePath('/borrows');
+  revalidatePath('/assets');
+  revalidatePath('/');
+  return { success: true, data: result };
+}
+
+/**
+ * Fetch stock adjustment logs for an asset
+ */
+export async function getQuantityStockLogs(assetId: string) {
+  try {
+    const logs = await prisma.auditLog.findMany({
+      where: {
+        entityId: assetId,
+        entity: 'ASSET',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Fetch user details for each log
+    const userIds = [...new Set(logs.map((l) => l.userId).filter(Boolean))] as string[];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, username: true },
+    });
+    const userMap = new Map(users.map((u) => [u.id, u.username]));
+
+    const formattedLogs = logs.map((log) => ({
+      ...log,
+      username: log.userId ? userMap.get(log.userId) || 'System Admin' : 'System Admin',
+    }));
+
+    return { success: true, data: formattedLogs };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'เกิดข้อผิดพลาดในการดึงประวัติสต็อก' };
+  }
+}
+
+/**
+ * Fetch all stock adjustment logs across all assets for the central history section
+ */
+export async function getAllStockAdjustmentLogs() {
+  try {
+    const logs = await prisma.auditLog.findMany({
+      where: {
+        entity: 'ASSET',
+        OR: [
+          { action: 'STOCK_ADJUSTMENT' },
+          { action: 'UPDATED' },
+          { action: 'CREATED' },
+        ],
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+    });
+
+    // Fetch asset details
+    const assetIds = [...new Set(logs.map((l) => l.entityId))];
+    const assets = await prisma.asset.findMany({
+      where: { id: { in: assetIds } },
+      select: {
+        id: true,
+        assetId: true,
+        name: true,
+        isQuantityBased: true,
+        property: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+    const assetMap = new Map(assets.map((a) => [a.id, a]));
+
+    // Fetch user details
+    const userIds = [...new Set(logs.map((l) => l.userId).filter(Boolean))] as string[];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, username: true, role: true },
+    });
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    // Filter and format quantity stock logs
+    const formattedLogs = logs
+      .map((log) => {
+        const asset = assetMap.get(log.entityId);
+        const user = log.userId ? userMap.get(log.userId) : null;
+
+        return {
+          ...log,
+          assetName: asset?.name || 'ไม่ทราบชื่ออุปกรณ์',
+          assetCode: asset?.assetId || '-',
+          propertyName: asset?.property?.name || 'ไม่ระบุสาขา',
+          propertyId: asset?.property?.id || null,
+          username: user?.username || 'System Admin',
+          userRole: user?.role || 'ADMIN',
+        };
+      });
+
+    return { success: true, data: formattedLogs };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'เกิดข้อผิดพลาดในการดึงประวัติสต็อกรวม' };
+  }
+}
+
+

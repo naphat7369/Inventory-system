@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, Settings, Tag, MapPin, LayoutDashboard, Building, Users, LogOut, User, Key, Menu, X } from 'lucide-react';
+import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes } from 'lucide-react';
 import { logout } from '@/app/actions';
 import { useState } from 'react';
 
@@ -10,17 +10,26 @@ export function Sidebar({ user }: { user: any }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  const links = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Assets', href: '/assets', icon: Package },
-    { name: 'Licenses', href: '/licenses', icon: Key },
-    { name: 'Categories', href: '/categories', icon: Tag },
-    { name: 'Properties', href: '/properties', icon: Building },
-    { name: 'Settings', href: '/settings', icon: Settings },
-  ];
+  let links = [];
 
   if (user?.role === 'ADMIN') {
-    links.push({ name: 'Users', href: '/users', icon: Users });
+    links = [
+      { name: 'Dashboard', href: '/', icon: Home },
+      { name: 'Assets', href: '/assets', icon: Package },
+      { name: 'อุปกรณ์นับจำนวน (Stock)', href: '/quantity-assets', icon: Boxes },
+      { name: 'ยืม-คืน (Borrows)', href: '/borrows', icon: ArrowLeftRight },
+      { name: 'Licenses', href: '/licenses', icon: Key },
+      { name: 'Categories', href: '/categories', icon: Tag },
+      { name: 'Properties', href: '/properties', icon: Building },
+      { name: 'Repair Center', href: '/repairs', icon: Wrench },
+      { name: 'Users', href: '/users', icon: Users },
+      { name: 'Settings', href: '/settings', icon: Settings },
+    ];
+  } else {
+    // Staff role strictly sees only Borrow Form
+    links = [
+      { name: 'ขอยืมอุปกรณ์ (Borrow Form)', href: '/borrows', icon: ArrowLeftRight },
+    ];
   }
 
   return (

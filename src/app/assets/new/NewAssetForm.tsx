@@ -38,6 +38,10 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
       propertyId: formData.get('propertyId') || undefined,
       parentId: formData.get('parentId') || undefined,
       status: formData.get('status'),
+      isBorrowable: formData.get('isBorrowable') === 'on',
+      isQuantityBased: formData.get('isQuantityBased') === 'on',
+      totalQuantity: parseInt((formData.get('totalQuantity') as string) || '1', 10),
+      availableQuantity: parseInt((formData.get('availableQuantity') as string) || '1', 10),
       customData: JSON.stringify(customData),
     };
 
@@ -138,9 +142,22 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
           <select name="status" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="Available">Available</option>
             <option value="In-use">In-use</option>
+            <option value="Borrowed">Borrowed</option>
             <option value="Repairing">Repairing</option>
             <option value="Disposed">Disposed</option>
           </select>
+        </div>
+
+        <div className="flex items-center pt-5">
+          <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              name="isBorrowable"
+              defaultChecked
+              className="w-4 h-4 text-blue-600 rounded-sm border-gray-300 focus:ring-blue-500"
+            />
+            <span>เปิดอนุญาตให้อุปกรณ์นี้ยืมได้ (Borrowable Asset)</span>
+          </label>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { Package, Plus, Search, Filter, Trash2 } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { ImportExportButtons } from './ImportExportButtons';
 import { AssetTable } from './AssetTable';
+import { AssetSearchBar } from './AssetSearchBar';
 import { Pagination } from '@/components/Pagination';
 
 export default async function AssetsPage({ searchParams }: { searchParams: Promise<{ search?: string, status?: string, page?: string, completeness?: string, trash?: string }> }) {
@@ -39,7 +40,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
   if (trash === 'true') {
     andConditions.push({ isDeleted: true });
   } else {
-    andConditions.push({ isDeleted: false });
+    andConditions.push({ isDeleted: false, isQuantityBased: false });
   }
 
   if (andConditions.length > 0) {
@@ -100,18 +101,9 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6 p-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
         <form method="GET" className="flex flex-col md:flex-row gap-4 md:items-center">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              name="search" 
-              defaultValue={search}
-              placeholder="Search by ID, Name, or Owner..." 
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <AssetSearchBar defaultValue={search} />
           <div className="relative w-full md:w-48">
             <Filter className="absolute left-3 top-2.5 text-gray-400" size={18} />
             <select 

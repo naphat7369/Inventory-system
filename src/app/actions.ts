@@ -468,6 +468,49 @@ export async function createUser(formData: FormData) {
   return { success: true };
 }
 
+export async function updateUser(
+  userId: string,
+  data: {
+    username?: string;
+    password?: string;
+    fullName?: string | null;
+    department?: string | null;
+    phone?: string | null;
+    role?: string;
+  }
+) {
+  const session = await getSession();
+  if (session?.role !== 'ADMIN') throw new Error('Unauthorized');
+
+  const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+  if (!existingUser) return { success: false, error: 'ไม่พบผู้ใช้งานนี้ในระบบ' };
+
+  if (data.username && data.username.trim() !== existingUser.username) {
+    const duplicate = await prisma.user.findUnique({ where: { username: data.username.trim() } });
+    if (duplicate) return { success: false, error: 'Username นี้ถูกใช้งานไปแล้ว' };
+  }
+
+  const updateData: any = {};
+  if (data.username) updateData.username = data.username.trim();
+  if (data.fullName !== undefined) updateData.fullName = data.fullName ? data.fullName.trim() : null;
+  if (data.department !== undefined) updateData.department = data.department ? data.department.trim() : null;
+  if (data.phone !== undefined) updateData.phone = data.phone ? data.phone.trim() : null;
+  if (data.role) updateData.role = data.role;
+
+  if (data.password && data.password.trim() !== '') {
+    updateData.passwordHash = await bcrypt.hash(data.password.trim(), 10);
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+  });
+
+  revalidatePath('/users');
+  revalidatePath('/borrows');
+  return { success: true };
+}
+
 export async function deleteUser(id: string) {
   const session = await getSession();
   if (session?.role !== 'ADMIN') throw new Error('Unauthorized');

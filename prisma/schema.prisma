@@ -144,6 +144,9 @@ model User {
   id           String      @id @default(uuid())
   username     String      @unique
   passwordHash String
+  fullName     String?     // ชื่อ - นามสกุล
+  department   String?     // แผนก / หน่วยงาน
+  phone        String?     // เบอร์โทรศัพท์ / ช่องทางติดต่อ
   role         String      @default("STAFF") // ADMIN or STAFF
   borrowLogs   BorrowLog[]
   createdAt    DateTime    @default(now())

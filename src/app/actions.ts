@@ -395,7 +395,10 @@ export async function login(formData: FormData) {
   await createSession({
     id: user.id,
     username: user.username,
-    role: user.role
+    role: user.role,
+    fullName: user.fullName,
+    department: user.department,
+    phone: user.phone,
   });
 
   if (user.role === 'STAFF') {
@@ -415,8 +418,16 @@ export async function getUsers() {
   if (session?.role !== 'ADMIN') throw new Error('Unauthorized');
 
   return prisma.user.findMany({
-    select: { id: true, username: true, role: true, createdAt: true },
-    orderBy: { createdAt: 'desc' }
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      department: true,
+      phone: true,
+      role: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
   });
 }
 
@@ -424,17 +435,20 @@ export async function createUser(formData: FormData) {
   const session = await getSession();
   if (session?.role !== 'ADMIN') throw new Error('Unauthorized');
 
-  const username = formData.get('username') as string;
+  const username = (formData.get('username') as string)?.trim();
   const password = formData.get('password') as string;
-  const role = formData.get('role') as string;
+  const fullName = (formData.get('fullName') as string)?.trim() || null;
+  const department = (formData.get('department') as string)?.trim() || null;
+  const phone = (formData.get('phone') as string)?.trim() || null;
+  const role = (formData.get('role') as string) || 'STAFF';
 
   if (!username || !password) {
-    return { error: 'Username and password are required' };
+    return { error: 'กรุณากรอก Username และ Password' };
   }
 
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) {
-    return { error: 'Username already exists' };
+    return { error: 'Username นี้ถูกใช้งานไปแล้ว' };
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -443,8 +457,11 @@ export async function createUser(formData: FormData) {
     data: {
       username,
       passwordHash,
-      role
-    }
+      fullName,
+      department,
+      phone,
+      role,
+    },
   });
 
   revalidatePath('/users');

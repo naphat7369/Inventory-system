@@ -10,80 +10,183 @@ export default async function UsersPage() {
   const users = await getUsers();
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Users className="text-blue-600" /> Users & Permissions
-        </h1>
+    <div className="p-8 max-w-6xl mx-auto space-y-8">
+      <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <Users className="text-indigo-600 dark:text-indigo-400 w-8 h-8" />
+            <span>จัดการผู้ใช้งานระบบ & สิทธิ์การใช้งาน (Users & Permissions)</span>
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            เพิ่มผู้ใช้งานใหม่ ระบุชื่อ-นามสกุล แผนก/หน่วยงาน และเบอร์ติดต่อเพื่อเชื่อมโยงกับระบบขอยืม-คืนอัตโนมัติ
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold mb-4">Add New User</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Add User Form */}
+        <div className="lg:col-span-1">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-3">
+              ➕ เพิ่มผู้ใช้งานใหม่ (Add New User)
+            </h2>
             <form action={createUser} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                <input type="text" name="username" required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Username <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  required
+                  placeholder="เช่น john_doe"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input type="password" name="password" required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Password <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select name="role" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
-                  <option value="STAFF">STAFF (View & Print only)</option>
-                  <option value="ADMIN">ADMIN (Full Access)</option>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  ชื่อ - นามสกุล (Full Name)
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  placeholder="เช่น นายสมชาย ใจดี"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  แผนก / หน่วยงานที่สังกัด (Department)
+                </label>
+                <input
+                  type="text"
+                  name="department"
+                  placeholder="เช่น แผนก IT, การเงิน, การตลาด"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  เบอร์โทรศัพท์ / ช่องทางติดต่อ (Contact)
+                </label>
+                <input
+                  type="text"
+                  name="phone"
+                  placeholder="เช่น 081-234-5678, เบอร์ภายใน 102"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  สิทธิ์การใช้งาน (Role)
+                </label>
+                <select
+                  name="role"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-semibold"
+                >
+                  <option value="STAFF">STAFF (ยืมอุปกรณ์ & ดูสถานะตนเอง)</option>
+                  <option value="ADMIN">ADMIN (อนุมัติ, จัดการสต็อก & สิทธิ์ทั้งหมด)</option>
                 </select>
               </div>
-              <button type="submit" className="w-full bg-gray-800 text-white font-medium py-2 rounded-lg hover:bg-gray-900 transition-colors">
-                Create User
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition"
+              >
+                บันทึกสร้างผู้ใช้ใหม่
               </button>
             </form>
           </div>
         </div>
 
-        <div className="md:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="p-4 font-semibold text-gray-600">Username</th>
-                  <th className="p-4 font-semibold text-gray-600">Role</th>
-                  <th className="p-4 font-semibold text-gray-600">Joined</th>
-                  <th className="p-4 font-semibold text-gray-600 w-24">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                    <td className="p-4 font-medium flex items-center gap-2">
-                      {u.role === 'ADMIN' ? <Shield size={16} className="text-purple-600" /> : <User size={16} className="text-gray-400" />}
-                      {u.username}
-                      {u.id === session.id && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">You</span>}
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-md text-xs font-semibold ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="p-4 text-gray-500 text-sm">
-                      {new Date(u.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="p-4">
-                      {u.id !== session.id && (
-                        <form action={deleteUser.bind(null, u.id)}>
-                          <button type="submit" className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors" title="Delete User">
-                            <Trash2 size={18} />
-                          </button>
-                        </form>
-                      )}
-                    </td>
+        {/* Users Table */}
+        <div className="lg:col-span-2">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <tr>
+                    <th className="p-4">ผู้ใช้งาน (User & Profile)</th>
+                    <th className="p-4">แผนก / หน่วยงาน</th>
+                    <th className="p-4">สิทธิ์</th>
+                    <th className="p-4 w-20 text-center">จัดการ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                  {users.map((u) => (
+                    <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+                      <td className="p-4">
+                        <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                          {u.role === 'ADMIN' ? (
+                            <Shield className="w-4 h-4 text-purple-600 shrink-0" />
+                          ) : (
+                            <User className="w-4 h-4 text-indigo-500 shrink-0" />
+                          )}
+                          <span>{u.fullName || u.username}</span>
+                          {u.id === session.id && (
+                            <span className="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                              คุณ
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-400 font-mono mt-0.5">
+                          @{u.username} {u.phone ? `• 📞 ${u.phone}` : ''}
+                        </div>
+                      </td>
+
+                      <td className="p-4">
+                        <span className="inline-flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+                          {u.department || 'ไม่ระบุแผนก'}
+                        </span>
+                      </td>
+
+                      <td className="p-4">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-extrabold ${
+                            u.role === 'ADMIN'
+                              ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {u.role}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-center">
+                        {u.id !== session.id && (
+                          <form action={deleteUser.bind(null, u.id)}>
+                            <button
+                              type="submit"
+                              className="text-rose-500 hover:text-rose-700 p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                              title="ลบผู้ใช้งานนี้"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </form>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

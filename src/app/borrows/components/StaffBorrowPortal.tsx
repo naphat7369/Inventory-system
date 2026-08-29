@@ -28,6 +28,9 @@ interface StaffBorrowPortalProps {
     id: string;
     username: string;
     role: string;
+    fullName?: string | null;
+    department?: string | null;
+    phone?: string | null;
   };
   availableAssets: any[];
   userLogs: any[];
@@ -49,11 +52,18 @@ export function StaffBorrowPortal({
     'Asia/Bangkok',
     'yyyy-MM-dd'
   );
-  const [borrowerDept, setBorrowerDept] = useState('');
-  const [borrowerContact, setBorrowerContact] = useState('');
+  const [borrowerDept, setBorrowerDept] = useState(currentUser?.department || '');
+  const [borrowerContact, setBorrowerContact] = useState(currentUser?.phone || '');
   const [expectedReturnDate, setExpectedReturnDate] = useState(defaultReturnDate);
   const [purpose, setPurpose] = useState('');
   const [borrowNotes, setBorrowNotes] = useState('');
+
+  React.useEffect(() => {
+    if (currentUser) {
+      if (currentUser.department && !borrowerDept) setBorrowerDept(currentUser.department);
+      if (currentUser.phone && !borrowerContact) setBorrowerContact(currentUser.phone);
+    }
+  }, [currentUser]);
 
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,9 +96,9 @@ export function StaffBorrowPortal({
       const res = await createBorrowLog({
         assetId: selectedAssetId,
         userId: currentUser.id,
-        borrowerName: currentUser.username,
-        borrowerDept: borrowerDept.trim() || undefined,
-        borrowerContact: borrowerContact.trim() || undefined,
+        borrowerName: currentUser.fullName || currentUser.username,
+        borrowerDept: borrowerDept.trim() || currentUser.department || undefined,
+        borrowerContact: borrowerContact.trim() || currentUser.phone || undefined,
         quantity: borrowQuantity,
         expectedReturnDate,
         purpose: purpose.trim() || undefined,

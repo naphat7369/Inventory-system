@@ -41,11 +41,21 @@ export async function getCurrentUserSession() {
   try {
     const session = await getSession();
     if (!session) return { success: false, data: null };
+
+    // Fetch full user record from database to get latest fullName & department
+    const user = await prisma.user.findUnique({
+      where: { id: String(session.id) },
+      select: { id: true, username: true, fullName: true, department: true, phone: true, role: true },
+    });
+
     return {
       success: true,
       data: {
         id: String(session.id),
-        username: session.username as string,
+        username: user?.username || (session.username as string),
+        fullName: user?.fullName || (session.fullName as string) || null,
+        department: user?.department || (session.department as string) || null,
+        phone: user?.phone || (session.phone as string) || null,
         role: session.role as string,
       },
     };
@@ -678,6 +688,9 @@ export async function getUsersList() {
       select: {
         id: true,
         username: true,
+        fullName: true,
+        department: true,
+        phone: true,
         role: true,
       },
       orderBy: {

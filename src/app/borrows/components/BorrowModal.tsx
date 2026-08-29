@@ -24,11 +24,17 @@ interface BorrowModalProps {
     id: string;
     username: string;
     role: string;
+    fullName?: string | null;
+    department?: string | null;
+    phone?: string | null;
   }>;
   currentUser?: {
     id: string;
     username: string;
     role: string;
+    fullName?: string | null;
+    department?: string | null;
+    phone?: string | null;
   } | null;
   initialAssetId?: string;
   onSuccess: () => void;
@@ -86,7 +92,9 @@ export default function BorrowModal({
     setSelectedUserId(userId);
     const u = users.find((item) => item.id === userId);
     if (u) {
-      setBorrowerName(u.username);
+      setBorrowerName(u.fullName || u.username);
+      setBorrowerDept(u.department || '');
+      setBorrowerContact(u.phone || '');
     }
   };
 

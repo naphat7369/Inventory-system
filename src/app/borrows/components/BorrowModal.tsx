@@ -291,35 +291,45 @@ export default function BorrowModal({
                   ))}
                 </select>
               ) : (
-                <div className="space-y-3">
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="ชื่อ-นามสกุล ผู้ยืม *"
-                      value={borrowerName}
-                      onChange={(e) => setBorrowerName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
-                      required={borrowerType === 'EXTERNAL'}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      placeholder="แผนก / หน่วยงาน"
-                      value={borrowerDept}
-                      onChange={(e) => setBorrowerDept(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
-                    />
-                    <input
-                      type="text"
-                      placeholder="เบอร์โทร / อีเมลติดต่อ"
-                      value={borrowerContact}
-                      onChange={(e) => setBorrowerContact(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
-                    />
-                  </div>
+                <div>
+                  <input
+                    type="text"
+                    placeholder="ชื่อ-นามสกุล ผู้ยืม *"
+                    value={borrowerName}
+                    onChange={(e) => setBorrowerName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                    required={borrowerType === 'EXTERNAL'}
+                  />
                 </div>
               )}
+
+              {/* Department & Contact Inputs (Available for All Borrower Types) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    แผนก / หน่วยงานที่สังกัด (Department)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="เช่น แผนก IT, การเงิน, การตลาด"
+                    value={borrowerDept}
+                    onChange={(e) => setBorrowerDept(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    เบอร์โทรศัพท์ / ช่องทางติดต่อ
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="เช่น 081-234-5678, เบอร์ภายใน 102"
+                    value={borrowerContact}
+                    onChange={(e) => setBorrowerContact(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Expected Return Date */}

@@ -49,6 +49,8 @@ export function StaffBorrowPortal({
     'Asia/Bangkok',
     'yyyy-MM-dd'
   );
+  const [borrowerDept, setBorrowerDept] = useState('');
+  const [borrowerContact, setBorrowerContact] = useState('');
   const [expectedReturnDate, setExpectedReturnDate] = useState(defaultReturnDate);
   const [purpose, setPurpose] = useState('');
   const [borrowNotes, setBorrowNotes] = useState('');
@@ -85,6 +87,8 @@ export function StaffBorrowPortal({
         assetId: selectedAssetId,
         userId: currentUser.id,
         borrowerName: currentUser.username,
+        borrowerDept: borrowerDept.trim() || undefined,
+        borrowerContact: borrowerContact.trim() || undefined,
         quantity: borrowQuantity,
         expectedReturnDate,
         purpose: purpose.trim() || undefined,
@@ -95,6 +99,8 @@ export function StaffBorrowPortal({
         setSuccessMsg(`ส่งคำขอยืมอุปกรณ์สำเร็จ! กรุณารอการอนุมัติจาก Admin`);
         setSelectedAssetId('');
         setBorrowQuantity(1);
+        setBorrowerDept('');
+        setBorrowerContact('');
         setPurpose('');
         setBorrowNotes('');
         onRefresh();
@@ -233,6 +239,35 @@ export function StaffBorrowPortal({
               </div>
             </div>
           )}
+
+          {/* Department & Contact Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
+                แผนก / หน่วยงานที่สังกัด (Department) <span className="text-slate-400">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="เช่น แผนก IT, การเงิน, การตลาด, ฝ่ายผลิต"
+                value={borrowerDept}
+                onChange={(e) => setBorrowerDept(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
+                เบอร์โทรศัพท์ / ช่องทางติดต่อ (Contact) <span className="text-slate-400">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="เช่น 081-234-5678, เบอร์ภายใน 102"
+                value={borrowerContact}
+                onChange={(e) => setBorrowerContact(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+              />
+            </div>
+          </div>
 
           {/* Expected Return Date */}
           <div>

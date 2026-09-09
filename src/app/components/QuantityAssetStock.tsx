@@ -60,7 +60,22 @@ export function QuantityAssetStock() {
     );
   }
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <div className="bg-bg border border-border rounded-none md:rounded-sm overflow-hidden mb-8 shadow-xs">
+        <div className="p-6 border-b border-border flex items-center gap-2">
+          <PackageCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <h2 className="font-display uppercase tracking-widest text-sm text-text font-bold">
+            Quantity Borrowables Inventory Stock (สถิติตรวจสอบสต็อกอุปกรณ์แบบนับจำนวน)
+          </h2>
+        </div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[200px] text-text/50 font-mono text-sm border-t border-dashed border-border m-6 mt-0">
+          <PackageCheck className="w-8 h-8 text-border mb-2" />
+          <span>[ No consumable inventory found ]</span>
+        </div>
+      </div>
+    );
+  }
 
   // Chart data formatted for Donut Chart (Total Quantity by Item)
   const chartData = items.map((item) => ({

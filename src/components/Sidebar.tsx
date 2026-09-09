@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText } from 'lucide-react';
 import { logout, getExpiringRenewalsCount } from '@/app/actions';
 import { useState, useEffect } from 'react';
+import { ThemeToggle } from '@/app/components/ThemeToggle';
 
 export function Sidebar({ user }: { user: any }) {
   const pathname = usePathname();
@@ -52,14 +53,17 @@ export function Sidebar({ user }: { user: any }) {
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between bg-gray-900 text-white p-4 w-full print:hidden z-30 relative shadow-sm">
         <div className="text-xl font-bold">Inventory System</div>
-        <button 
-          onClick={() => setIsOpen(true)}
-          aria-label="Open Menu"
-          aria-expanded={isOpen}
-          className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          <Menu size={24} />
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <button 
+            onClick={() => setIsOpen(true)}
+            aria-label="Open Menu"
+            aria-expanded={isOpen}
+            className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            <Menu size={24} />
+          </button>
+        </div>
       </div>
 
       {/* Backdrop */}
@@ -111,14 +115,17 @@ export function Sidebar({ user }: { user: any }) {
       </nav>
 
       <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-300">
-            <User size={20} />
+        <div className="flex items-center justify-between mb-4 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-300">
+              <User size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-medium">{user.username}</p>
+              <p className="text-xs text-gray-500">{user.role}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium">{user.username}</p>
-            <p className="text-xs text-gray-500">{user.role}</p>
-          </div>
+          <ThemeToggle />
         </div>
         <form action={logout}>
           <button type="submit" className="flex items-center space-x-3 p-3 w-full rounded-lg transition-colors text-red-400 hover:bg-gray-800 hover:text-red-300 font-medium">

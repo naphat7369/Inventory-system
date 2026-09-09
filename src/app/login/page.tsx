@@ -23,8 +23,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory System</h1>
           <p className="text-gray-500 mt-2 text-center text-sm">
-            Sign in to access your assets.<br />
-            (Default: admin / password123)
+            Sign in to access your assets.
           </p>
         </div>
 

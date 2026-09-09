@@ -19,13 +19,17 @@ export function QuantityAssetStock() {
   const [viewMode, setViewMode] = useState<'CHART' | 'TABLE'>('CHART');
 
   const COLORS = [
-    '#E24A22', // Safety Orange
-    '#4C6246', // Utility Green
-    '#1C1C1A', // Near Black
-    '#D4D6CF', // Steel Gray
-    '#F26A42', // Lighter Orange
-    '#6B8265', // Lighter Green
-    '#4A4A48', // Lighter Black
+    '#2563EB', // Blue 600
+    '#059669', // Emerald 600
+    '#D97706', // Amber 600
+    '#7C3AED', // Purple 600
+    '#E11D48', // Rose 600
+    '#0D9488', // Teal 600
+    '#4F46E5', // Indigo 600
+    '#C026D3', // Fuchsia 600
+    '#0891B2', // Cyan 600
+    '#EA580C', // Orange 600
+    '#475569', // Slate 600
   ];
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export function QuantityAssetStock() {
 
   // Chart data formatted for Donut Chart (Total Quantity by Item)
   const chartData = items.map((item) => ({
-    name: `${item.name} (คงเหลือ ${item.available}/${item.total})`,
+    name: `${item.name} ${item.branch !== '-' ? `(สาขา: ${item.branch})` : ''}`,
     value: item.total,
     available: item.available,
     borrowed: item.borrowed,
@@ -163,7 +167,7 @@ export function QuantityAssetStock() {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-bold text-text text-sm">{item.name}</h3>
-                      <p className="text-xs font-mono text-text/50">[{item.assetId}]</p>
+                      <p className="text-xs font-mono text-text/50">[{item.assetId}] {item.branch !== '-' && <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300">สาขา: {item.branch}</span>}</p>
                     </div>
                     {isLowStock ? (
                       <span className="text-[10px] bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-bold px-2 py-0.5 rounded-xs uppercase">

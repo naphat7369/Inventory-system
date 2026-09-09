@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { InteractivePieChart } from './InteractivePieChart';
+import { DashboardMultiFilter } from './DashboardMultiFilter';
 import { REPAIR_OVERDUE_DAYS } from '@/lib/constants';
 import { AlertCircle, Clock, Wrench } from 'lucide-react';
 import Link from 'next/link';
@@ -7,34 +8,44 @@ import Link from 'next/link';
 export async function AnalyticsPanel({ searchParams }: { searchParams: { [key: string]: string | undefined } }) {
   const { statusFilter, categoryId, propertyId } = searchParams;
 
+  const statusFilterArray = statusFilter ? statusFilter.split(',') : undefined;
+  const categoryIdArray = categoryId ? categoryId.split(',') : undefined;
+  const propertyIdArray = propertyId ? propertyId.split(',') : undefined;
+
   // Rule 3: Self-filter exclusion.
   // When querying for the Status chart, we apply categoryId and propertyId filters, but NOT statusFilter.
   const statusWhere = {
-    ...(categoryId && { categoryId }),
-    ...(propertyId && { propertyId }),
+    ...(categoryIdArray && { categoryId: { in: categoryIdArray } }),
+    ...(propertyIdArray && { propertyId: { in: propertyIdArray } }),
+    isDeleted: false,
+    isQuantityBased: false,
   };
 
   // When querying for the Category chart, we apply statusFilter and propertyId, but NOT categoryId.
   const categoryWhere = {
-    ...(statusFilter && { status: statusFilter }),
-    ...(propertyId && { propertyId }),
+    ...(statusFilterArray && { status: { in: statusFilterArray } }),
+    ...(propertyIdArray && { propertyId: { in: propertyIdArray } }),
+    isDeleted: false,
+    isQuantityBased: false,
   };
 
   // When querying for the Property chart, we apply statusFilter and categoryId, but NOT propertyId.
   const propertyWhere = {
-    ...(statusFilter && { status: statusFilter }),
-    ...(categoryId && { categoryId }),
+    ...(statusFilterArray && { status: { in: statusFilterArray } }),
+    ...(categoryIdArray && { categoryId: { in: categoryIdArray } }),
+    isDeleted: false,
+    isQuantityBased: false,
   };
 
   // 1. Status Chart Data
   const statuses = await prisma.asset.groupBy({
     by: ['status'],
-    where: Object.keys(statusWhere).length > 0 ? statusWhere : undefined,
+    where: statusWhere,
     _count: { id: true }
   });
   
   const statusChartData = statuses.map(s => ({
-    id: s.status, // use status string as ID
+    id: s.status,
     name: s.status,
     value: s._count.id
   }));
@@ -45,7 +56,7 @@ export async function AnalyticsPanel({ searchParams }: { searchParams: { [key: s
       id: true,
       name: true,
       _count: {
-        select: { assets: { where: Object.keys(categoryWhere).length > 0 ? categoryWhere : undefined } }
+        select: { assets: { where: categoryWhere } }
       }
     }
   });
@@ -64,7 +75,7 @@ export async function AnalyticsPanel({ searchParams }: { searchParams: { [key: s
       id: true,
       name: true,
       _count: {
-        select: { assets: { where: Object.keys(propertyWhere).length > 0 ? propertyWhere : undefined } }
+        select: { assets: { where: propertyWhere } }
       }
     }
   });

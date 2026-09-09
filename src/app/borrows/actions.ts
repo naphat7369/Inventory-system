@@ -821,6 +821,11 @@ export async function getQuantityAssetsStock() {
             name: true,
           },
         },
+        property: {
+          select: {
+            name: true,
+          },
+        },
       },
       orderBy: {
         name: 'asc',
@@ -834,6 +839,7 @@ export async function getQuantityAssetsStock() {
         assetId: a.assetId,
         name: a.name,
         category: a.category?.name || '-',
+        branch: a.property?.name || '-',
         total: a.totalQuantity,
         borrowed,
         available: a.availableQuantity,

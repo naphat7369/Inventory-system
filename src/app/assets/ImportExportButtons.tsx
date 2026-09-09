@@ -3,36 +3,47 @@
 import { useState, useRef } from 'react';
 import { Upload, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { importAssets } from '@/app/actions';
+import { importAssets, getAllAssetsForExport } from '@/app/actions';
 
 export function ImportExportButtons({ assets }: { assets: any[] }) {
   const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleExport = () => {
-    // Map assets to a flat format for Excel
-    const data = assets.map(asset => {
-      const customData = asset.customData ? JSON.parse(asset.customData) : {};
-      return {
-        'Asset ID': asset.assetId,
-        'Asset Name': asset.name,
-        'Category': asset.category?.name || '',
-        'Property': asset.property?.name || '',
-        'Usage Status': asset.status,
-        'Location': asset.location || '',
-        'IP Address': asset.ipAddress || '',
-        'Department': asset.department || '',
-        'Owner': asset.owner || '',
-        'OS': asset.os || '',
-        'Purchase Date': asset.purchaseDate ? new Date(asset.purchaseDate).toLocaleDateString() : '',
-        ...customData
-      };
-    });
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const allAssets = await getAllAssetsForExport();
+      
+      // Map assets to a flat format for Excel
+      const data = allAssets.map(asset => {
+        const customData = asset.customData ? JSON.parse(asset.customData) : {};
+        return {
+          'Asset ID': asset.assetId,
+          'Asset Name': asset.name,
+          'Category': asset.category?.name || '',
+          'Property': asset.property?.name || '',
+          'Usage Status': asset.status,
+          'Location': asset.location || '',
+          'IP Address': asset.ipAddress || '',
+          'Department': asset.department || '',
+          'Owner': asset.owner || '',
+          'OS': asset.os || '',
+          'Purchase Date': asset.purchaseDate ? new Date(asset.purchaseDate).toLocaleDateString() : '',
+          ...customData
+        };
+      });
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Assets');
-    XLSX.writeFile(workbook, 'assets_export.xlsx');
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Assets');
+      XLSX.writeFile(workbook, 'assets_export.xlsx');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to export assets.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,9 +114,10 @@ export function ImportExportButtons({ assets }: { assets: any[] }) {
       
       <button 
         onClick={handleExport}
-        className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        disabled={isExporting}
+        className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
       >
-        <Download size={20} /> Export Excel
+        <Download size={20} /> {isExporting ? 'Exporting...' : 'Export Excel'}
       </button>
     </div>
   );

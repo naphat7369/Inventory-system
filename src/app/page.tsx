@@ -8,19 +8,20 @@ import { StatsSummarySkeleton, AnalyticsPanelSkeleton, RecentActivitySkeleton } 
 import { DashboardTabs } from './components/DashboardTabs';
 
 import { RenewalAlertsWidget } from './components/RenewalAlertsWidget';
+import { DashboardAssetTable } from './components/DashboardAssetTable';
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const resolvedParams = await searchParams;
 
   const overviewContent = (
     <div className="space-y-8">
-      <Suspense fallback={<StatsSummarySkeleton />} key={`stats-${JSON.stringify(resolvedParams)}`}>
+      <Suspense fallback={<StatsSummarySkeleton />}>
         <StatsSummary searchParams={resolvedParams} />
       </Suspense>
 
       <RenewalAlertsWidget />
 
-      <Suspense fallback={<AnalyticsPanelSkeleton />} key={`analytics-${JSON.stringify(resolvedParams)}`}>
+      <Suspense fallback={<AnalyticsPanelSkeleton />}>
         <AnalyticsPanel searchParams={resolvedParams} />
       </Suspense>
     </div>

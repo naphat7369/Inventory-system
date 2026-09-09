@@ -19,27 +19,29 @@ export function InteractivePieChart({
   paramKey: string,
   title: string
 }) {
-  const { activeValue, toggle, isPending } = useDrilldownFilter(paramKey);
+  const { activeValues, toggle, clear, isPending } = useDrilldownFilter(paramKey);
 
-  // Extended palette based on Industrial Warehouse theme
   const COLORS = [
-    '#E24A22', // Safety Orange
-    '#4C6246', // Utility Green
-    '#1C1C1A', // Near Black
-    '#D4D6CF', // Steel Gray
-    '#F26A42', // Lighter Orange
-    '#6B8265', // Lighter Green
-    '#4A4A48', // Lighter Black
-    '#E8E9E6', // Lighter Gray
+    '#2563EB', // Blue 600
+    '#059669', // Emerald 600
+    '#D97706', // Amber 600
+    '#7C3AED', // Purple 600
+    '#E11D48', // Rose 600
+    '#0D9488', // Teal 600
+    '#4F46E5', // Indigo 600
+    '#C026D3', // Fuchsia 600
+    '#0891B2', // Cyan 600
+    '#EA580C', // Orange 600
+    '#475569', // Slate 600
   ];
 
   return (
     <div className={`flex flex-col h-full relative transition-opacity duration-300 ${isPending ? 'opacity-50' : 'opacity-100'}`}>
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-display uppercase tracking-widest text-[0.8rem] text-text">{title}</h2>
-        {activeValue && (
+        {activeValues.length > 0 && (
           <button 
-            onClick={() => toggle(activeValue)}
+            onClick={clear}
             className="flex items-center gap-1 text-[0.65rem] uppercase tracking-wider text-accent-primary hover:bg-accent-primary/10 px-2 py-1 rounded transition-colors"
           >
             <FilterX size={12} /> Clear Filter
@@ -61,14 +63,11 @@ export function InteractivePieChart({
                 dataKey="value"
                 stroke="none"
                 onClick={(entry: any) => toggle(entry?.id || entry?.name)}
-
                 cursor="pointer"
               >
                 {data.map((entry, index) => {
-                  // If a filter is active, dim the non-selected slices
-                  const isSelected = activeValue === entry.id;
-                  const opacity = !activeValue || isSelected ? 1 : 0.3;
-                  // Make active slice slightly thicker border
+                  const isSelected = activeValues.includes(entry.id || entry.name);
+                  const opacity = activeValues.length === 0 || isSelected ? 1 : 0.3;
                   const strokeProps = isSelected ? { stroke: '#1C1C1A', strokeWidth: 2 } : { stroke: 'none' };
                   
                   return (

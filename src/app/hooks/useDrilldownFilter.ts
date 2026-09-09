@@ -8,19 +8,36 @@ export function useDrilldownFilter(paramKey: string) {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const activeValue = searchParams.get(paramKey);
+  const activeValues = searchParams.get(paramKey)?.split(',') || [];
 
   function toggle(value: string) {
     const params = new URLSearchParams(searchParams.toString());
-    if (params.get(paramKey) === value) {
-      params.delete(paramKey); // clicking the active slice clears it
+    let newValues = [...activeValues];
+    
+    if (newValues.includes(value)) {
+      newValues = newValues.filter(v => v !== value);
     } else {
-      params.set(paramKey, value);
+      newValues.push(value);
     }
+
+    if (newValues.length > 0) {
+      params.set(paramKey, newValues.join(','));
+    } else {
+      params.delete(paramKey);
+    }
+
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     });
   }
 
-  return { activeValue, toggle, isPending };
+  function clear() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(paramKey);
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+  }
+
+  return { activeValues, toggle, clear, isPending };
 }

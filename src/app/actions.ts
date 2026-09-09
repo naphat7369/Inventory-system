@@ -377,6 +377,15 @@ export async function hardDeleteAssets(ids: string[]) {
 
 // === User Authentication & Management Actions ===
 
+export async function getAllAssetsForExport() {
+  await requireAdmin();
+  return prisma.asset.findMany({
+    where: { isDeleted: false, isQuantityBased: false },
+    include: { category: true, property: true },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
 export async function login(formData: FormData) {
   const username = formData.get('username') as string;
   const password = formData.get('password') as string;
@@ -719,7 +728,18 @@ export async function importAssets(rows: any[]) {
 
       // Core fields
       const name = (row['Asset Name']?.toString().trim() || row['Device Name']?.toString().trim()) || 'Unknown Asset';
-      const status = row['Usage Status'] || row['Status'] || 'Available';
+      let statusKey = Object.keys(row).find(k => 
+        ['usage status', 'status', 'สถานะ'].includes(k.toLowerCase())
+      );
+      let rawStatus = statusKey ? row[statusKey]?.toString().trim() : 'Available';
+      
+      let status = 'Available';
+      const lowerRaw = rawStatus.toLowerCase();
+      if (lowerRaw.includes('in-use') || lowerRaw.includes('in use') || lowerRaw.includes('ใช้งาน')) status = 'In-use';
+      else if (lowerRaw.includes('repair') || lowerRaw.includes('ซ่อม')) status = 'Repairing';
+      else if (lowerRaw.includes('dispose') || lowerRaw.includes('จำหน่าย')) status = 'Disposed';
+      else if (lowerRaw.includes('available') || lowerRaw.includes('ว่าง')) status = 'Available';
+      else status = rawStatus; // fallback to whatever it is
       const location = row['Location'] || null;
       const ipAddress = row['IP Address'] || null;
       const department = row['Department']?.toString().trim() || row['Departments']?.toString().trim() || null;

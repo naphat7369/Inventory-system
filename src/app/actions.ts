@@ -38,7 +38,7 @@ export async function createAuditLog(
   action: string, 
   entity: string, 
   entityId: string, 
-  data?: { oldValue?: any, newValue?: any, details?: string, userId?: string | null }
+  data?: { oldValue?: any, newValue?: any, details?: string, userId?: any }
 ) {
   return tx.auditLog.create({
     data: {
@@ -48,10 +48,11 @@ export async function createAuditLog(
       oldValue: data?.oldValue ? JSON.stringify(data.oldValue) : null,
       newValue: data?.newValue ? JSON.stringify(data.newValue) : null,
       details: data?.details,
-      userId: data?.userId || null
+      userId: data?.userId ? String(data.userId) : null
     }
   });
 }
+
 
 // Categories
 export async function initAdmin() {
@@ -606,7 +607,8 @@ export async function assignLicenseSlot(formData: FormData) {
   const assignedTo = formData.get('assignedTo') as string;
   const assignedEmail = formData.get('assignedEmail') as string;
 
-  if (!licenseId || !assignedTo) return { error: 'Required fields missing' };
+  if (!licenseId || !assignedTo) return;
+
 
   const license = await prisma.license.findUnique({
     where: { id: licenseId },
@@ -1056,5 +1058,358 @@ export async function getAllStockAdjustmentLogs() {
     return { success: false, error: error.message || 'เกิดข้อผิดพลาดในการดึงประวัติสต็อกรวม' };
   }
 }
+
+// ----------------------------------------------------
+// RENEWAL CONTRACTS MANAGEMENT SERVER ACTIONS
+// ----------------------------------------------------
+
+async function requireAdminSession() {
+  const session = await getSession();
+  if (session?.role !== 'ADMIN') throw new Error('Unauthorized: Only ADMIN role is allowed');
+  return session as unknown as { id?: string; username?: string; role?: string };
+}
+
+
+export async function computeRenewalStatus(endDate: Date, alertAdvanceDays: number = 30): Promise<'EXPIRED' | 'EXPIRING_SOON' | 'ACTIVE'> {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  if (end < now) {
+    return 'EXPIRED';
+  }
+
+  const alertThreshold = new Date(now.getTime() + (alertAdvanceDays || 30) * 24 * 60 * 60 * 1000);
+  if (end <= alertThreshold) {
+    return 'EXPIRING_SOON';
+  }
+
+  return 'ACTIVE';
+}
+
+export async function getRenewalContracts(search?: string, category?: string, statusFilter?: string) {
+  await requireAdmin();
+
+  const contracts = await prisma.renewalContract.findMany({
+    include: {
+      attachments: {
+        orderBy: { createdAt: 'desc' },
+      },
+      histories: {
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+    orderBy: { endDate: 'asc' },
+  });
+
+  const formattedContracts = await Promise.all(
+    contracts.map(async (c) => {
+      const computedStatus = await computeRenewalStatus(c.endDate, c.alertAdvanceDays);
+      return {
+        ...c,
+        status: computedStatus,
+      };
+    })
+  );
+
+  return formattedContracts.filter((c) => {
+    if (category && category !== 'ALL' && c.category !== category) return false;
+    if (statusFilter && statusFilter !== 'ALL' && c.status !== statusFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchTitle = c.title.toLowerCase().includes(q);
+      const matchNo = c.contractNo?.toLowerCase().includes(q) || false;
+      const matchVendor = c.vendor?.toLowerCase().includes(q) || false;
+      if (!matchTitle && !matchNo && !matchVendor) return false;
+    }
+    return true;
+  });
+}
+
+export async function getRenewalContractById(id: string) {
+  await requireAdmin();
+
+  const contract = await prisma.renewalContract.findUnique({
+    where: { id },
+    include: {
+      attachments: {
+        orderBy: { createdAt: 'desc' },
+      },
+      histories: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          attachments: true,
+        },
+      },
+    },
+  });
+
+  if (!contract) return null;
+
+  const status = await computeRenewalStatus(contract.endDate, contract.alertAdvanceDays);
+  return {
+    ...contract,
+    status,
+  };
+}
+
+
+export async function createRenewalContract(
+  data: {
+    contractNo?: string;
+    title: string;
+    category?: string;
+    vendor?: string;
+    costCents?: number;
+    startDate?: Date | string | null;
+    endDate: Date | string;
+    alertAdvanceDays?: number;
+    notes?: string;
+  },
+  attachmentsData?: Array<{
+    fileName: string;
+    storedFileName: string;
+    filePath: string;
+    fileType?: string;
+    fileSize?: number;
+    attachmentCategory?: string;
+  }>
+) {
+  const session = await requireAdminSession();
+
+  const startDate = data.startDate ? new Date(data.startDate) : null;
+  const endDate = new Date(data.endDate);
+  const alertAdvanceDays = data.alertAdvanceDays ? Number(data.alertAdvanceDays) : 30;
+
+  const contract = await prisma.renewalContract.create({
+    data: {
+      contractNo: data.contractNo || null,
+      title: data.title,
+      category: data.category || 'Service',
+      vendor: data.vendor || null,
+      costCents: data.costCents ?? null,
+      startDate,
+      endDate,
+      alertAdvanceDays,
+      notes: data.notes || null,
+      createdBy: session?.username || 'ADMIN',
+      attachments: attachmentsData && attachmentsData.length > 0
+        ? {
+            create: attachmentsData.map((att) => ({
+              fileName: att.fileName,
+              storedFileName: att.storedFileName,
+              filePath: att.filePath,
+              fileType: att.fileType || null,
+              fileSize: att.fileSize || null,
+              attachmentCategory: att.attachmentCategory || 'General',
+            })),
+          }
+        : undefined,
+    },
+    include: {
+      attachments: true,
+    },
+  });
+
+  revalidatePath('/renewals');
+  revalidatePath('/');
+  return { success: true, contract };
+}
+
+export async function updateRenewalContract(
+  id: string,
+  data: {
+    contractNo?: string;
+    title?: string;
+    category?: string;
+    vendor?: string;
+    costCents?: number;
+    startDate?: Date | string | null;
+    endDate?: Date | string;
+    alertAdvanceDays?: number;
+    notes?: string;
+  }
+) {
+  await requireAdmin();
+
+  const updateData: any = {};
+  if (data.contractNo !== undefined) updateData.contractNo = data.contractNo || null;
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.category !== undefined) updateData.category = data.category;
+  if (data.vendor !== undefined) updateData.vendor = data.vendor || null;
+  if (data.costCents !== undefined) updateData.costCents = data.costCents;
+  if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate) : null;
+  if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
+  if (data.alertAdvanceDays !== undefined) updateData.alertAdvanceDays = Number(data.alertAdvanceDays);
+  if (data.notes !== undefined) updateData.notes = data.notes || null;
+
+  const contract = await prisma.renewalContract.update({
+    where: { id },
+    data: updateData,
+  });
+
+  revalidatePath('/renewals');
+  revalidatePath('/');
+  return { success: true, contract };
+}
+
+export async function deleteRenewalContract(id: string) {
+  await requireAdmin();
+
+  const attachments = await prisma.renewalAttachment.findMany({
+    where: { contractId: id },
+  });
+
+  const fsPromises = (await import('fs')).promises;
+  const path = await import('path');
+
+  for (const att of attachments) {
+    try {
+      const diskPath = path.join(process.cwd(), 'storage', 'renewals', att.storedFileName);
+      await fsPromises.unlink(diskPath);
+    } catch (e) {
+      // Ignore if file doesn't exist
+    }
+  }
+
+  await prisma.renewalContract.delete({
+    where: { id },
+  });
+
+  revalidatePath('/renewals');
+  revalidatePath('/');
+  return { success: true };
+}
+
+export async function renewContractAction(
+  contractId: string,
+  data: {
+    newStartDate?: Date | string | null;
+    newEndDate: Date | string;
+    costCents?: number;
+    notes?: string;
+  },
+  newAttachmentsData?: Array<{
+    fileName: string;
+    storedFileName: string;
+    filePath: string;
+    fileType?: string;
+    fileSize?: number;
+    attachmentCategory?: string;
+  }>
+) {
+  const session = await requireAdminSession();
+
+  const existing = await prisma.renewalContract.findUnique({
+    where: { id: contractId },
+  });
+
+  if (!existing) throw new Error('Contract not found');
+
+  const newStart = data.newStartDate ? new Date(data.newStartDate) : null;
+  const newEnd = new Date(data.newEndDate);
+
+  // 1. Create history log record
+  const history = await prisma.renewalHistory.create({
+    data: {
+      contractId,
+      previousStartDate: existing.startDate,
+      previousEndDate: existing.endDate,
+      newStartDate: newStart,
+      newEndDate: newEnd,
+      costCents: data.costCents ?? existing.costCents,
+      renewedBy: session?.username || 'ADMIN',
+      notes: data.notes || null,
+    },
+  });
+
+  // 2. Attachments for this renewal cycle
+  if (newAttachmentsData && newAttachmentsData.length > 0) {
+    await prisma.renewalAttachment.createMany({
+      data: newAttachmentsData.map((att) => ({
+        contractId,
+        renewalHistoryId: history.id,
+        fileName: att.fileName,
+        storedFileName: att.storedFileName,
+        filePath: att.filePath,
+        fileType: att.fileType || null,
+        fileSize: att.fileSize || null,
+        attachmentCategory: att.attachmentCategory || 'Renewal Document',
+      })),
+    });
+  }
+
+  // 3. Update main contract dates and cost
+  await prisma.renewalContract.update({
+    where: { id: contractId },
+    data: {
+      startDate: newStart,
+      endDate: newEnd,
+      costCents: data.costCents ?? existing.costCents,
+    },
+  });
+
+  revalidatePath('/renewals');
+  revalidatePath('/');
+  return { success: true };
+}
+
+export async function deleteRenewalAttachment(attachmentId: string) {
+  await requireAdmin();
+
+  const attachment = await prisma.renewalAttachment.findUnique({
+    where: { id: attachmentId },
+  });
+
+  if (!attachment) return { success: false, error: 'Attachment not found' };
+
+  const fsPromises = (await import('fs')).promises;
+  const path = await import('path');
+
+  try {
+    const diskPath = path.join(process.cwd(), 'storage', 'renewals', attachment.storedFileName);
+    await fsPromises.unlink(diskPath);
+  } catch (e) {
+    // Ignore error if file physically removed
+  }
+
+  await prisma.renewalAttachment.delete({
+    where: { id: attachmentId },
+  });
+
+  revalidatePath('/renewals');
+  return { success: true };
+}
+
+export async function getExpiringRenewalsCount() {
+  await requireAdmin();
+
+  const contracts = await prisma.renewalContract.findMany({
+    select: {
+      id: true,
+      endDate: true,
+      alertAdvanceDays: true,
+    },
+  });
+
+  let expiredCount = 0;
+  let expiringSoonCount = 0;
+
+  for (const c of contracts) {
+    const status = await computeRenewalStatus(c.endDate, c.alertAdvanceDays);
+    if (status === 'EXPIRED') expiredCount++;
+    if (status === 'EXPIRING_SOON') expiringSoonCount++;
+  }
+
+  return {
+    totalAlerts: expiredCount + expiringSoonCount,
+    expiredCount,
+    expiringSoonCount,
+  };
+}
+
+
 
 

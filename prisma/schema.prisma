@@ -195,3 +195,63 @@ model AuditLog {
   @@index([createdAt])
   @@index([entity, entityId])
 }
+
+model RenewalContract {
+  id               String              @id @default(uuid())
+  contractNo       String?
+  title            String
+  category         String              @default("Service") // MA, Domain, Insurance, License, Service, Other
+  vendor           String?
+  costCents        Int?
+  startDate        DateTime?
+  endDate          DateTime
+  alertAdvanceDays Int                 @default(30)
+  notes            String?
+  createdBy        String?
+  
+  attachments      RenewalAttachment[]
+  histories        RenewalHistory[]
+  
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([endDate])
+}
+
+model RenewalAttachment {
+  id                 String          @id @default(uuid())
+  contractId         String
+  contract           RenewalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  fileName           String          // Original uploaded filename
+  storedFileName     String          // UUID disk filename
+  filePath           String
+  fileType           String?
+  fileSize           Int?
+  attachmentCategory String          @default("General") // "Main Contract", "Quotation", "Receipt", "Renewal Document", "General"
+  
+  renewalHistoryId   String?
+  renewalHistory     RenewalHistory? @relation(fields: [renewalHistoryId], references: [id], onDelete: SetNull)
+
+  createdAt          DateTime        @default(now())
+
+  @@index([contractId])
+  @@index([renewalHistoryId])
+}
+
+model RenewalHistory {
+  id                String              @id @default(uuid())
+  contractId        String
+  contract          RenewalContract     @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  previousStartDate DateTime?
+  previousEndDate   DateTime
+  newStartDate      DateTime?
+  newEndDate        DateTime
+  costCents         Int?
+  renewedBy         String?
+  notes             String?
+  attachments       RenewalAttachment[]
+  createdAt         DateTime            @default(now())
+
+  @@index([contractId])
+}
+

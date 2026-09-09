@@ -140,7 +140,8 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
         </form>
       </div>
 
-      <AssetTable assets={assets} role={session?.role} isTrash={trash === 'true'} />
+      <AssetTable assets={assets} role={session?.role as string} isTrash={trash === 'true'} />
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">  
         <Pagination 
           currentPage={currentPage} 

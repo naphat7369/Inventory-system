@@ -60,7 +60,8 @@ export function InteractivePieChart({
                 paddingAngle={5}
                 dataKey="value"
                 stroke="none"
-                onClick={(entry) => toggle(entry.id)}
+                onClick={(entry: any) => toggle(entry?.id || entry?.name)}
+
                 cursor="pointer"
               >
                 {data.map((entry, index) => {

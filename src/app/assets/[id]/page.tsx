@@ -248,8 +248,9 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
         </div>
 
         <div className="md:col-span-1 space-y-6">
-          <PrintableLabel asset={asset} role={session?.role} />
+          <PrintableLabel asset={asset} role={session?.role as string} />
         </div>
+
       </div>
     </div>
   );

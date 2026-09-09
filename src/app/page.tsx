@@ -7,6 +7,8 @@ import { RecentActivity } from './components/RecentActivity';
 import { StatsSummarySkeleton, AnalyticsPanelSkeleton, RecentActivitySkeleton } from './components/Skeletons';
 import { DashboardTabs } from './components/DashboardTabs';
 
+import { RenewalAlertsWidget } from './components/RenewalAlertsWidget';
+
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const resolvedParams = await searchParams;
 
@@ -16,11 +18,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <StatsSummary searchParams={resolvedParams} />
       </Suspense>
 
+      <RenewalAlertsWidget />
+
       <Suspense fallback={<AnalyticsPanelSkeleton />} key={`analytics-${JSON.stringify(resolvedParams)}`}>
         <AnalyticsPanel searchParams={resolvedParams} />
       </Suspense>
     </div>
   );
+
 
   const recentActivityContent = (
     <Suspense fallback={<RecentActivitySkeleton />}>

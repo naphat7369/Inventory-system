@@ -19,13 +19,8 @@ export default async function PropertiesPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Add New Property</h2>
-        <form action={async (formData) => {
-          'use server';
-          await createProperty({
-            name: formData.get('name') as string,
-            prefix: (formData.get('prefix') as string) || undefined
-          });
-        }} className="flex gap-4 items-end">
+        <form action={createProperty} className="flex gap-4 items-end">
+
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">Property Name *</label>
             <input 

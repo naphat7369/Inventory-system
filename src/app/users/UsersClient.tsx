@@ -52,7 +52,8 @@ export function UsersClient({ users, currentUserId }: UsersClientProps) {
               <Plus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>เพิ่มผู้ใช้งานใหม่ (Add New User)</span>
             </h2>
-            <form action={createUser} className="space-y-4">
+            <form action={async (formData) => { await createUser(formData); }} className="space-y-4">
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Username <span className="text-rose-500">*</span>

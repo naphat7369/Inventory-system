@@ -2,13 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes } from 'lucide-react';
-import { logout } from '@/app/actions';
-import { useState } from 'react';
+import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText } from 'lucide-react';
+import { logout, getExpiringRenewalsCount } from '@/app/actions';
+import { useState, useEffect } from 'react';
 
 export function Sidebar({ user }: { user: any }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [expiringCount, setExpiringCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      getExpiringRenewalsCount()
+        .then((res) => {
+          if (res && typeof res.totalAlerts === 'number') {
+            setExpiringCount(res.totalAlerts);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user, pathname]);
 
   let links = [];
 
@@ -19,6 +32,7 @@ export function Sidebar({ user }: { user: any }) {
       { name: 'อุปกรณ์นับจำนวน (Stock)', href: '/quantity-assets', icon: Boxes },
       { name: 'ยืม-คืน (Borrows)', href: '/borrows', icon: ArrowLeftRight },
       { name: 'Licenses', href: '/licenses', icon: Key },
+      { name: 'เอกสารต่ออายุ (Renewals)', href: '/renewals', icon: FileText, badge: expiringCount },
       { name: 'Categories', href: '/categories', icon: Tag },
       { name: 'Properties', href: '/properties', icon: Building },
       { name: 'Repair Center', href: '/repairs', icon: Wrench },
@@ -31,6 +45,7 @@ export function Sidebar({ user }: { user: any }) {
       { name: 'ขอยืมอุปกรณ์ (Borrow Form)', href: '/borrows', icon: ArrowLeftRight },
     ];
   }
+
 
   return (
     <>
@@ -83,8 +98,14 @@ export function Sidebar({ user }: { user: any }) {
               }`}
             >
               <Icon size={20} />
-              <span>{link.name}</span>
+              <span className="flex-1">{link.name}</span>
+              {typeof link.badge === 'number' && link.badge > 0 && (
+                <span className="bg-red-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full shadow-sm">
+                  {link.badge}
+                </span>
+              )}
             </Link>
+
           );
         })}
       </nav>

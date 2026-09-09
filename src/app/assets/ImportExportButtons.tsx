@@ -60,9 +60,10 @@ export function ImportExportButtons({ assets }: { assets: any[] }) {
           const result = await importAssets(JSON.parse(JSON.stringify(rows)));
           if (result.success) {
             alert(`Successfully imported ${result.count} assets!`);
-          } else if (result.error) {
-            alert(`Import Error:\n${result.error}`);
+          } else if ((result as any).error) {
+            alert(`Import Error:\n${(result as any).error}`);
           }
+
         } catch (err) {
           console.error(err);
           alert('Failed to parse the Excel file. Please ensure it is a valid .xlsx format.');

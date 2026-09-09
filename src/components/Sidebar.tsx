@@ -76,7 +76,7 @@ export function Sidebar({ user }: { user: any }) {
       )}
 
       {/* Sidebar Panel */}
-      <div className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-gray-900 text-white min-h-screen print:hidden transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-gray-900 text-white min-h-screen print:hidden transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} dark:border-r dark:border-slate-800 shadow-[4px_0_24px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.4)]`}>
         <div className="p-4 text-xl font-bold border-b border-gray-800 flex justify-between items-center">
           <span>Inventory System</span>
           <button 

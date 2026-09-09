@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --color-bg: #F8F9F5;
   --color-text: #1C1C1A;
@@ -8,15 +10,13 @@
   --color-border: #D4D6CF;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0F172A; /* Slate 900 background for dark mode */
-    --color-text: #F8FAFC; /* Slate 50 text */
-    --color-border: #334155; /* Slate 700 border */
-    /* Accents remain similar but tweaked for dark mode visibility */
-    --color-accent-primary: #F26A42;
-    --color-accent-secondary: #6B8265;
-  }
+.dark {
+  --color-bg: #0F172A; /* Slate 900 background for dark mode */
+  --color-text: #F8FAFC; /* Slate 50 text */
+  --color-border: #334155; /* Slate 700 border */
+  /* Accents remain similar but tweaked for dark mode visibility */
+  --color-accent-primary: #F26A42;
+  --color-accent-secondary: #6B8265;
 }
 
 @theme inline {

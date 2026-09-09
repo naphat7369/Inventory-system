@@ -5,10 +5,14 @@ import React from 'react';
 export async function StatsSummary({ searchParams }: { searchParams: { [key: string]: string | undefined } }) {
   const { statusFilter, categoryId, propertyId } = searchParams;
 
+  const statusFilterArray = statusFilter ? statusFilter.split(',') : undefined;
+  const categoryIdArray = categoryId ? categoryId.split(',') : undefined;
+  const propertyIdArray = propertyId ? propertyId.split(',') : undefined;
+
   const where = {
-    ...(statusFilter && { status: statusFilter }),
-    ...(categoryId && { categoryId }),
-    ...(propertyId && { propertyId }),
+    ...(statusFilterArray && { status: { in: statusFilterArray } }),
+    ...(categoryIdArray && { categoryId: { in: categoryIdArray } }),
+    ...(propertyIdArray && { propertyId: { in: propertyIdArray } }),
   };
 
   const [totalAssets, totalCategories, availableAssets, assetsInRepair] = await Promise.all([

@@ -44,12 +44,12 @@ export default async function PrintAssetsPage({ searchParams }: { searchParams: 
           return (
             <div 
               key={asset.id}
-              className="border-2 border-gray-800 rounded-lg p-6 w-96 bg-white break-inside-avoid mb-8 print:mb-0 print:border-2 print:border-solid print:border-gray-800 print:w-auto"
+              className="border-2 border-gray-800 rounded-lg p-6 w-96 bg-white dark:bg-slate-900 break-inside-avoid mb-8 print:mb-0 print:border-2 print:border-solid print:border-gray-800 print:w-auto"
             >
               <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-4">
                 <div>
                   <h2 className="font-bold text-xl uppercase tracking-wider">{asset.category.name}</h2>
-                  <p className="text-gray-500 text-sm">Asset ID: {asset.assetId}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Asset ID: {asset.assetId}</p>
                 </div>
                 <div className="w-12 h-12 bg-gray-900 rounded flex items-center justify-center text-white font-bold text-xs">
                   LOGO
@@ -60,16 +60,16 @@ export default async function PrintAssetsPage({ searchParams }: { searchParams: 
                 <div className="flex-1 space-y-2 min-w-0">
                   <p className="font-semibold text-lg break-words leading-tight">{asset.name}</p>
                   <div>
-                    <p className="text-gray-500 mb-1 text-xs">Prop / Loc</p>
-                    <p className="font-semibold text-gray-900 text-sm break-words">{asset.property?.name || '-'}{asset.location ? ` / ${asset.location}` : ''}</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-1 text-xs">Prop / Loc</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm break-words">{asset.property?.name || '-'}{asset.location ? ` / ${asset.location}` : ''}</p>
                   </div>
-                  <p className="text-sm"><span className="text-gray-500">Dept:</span> {asset.department || '-'}</p>
+                  <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Dept:</span> {asset.department || '-'}</p>
                   {asset.parent && (
-                    <p className="text-sm"><span className="text-gray-500">Conn:</span> {asset.parent.assetId}</p>
+                    <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Conn:</span> {asset.parent.assetId}</p>
                   )}
-                  <p className="text-sm"><span className="text-gray-500">IP:</span> {asset.ipAddress || '-'}</p>
+                  <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">IP:</span> {asset.ipAddress || '-'}</p>
                 </div>
-                <div className="bg-white p-2 border border-gray-200 rounded-lg shrink-0">
+                <div className="bg-white dark:bg-slate-900 p-2 border border-gray-200 dark:border-slate-700 rounded-lg shrink-0">
                   <QRCodeSVG value={qrUrl} size={96} />
                 </div>
               </div>

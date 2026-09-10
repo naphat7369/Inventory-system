@@ -158,7 +158,7 @@ export function EditQuantityStockModal({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
             />
           </div>
 
@@ -173,7 +173,7 @@ export function EditQuantityStockModal({
                 min={1}
                 value={totalQuantity}
                 onChange={(e) => setTotalQuantity(parseInt(e.target.value || '1', 10))}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-extrabold focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-extrabold focus:ring-2 focus:ring-indigo-500"
                 required
               />
             </div>
@@ -188,7 +188,7 @@ export function EditQuantityStockModal({
                 max={totalQuantity}
                 value={availableQuantity}
                 onChange={(e) => setAvailableQuantity(parseInt(e.target.value || '0', 10))}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-extrabold focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-extrabold focus:ring-2 focus:ring-indigo-500"
                 required
               />
             </div>
@@ -202,7 +202,7 @@ export function EditQuantityStockModal({
             <select
               value={propertyId}
               onChange={(e) => setPropertyId(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
             >
               <option value="">-- ไม่ระบุสาขา --</option>
               {properties.map((prop) => (
@@ -223,7 +223,7 @@ export function EditQuantityStockModal({
                 type="text"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
               />
             </div>
             <div>
@@ -234,7 +234,7 @@ export function EditQuantityStockModal({
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
               />
             </div>
           </div>
@@ -277,7 +277,7 @@ export function EditQuantityStockModal({
                 }
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                 required={reasonCategory === 'OTHER'}
               />
             </div>

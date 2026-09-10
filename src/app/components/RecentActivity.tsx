@@ -24,7 +24,7 @@ export async function RecentActivity() {
           {activities.map(activity => {
             const actor = activity.userId ? `User ${activity.userId}` : 'System'; // Replace with User object when auth exists
             
-            let color = 'text-gray-500';
+            let color = 'text-gray-500 dark:text-gray-400';
             if (activity.action === 'CREATED') color = 'text-green-600';
             if (activity.action === 'DELETED') color = 'text-red-600';
             if (activity.action === 'UPDATED') color = 'text-blue-600';

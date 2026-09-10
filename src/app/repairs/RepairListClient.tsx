@@ -73,15 +73,15 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
 
   return (
     <>
-      <div className="bg-white rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden">
         <div className="bg-[#F8F9F5] p-4 border-b border-[#D4D6CF] flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Filter size={18} className="text-gray-500" />
+              <Filter size={18} className="text-gray-500 dark:text-gray-400" />
               <select 
                 value={currentStatus}
                 onChange={(e) => updateFilters('status', e.target.value)}
-                className="bg-white border border-[#D4D6CF] rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1C1C1A]"
+                className="bg-white dark:bg-slate-900 border border-[#D4D6CF] rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1C1C1A]"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="IN_PROGRESS">In Progress</option>
@@ -90,11 +90,11 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Sort:</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Sort:</span>
               <select 
                 value={currentSort}
                 onChange={(e) => updateFilters('sort', e.target.value)}
-                className="bg-white border border-[#D4D6CF] rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1C1C1A]"
+                className="bg-white dark:bg-slate-900 border border-[#D4D6CF] rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1C1C1A]"
               >
                 <option value="sent-date-desc">Newest First</option>
                 <option value="sent-date-asc">Oldest First</option>
@@ -106,7 +106,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-white border-b border-[#D4D6CF]">
+            <thead className="bg-white dark:bg-slate-900 border-b border-[#D4D6CF]">
               <tr>
                 <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Asset</th>
                 <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Status</th>
@@ -124,11 +124,11 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                   <tr 
                     key={repair.id} 
                     onClick={() => setSelectedRepair(repair)}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer"
+                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50 cursor-pointer"
                   >
                     <td className="p-4">
                       <div className="font-medium text-blue-600">{repair.asset.assetId}</div>
-                      <div className="text-xs text-gray-500">{repair.asset.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{repair.asset.name}</div>
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-sm text-xs font-bold uppercase tracking-wider ${
@@ -140,15 +140,15 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                       </span>
                     </td>
                     <td className="p-4 text-sm text-[#1C1C1A] max-w-[200px] truncate">{repair.reason}</td>
-                    <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)] text-gray-600">
+                    <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)] text-gray-600 dark:text-gray-400">
                       {new Date(repair.sentDate).toLocaleDateString()}
                     </td>
                     <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)]">
-                      <span className={isWarning ? 'text-[#E24A22] font-bold' : 'text-gray-600'}>
+                      <span className={isWarning ? 'text-[#E24A22] font-bold' : 'text-gray-600 dark:text-gray-400'}>
                         {days} days
                       </span>
                     </td>
-                    <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)] text-gray-600">
+                    <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)] text-gray-600 dark:text-gray-400">
                       {repair.costCents ? `$${(repair.costCents / 100).toFixed(2)}` : '-'}
                     </td>
                   </tr>
@@ -156,7 +156,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
               })}
               {repairs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">No repair jobs found.</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-500 dark:text-gray-400">No repair jobs found.</td>
                 </tr>
               )}
             </tbody>
@@ -165,21 +165,21 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
         
         {totalPages > 1 && (
           <div className="bg-[#F8F9F5] p-4 border-t border-[#D4D6CF] flex items-center justify-between">
-            <div className="text-sm text-gray-600 font-[family-name:var(--font-inter)]">
+            <div className="text-sm text-gray-600 dark:text-gray-400 font-[family-name:var(--font-inter)]">
               Page {currentPage} of {totalPages}
             </div>
             <div className="flex gap-2">
               <button 
                 disabled={currentPage <= 1}
                 onClick={() => updateFilters('page', (currentPage - 1).toString())}
-                className="p-1.5 rounded-sm border border-[#D4D6CF] bg-white text-[#1C1C1A] disabled:opacity-50 hover:bg-gray-50"
+                className="p-1.5 rounded-sm border border-[#D4D6CF] bg-white dark:bg-slate-900 text-[#1C1C1A] disabled:opacity-50 hover:bg-gray-50 dark:bg-slate-800/50"
               >
                 <ChevronLeft size={18} />
               </button>
               <button 
                 disabled={currentPage >= totalPages}
                 onClick={() => updateFilters('page', (currentPage + 1).toString())}
-                className="p-1.5 rounded-sm border border-[#D4D6CF] bg-white text-[#1C1C1A] disabled:opacity-50 hover:bg-gray-50"
+                className="p-1.5 rounded-sm border border-[#D4D6CF] bg-white dark:bg-slate-900 text-[#1C1C1A] disabled:opacity-50 hover:bg-gray-50 dark:bg-slate-800/50"
               >
                 <ChevronRight size={18} />
               </button>
@@ -191,18 +191,18 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
       {selectedRepair && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#F8F9F5] rounded-sm shadow-xl w-full max-w-lg overflow-hidden border border-[#D4D6CF]">
-            <div className="bg-white p-4 border-b border-[#D4D6CF] flex justify-between items-center">
+            <div className="bg-white dark:bg-slate-900 p-4 border-b border-[#D4D6CF] flex justify-between items-center">
               <h2 className="font-bold text-lg text-[#1C1C1A]">Update Repair Job</h2>
-              <button onClick={() => setSelectedRepair(null)} className="text-gray-500 hover:text-gray-900">
+              <button onClick={() => setSelectedRepair(null)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100">
                 <X size={20} />
               </button>
             </div>
             
-            <div className="p-6 bg-white border-b border-[#D4D6CF]">
+            <div className="p-6 bg-white dark:bg-slate-900 border-b border-[#D4D6CF]">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-bold text-blue-600">{selectedRepair.asset.assetId}</h3>
-                  <p className="text-sm text-gray-500">{selectedRepair.asset.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{selectedRepair.asset.name}</p>
                 </div>
                 <span className={`px-2 py-1 rounded-sm text-xs font-bold uppercase tracking-wider ${
                   selectedRepair.status === 'COMPLETED' ? 'bg-[#4C6246]/10 text-[#4C6246]' :
@@ -227,7 +227,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                     id="status" 
                     name="status" 
                     defaultValue={selectedRepair.status}
-                    className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white font-[family-name:var(--font-inter)]"
+                    className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-inter)]"
                   >
                     <option value="IN_PROGRESS">In Progress</option>
                     <option value="WAITING_FOR_PARTS">Waiting for Parts</option>
@@ -243,7 +243,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                     id="cost" 
                     name="cost"
                     defaultValue={selectedRepair.costCents ? (selectedRepair.costCents / 100).toFixed(2) : ''}
-                    className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white font-[family-name:var(--font-jetbrains)]"
+                    className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-jetbrains)]"
                     placeholder="0.00"
                   />
                 </div>
@@ -256,7 +256,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                   id="technician" 
                   name="technician" 
                   defaultValue={selectedRepair.technician || ''}
-                  className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-inter)]"
                   placeholder="Who is repairing this?"
                 />
               </div>
@@ -268,7 +268,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                   name="resolution" 
                   rows={2}
                   defaultValue={selectedRepair.resolution || ''}
-                  className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white resize-none font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 resize-none font-[family-name:var(--font-inter)]"
                   placeholder="What was fixed?"
                 />
               </div>
@@ -288,7 +288,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                   <button 
                     type="button" 
                     onClick={() => setSelectedRepair(null)}
-                    className="px-4 py-2 text-[#1C1C1A] font-medium hover:bg-gray-100 rounded-sm transition-colors border border-[#D4D6CF] bg-white"
+                    className="px-4 py-2 text-[#1C1C1A] font-medium hover:bg-gray-100 dark:bg-slate-800 rounded-sm transition-colors border border-[#D4D6CF] bg-white dark:bg-slate-900"
                   >
                     Cancel
                   </button>

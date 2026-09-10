@@ -107,7 +107,7 @@ export function NewQuantityAssetModal({
               placeholder="เช่น เมาส์ไร้สาย Logitech, คีย์บอร์ด USB, สาย HDMI 2m"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
             />
           </div>
 
@@ -121,7 +121,7 @@ export function NewQuantityAssetModal({
                 placeholder="เว้นว่างเพื่อเจนรหัสให้อัตโนมัติ"
                 value={assetId}
                 onChange={(e) => setAssetId(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
               />
             </div>
 
@@ -132,7 +132,7 @@ export function NewQuantityAssetModal({
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                 required
               >
                 {categories.map((cat) => (
@@ -158,7 +158,7 @@ export function NewQuantityAssetModal({
                   setTotalQuantity(val);
                   setAvailableQuantity(val);
                 }}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500"
                 required
               />
             </div>
@@ -173,7 +173,7 @@ export function NewQuantityAssetModal({
                 max={totalQuantity}
                 value={availableQuantity}
                 onChange={(e) => setAvailableQuantity(parseInt(e.target.value || '0', 10))}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500"
                 required
               />
             </div>
@@ -186,7 +186,7 @@ export function NewQuantityAssetModal({
             <select
               value={propertyId}
               onChange={(e) => setPropertyId(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
             >
               <option value="">-- เลือกสาขาที่จัดเก็บ --</option>
               {properties.map((prop) => (
@@ -205,7 +205,7 @@ export function NewQuantityAssetModal({
                 placeholder="เช่น IT Center, Stock Room 2"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
               />
             </div>
             <div>
@@ -215,7 +215,7 @@ export function NewQuantityAssetModal({
                 placeholder="เช่น ตู้ A ชั้น 3"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
               />
             </div>
           </div>

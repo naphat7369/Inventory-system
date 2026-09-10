@@ -176,7 +176,7 @@ export function QuantityAssetStock() {
                   className={`p-4 border rounded-none md:rounded-sm space-y-2 transition ${
                     isLowStock
                       ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800'
-                      : 'bg-gray-50/50 dark:bg-slate-900/50 border-border hover:border-indigo-500/50'
+                      : 'bg-gray-50 dark:bg-slate-800/50/50 dark:bg-slate-900/50 border-border hover:border-indigo-500/50'
                   }`}
                 >
                   <div className="flex items-start justify-between">

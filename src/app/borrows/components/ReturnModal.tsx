@@ -102,7 +102,7 @@ export default function ReturnModal({
                 className={`p-3.5 rounded-xl border text-left font-medium transition flex items-start gap-3 ${
                   returnCondition === 'GOOD'
                     ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/20'
-                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                    : 'bg-white dark:bg-slate-900 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -120,7 +120,7 @@ export default function ReturnModal({
                 className={`p-3.5 rounded-xl border text-left font-medium transition flex items-start gap-3 ${
                   returnCondition === 'DAMAGED'
                     ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 text-amber-900 dark:text-amber-300 ring-2 ring-amber-500/20'
-                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                    : 'bg-white dark:bg-slate-900 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
                 <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -150,7 +150,7 @@ export default function ReturnModal({
               placeholder={returnCondition === 'DAMAGED' ? 'ระบุอาการเสีย หรือความเสียหายที่พบ' : 'หมายเหตุเพิ่มเติม (ถ้ามี)'}
               value={returnNotes}
               onChange={(e) => setReturnNotes(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-hidden dark:text-slate-100 resize-none"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-hidden dark:text-slate-100 resize-none"
               required={returnCondition === 'DAMAGED'}
             />
           </div>

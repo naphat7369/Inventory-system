@@ -50,31 +50,31 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Device Name *</label>
-          <input type="text" name="name" required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Device Name *</label>
+          <input type="text" name="name" required className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Asset ID</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asset ID</label>
           <input 
             type="text" 
             name="assetId" 
             value={assetIdValue}
             onChange={(e) => setAssetIdValue(e.target.value)}
             placeholder="Auto-generated if left blank" 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50" 
+            className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800/50" 
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Property</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Property</label>
           <select 
             name="propertyId" 
             value={selectedProperty}
             onChange={(e) => setSelectedProperty(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select a property (optional)</option>
             {properties.map(prop => (
@@ -84,10 +84,10 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Connected To (Parent Asset)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Connected To (Parent Asset)</label>
           <select 
             name="parentId" 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">None</option>
             {allAssets.map(a => (
@@ -97,13 +97,13 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
           <select 
             name="categoryId" 
             required 
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select a category</option>
             {categories.map(cat => (
@@ -113,33 +113,33 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-          <input type="text" name="location" placeholder="e.g. Building A - Room 101" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+          <input type="text" name="location" placeholder="e.g. Building A - Room 101" className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
-          <input type="text" name="ipAddress" placeholder="e.g. 192.168.1.100" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">IP Address</label>
+          <input type="text" name="ipAddress" placeholder="e.g. 192.168.1.100" className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-          <input type="text" name="department" placeholder="e.g. IT, HR, Sales" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
+          <input type="text" name="department" placeholder="e.g. IT, HR, Sales" className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Owner Inventory</label>
-          <input type="text" name="owner" placeholder="Name of person responsible" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Inventory</label>
+          <input type="text" name="owner" placeholder="Name of person responsible" className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">OS</label>
-          <input type="text" name="os" placeholder="e.g. Windows 11, macOS" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OS</label>
+          <input type="text" name="os" placeholder="e.g. Windows 11, macOS" className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select name="status" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+          <select name="status" className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="Available">Available</option>
             <option value="In-use">In-use</option>
             <option value="Borrowed">Borrowed</option>
@@ -149,12 +149,12 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
         </div>
 
         <div className="flex items-center pt-5">
-          <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-700 cursor-pointer select-none">
+          <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
             <input
               type="checkbox"
               name="isBorrowable"
               defaultChecked
-              className="w-4 h-4 text-blue-600 rounded-sm border-gray-300 focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 rounded-sm border-gray-300 dark:border-slate-600 focus:ring-blue-500"
             />
             <span>เปิดอนุญาตให้อุปกรณ์นี้ยืมได้ (Borrowable Asset)</span>
           </label>
@@ -163,16 +163,16 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
 
       {customFields.length > 0 && (
         <div className="pt-6 border-t border-gray-100">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Custom Fields ({activeCategory?.name})</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Custom Fields ({activeCategory?.name})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {customFields.map((field: any) => (
               <div key={field.id}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{field.name}</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{field.name}</label>
                 <input 
                   type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
                   value={customData[field.id] || ''}
                   onChange={(e) => setCustomData({...customData, [field.id]: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             ))}
@@ -181,7 +181,7 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
       )}
 
       <div className="pt-6 flex justify-end gap-4">
-        <button type="button" onClick={() => router.back()} className="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">
+        <button type="button" onClick={() => router.back()} className="px-6 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:bg-slate-800/50">
           Cancel
         </button>
         <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">

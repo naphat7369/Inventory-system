@@ -68,29 +68,29 @@ export function AssetSearchBar({ defaultValue }: { defaultValue: string }) {
           if (suggestions.length > 0) setShowDropdown(true);
         }}
         placeholder="Search by ID, Name, or Owner..." 
-        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
         autoComplete="off"
       />
       
       {showDropdown && (query.length >= 2) && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-3 text-sm text-gray-500 text-center font-mono">Loading...</div>
+            <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center font-mono">Loading...</div>
           ) : suggestions.length > 0 ? (
             <ul className="max-h-60 overflow-y-auto">
               {suggestions.map((asset) => (
                 <li 
                   key={asset.id}
                   onClick={() => handleSelect(asset.name)}
-                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex flex-col border-b border-gray-50 last:border-0"
+                  className="px-4 py-2 hover:bg-gray-50 dark:bg-slate-800/50 cursor-pointer flex flex-col border-b border-gray-50 last:border-0"
                 >
-                  <span className="font-medium text-gray-900">{asset.name}</span>
-                  <span className="text-xs text-gray-500 font-mono">{asset.assetId} {asset.owner ? `• ${asset.owner}` : ''}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{asset.name}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{asset.assetId} {asset.owner ? `• ${asset.owner}` : ''}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="p-3 text-sm text-gray-500 text-center font-mono">No matches found</div>
+            <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center font-mono">No matches found</div>
           )}
         </div>
       )}

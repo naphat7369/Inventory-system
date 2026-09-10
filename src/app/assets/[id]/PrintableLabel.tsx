@@ -36,7 +36,7 @@ export default function PrintableLabel({ asset, role }: { asset: any, role?: str
         
         {role === 'ADMIN' ? (
           <select 
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+            className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900"
             value={asset.status}
             onChange={(e) => updateAssetStatus(asset.id, e.target.value)}
           >
@@ -50,14 +50,14 @@ export default function PrintableLabel({ asset, role }: { asset: any, role?: str
             asset.status === 'Available' ? 'bg-green-50 text-green-700 border-green-200' :
             asset.status === 'In-use' ? 'bg-blue-50 text-blue-700 border-blue-200' :
             asset.status === 'Repairing' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-            'bg-gray-50 text-gray-700 border-gray-200'
+            'bg-gray-50 dark:bg-slate-800/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700'
           }`}>
             {asset.status}
           </div>
         )}
       </div>
 
-      <div className="bg-gray-50 rounded-xl shadow-sm border border-gray-200 p-8 flex flex-col items-center gap-8 overflow-y-auto max-h-[600px]">
+      <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 flex flex-col items-center gap-8 overflow-y-auto max-h-[600px]">
         {/* Printable Area */}
         <div ref={componentRef} className="print:p-0 flex flex-col gap-8">
           {itemsToPrint.map((item, index) => {
@@ -65,12 +65,12 @@ export default function PrintableLabel({ asset, role }: { asset: any, role?: str
             return (
               <div 
                 key={item.id}
-                className="border-2 border-gray-800 rounded-lg p-6 w-96 bg-white print:border-none print:shadow-none break-inside-avoid page-break-after"
+                className="border-2 border-gray-800 rounded-lg p-6 w-96 bg-white dark:bg-slate-900 print:border-none print:shadow-none break-inside-avoid page-break-after"
               >
                 <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-4">
                   <div>
                     <h2 className="font-bold text-xl uppercase tracking-wider">{item.category?.name || 'ASSET'}</h2>
-                    <p className="text-gray-500 text-sm">Asset ID: {item.assetId}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Asset ID: {item.assetId}</p>
                   </div>
                   <div className="w-12 h-12 bg-gray-900 rounded flex items-center justify-center text-white font-bold text-xs">
                     LOGO
@@ -81,16 +81,16 @@ export default function PrintableLabel({ asset, role }: { asset: any, role?: str
                   <div className="flex-1 space-y-2 min-w-0">
                     <p className="font-semibold text-lg break-words leading-tight">{item.name}</p>
                     <div>
-                      <p className="text-gray-500 mb-1 text-xs">Prop / Loc</p>
-                      <p className="font-semibold text-gray-900 text-sm">{item.property?.name || '-'}{item.location ? ` / ${item.location}` : ''}</p>
+                      <p className="text-gray-500 dark:text-gray-400 mb-1 text-xs">Prop / Loc</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{item.property?.name || '-'}{item.location ? ` / ${item.location}` : ''}</p>
                     </div>
-                    <p className="text-sm"><span className="text-gray-500">Dept:</span> {item.department || '-'}</p>
+                    <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Dept:</span> {item.department || '-'}</p>
                     {item.parentId && item.id === asset.id && item.parent && (
-                      <p className="text-sm"><span className="text-gray-500">Conn:</span> {item.parent.assetId}</p>
+                      <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Conn:</span> {item.parent.assetId}</p>
                     )}
-                    <p className="text-sm"><span className="text-gray-500">IP:</span> {item.ipAddress || '-'}</p>
+                    <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">IP:</span> {item.ipAddress || '-'}</p>
                   </div>
-                  <div className="bg-white p-2 border border-gray-200 rounded-lg shrink-0">
+                  <div className="bg-white dark:bg-slate-900 p-2 border border-gray-200 dark:border-slate-700 rounded-lg shrink-0">
                     <QRCodeSVG value={itemQrUrl || item.assetId} size={96} />
                   </div>
                 </div>

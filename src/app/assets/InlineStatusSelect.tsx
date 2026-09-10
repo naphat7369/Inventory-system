@@ -19,7 +19,7 @@ export function InlineStatusSelect({ id, currentStatus, role }: { id: string, cu
       case 'In-use': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'Borrowed': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       case 'Repairing': return 'bg-orange-100 text-orange-700 border-orange-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      default: return 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700';
     }
   };
 
@@ -38,11 +38,11 @@ export function InlineStatusSelect({ id, currentStatus, role }: { id: string, cu
       disabled={isPending}
       className={`px-3 py-1 rounded-full text-sm font-medium border appearance-none cursor-pointer outline-none text-center ${getStatusColor(currentStatus)} ${isPending ? 'opacity-50' : 'hover:brightness-95'}`}
     >
-      <option value="Available" className="bg-white text-gray-900">Available</option>
-      <option value="In-use" className="bg-white text-gray-900">In-use</option>
-      <option value="Borrowed" className="bg-white text-gray-900">Borrowed</option>
-      <option value="Repairing" className="bg-white text-gray-900">Repairing</option>
-      <option value="Disposed" className="bg-white text-gray-900">Disposed</option>
+      <option value="Available" className="bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">Available</option>
+      <option value="In-use" className="bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">In-use</option>
+      <option value="Borrowed" className="bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">Borrowed</option>
+      <option value="Repairing" className="bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">Repairing</option>
+      <option value="Disposed" className="bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100">Disposed</option>
     </select>
   );
 }

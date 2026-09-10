@@ -35,7 +35,7 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
               name="search"
               defaultValue={search}
               placeholder="Search licenses..."
-              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </form>
           {session?.role === 'ADMIN' && (
@@ -49,16 +49,16 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
             <tr>
-              <th className="p-4 font-semibold text-gray-600">Name / Account</th>
-              <th className="p-4 font-semibold text-gray-600">Slots Used</th>
-              <th className="p-4 font-semibold text-gray-600 hidden md:table-cell">Property</th>
-              <th className="p-4 font-semibold text-gray-600 hidden lg:table-cell">Expires</th>
-              <th className="p-4 font-semibold text-gray-600">Status</th>
-              <th className="p-4 font-semibold text-gray-600 text-center w-24">Actions</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Name / Account</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Slots Used</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 hidden md:table-cell">Property</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 hidden lg:table-cell">Expires</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Status</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 text-center w-24">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -68,28 +68,28 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
               const isExpired = license.expirationDate && new Date(license.expirationDate) < new Date();
               
               return (
-                <tr key={license.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                <tr key={license.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50 transition-colors">
                   <td className="p-4">
-                    <div className="font-semibold text-gray-900">{license.name}</div>
-                    {license.accountEmail && <div className="text-sm text-gray-500">{license.accountEmail}</div>}
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">{license.name}</div>
+                    {license.accountEmail && <div className="text-sm text-gray-500 dark:text-gray-400">{license.accountEmail}</div>}
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden w-24">
+                      <div className="flex-1 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden w-24">
                         <div 
                           className={`h-full ${isFull ? 'bg-red-500' : 'bg-green-500'}`} 
                           style={{ width: `${Math.min(usedRatio * 100, 100)}%` }}
                         />
                       </div>
-                      <span className={`text-sm font-medium ${isFull ? 'text-red-600' : 'text-gray-600'}`}>
+                      <span className={`text-sm font-medium ${isFull ? 'text-red-600' : 'text-gray-600 dark:text-gray-400'}`}>
                         {license._count.assignments} / {license.totalSlots}
                       </span>
                     </div>
                   </td>
-                  <td className="p-4 hidden md:table-cell text-gray-600">
+                  <td className="p-4 hidden md:table-cell text-gray-600 dark:text-gray-400">
                     {license.property?.name || '-'}
                   </td>
-                  <td className="p-4 hidden lg:table-cell text-gray-600">
+                  <td className="p-4 hidden lg:table-cell text-gray-600 dark:text-gray-400">
                     {license.expirationDate ? new Date(license.expirationDate).toLocaleDateString() : '-'}
                   </td>
                   <td className="p-4">
@@ -116,7 +116,7 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
             
             {licenses.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-gray-500">
+                <td colSpan={6} className="p-12 text-center text-gray-500 dark:text-gray-400">
                   <Key size={48} className="mx-auto text-gray-300 mb-4" />
                   <p className="text-lg font-medium">No licenses found</p>
                   <p>Add a new software license to start managing slots.</p>

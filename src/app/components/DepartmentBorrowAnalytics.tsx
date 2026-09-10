@@ -151,7 +151,7 @@ export function DepartmentBorrowAnalytics() {
             {stats.map((item, idx) => (
               <div
                 key={idx}
-                className="bg-gray-50/50 dark:bg-slate-900/50 p-4 border border-border rounded-none md:rounded-sm space-y-2 hover:border-accent-primary/50 transition"
+                className="bg-gray-50 dark:bg-slate-800/50/50 dark:bg-slate-900/50 p-4 border border-border rounded-none md:rounded-sm space-y-2 hover:border-accent-primary/50 transition"
               >
                 <div className="flex items-center justify-between border-b border-border/60 pb-2">
                   <span className="font-bold text-text text-sm flex items-center gap-1.5">

@@ -17,28 +17,28 @@ export default async function PropertiesPage() {
         <Building className="text-blue-600" /> Properties Management
       </h1>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Add New Property</h2>
         <form action={createProperty} className="flex gap-4 items-end">
 
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Property Name *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Property Name *</label>
             <input 
               type="text" 
               name="name" 
               required 
               placeholder="e.g. Headquarters, Branch 1"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="w-48">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Prefix (Optional)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prefix (Optional)</label>
             <input 
               type="text" 
               name="prefix" 
               placeholder="e.g. HQ, B1"
               maxLength={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
             />
           </div>
           <button 
@@ -50,22 +50,22 @@ export default async function PropertiesPage() {
         </form>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
             <tr>
-              <th className="p-4 font-semibold text-gray-600">Property Name</th>
-              <th className="p-4 font-semibold text-gray-600">Prefix</th>
-              <th className="p-4 font-semibold text-gray-600">Assets</th>
-              <th className="p-4 font-semibold text-gray-600 w-24">Action</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Property Name</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Prefix</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Assets</th>
+              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 w-24">Action</th>
             </tr>
           </thead>
           <tbody>
             {properties.map(property => (
-              <tr key={property.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+              <tr key={property.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50">
                 <td className="p-4 font-medium">{property.name}</td>
-                <td className="p-4 text-gray-500">{property.prefix || '-'}</td>
-                <td className="p-4 text-gray-500">{property._count.assets} items</td>
+                <td className="p-4 text-gray-500 dark:text-gray-400">{property.prefix || '-'}</td>
+                <td className="p-4 text-gray-500 dark:text-gray-400">{property._count.assets} items</td>
                 <td className="p-4">
                   <form action={async () => {
                     'use server';
@@ -85,7 +85,7 @@ export default async function PropertiesPage() {
             ))}
             {properties.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-8 text-center text-gray-500">No properties added yet.</td>
+                <td colSpan={4} className="p-8 text-center text-gray-500 dark:text-gray-400">No properties added yet.</td>
               </tr>
             )}
           </tbody>

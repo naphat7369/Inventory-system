@@ -16,20 +16,20 @@ export function AnalyticsPanelSkeleton() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <div className="bg-bg border border-border p-6 rounded-none md:rounded-sm animate-pulse h-80">
         <div className="h-4 bg-gray-200 rounded w-1/4 mb-6"></div>
-        <div className="h-64 bg-gray-100 rounded-full w-64 mx-auto"></div>
+        <div className="h-64 bg-gray-100 dark:bg-slate-800 rounded-full w-64 mx-auto"></div>
       </div>
       <div className="bg-bg border border-border p-6 rounded-none md:rounded-sm animate-pulse h-80">
         <div className="h-4 bg-gray-200 rounded w-1/4 mb-6"></div>
-        <div className="h-64 bg-gray-100 rounded-full w-64 mx-auto"></div>
+        <div className="h-64 bg-gray-100 dark:bg-slate-800 rounded-full w-64 mx-auto"></div>
       </div>
       <div className="bg-bg border border-border rounded-none md:rounded-sm animate-pulse h-80">
         <div className="p-6 border-b border-border">
           <div className="h-4 bg-gray-200 rounded w-1/4"></div>
         </div>
         <div className="p-4 space-y-4">
-          <div className="h-12 bg-gray-100 rounded w-full"></div>
-          <div className="h-12 bg-gray-100 rounded w-full"></div>
-          <div className="h-12 bg-gray-100 rounded w-full"></div>
+          <div className="h-12 bg-gray-100 dark:bg-slate-800 rounded w-full"></div>
+          <div className="h-12 bg-gray-100 dark:bg-slate-800 rounded w-full"></div>
+          <div className="h-12 bg-gray-100 dark:bg-slate-800 rounded w-full"></div>
         </div>
       </div>
     </div>
@@ -42,7 +42,7 @@ export function RecentActivitySkeleton() {
       <div className="h-4 bg-gray-200 rounded w-1/4 mb-6"></div>
       <div className="space-y-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-12 bg-gray-100 rounded w-full"></div>
+          <div key={i} className="h-12 bg-gray-100 dark:bg-slate-800 rounded w-full"></div>
         ))}
       </div>
     </div>

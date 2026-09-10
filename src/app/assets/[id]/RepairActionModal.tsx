@@ -57,9 +57,9 @@ export function RepairActionModal({ assetId, status, existingActiveRepair }: { a
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#F8F9F5] rounded-sm shadow-xl w-full max-w-md overflow-hidden border border-[#D4D6CF]">
-            <div className="bg-white p-4 border-b border-[#D4D6CF] flex justify-between items-center">
+            <div className="bg-white dark:bg-slate-900 p-4 border-b border-[#D4D6CF] flex justify-between items-center">
               <h2 className="font-bold text-lg text-[#1C1C1A]">Send Asset to Repair</h2>
-              <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-900">
+              <button onClick={() => setIsOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100">
                 <X size={20} />
               </button>
             </div>
@@ -75,7 +75,7 @@ export function RepairActionModal({ assetId, status, existingActiveRepair }: { a
                   name="reason" 
                   required
                   rows={3}
-                  className="w-full border border-[#D4D6CF] rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white resize-none font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 resize-none font-[family-name:var(--font-inter)]"
                   placeholder="Describe the issue..."
                 />
               </div>
@@ -88,7 +88,7 @@ export function RepairActionModal({ assetId, status, existingActiveRepair }: { a
                   type="text" 
                   id="technician" 
                   name="technician" 
-                  className="w-full border border-[#D4D6CF] rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-inter)]"
                   placeholder="e.g. IT Dept or FixIt Shop"
                 />
               </div>
@@ -97,7 +97,7 @@ export function RepairActionModal({ assetId, status, existingActiveRepair }: { a
                 <button 
                   type="button" 
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 text-[#1C1C1A] font-medium hover:bg-gray-100 rounded-sm transition-colors border border-[#D4D6CF] bg-white"
+                  className="px-4 py-2 text-[#1C1C1A] font-medium hover:bg-gray-100 dark:bg-slate-800 rounded-sm transition-colors border border-[#D4D6CF] bg-white dark:bg-slate-900"
                 >
                   Cancel
                 </button>

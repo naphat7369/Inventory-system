@@ -86,7 +86,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             <>
               <Link 
                 href={trash === 'true' ? '/assets' : '/assets?trash=true'} 
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors border ${trash === 'true' ? 'bg-gray-200 text-gray-800 hover:bg-gray-300 border-gray-300' : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors border ${trash === 'true' ? 'bg-gray-200 text-gray-800 dark:text-gray-200 hover:bg-gray-300 border-gray-300 dark:border-slate-600' : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'}`}
               >
                 <Trash2 size={20} /> {trash === 'true' ? 'Exit Trash' : 'View Trash'}
               </Link>
@@ -101,7 +101,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4">
         <form method="GET" className="flex flex-col md:flex-row gap-4 md:items-center">
           <AssetSearchBar defaultValue={search} />
           <div className="relative w-full md:w-48">
@@ -109,7 +109,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             <select 
               name="status" 
               defaultValue={status}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900"
             >
               <option value="">All Statuses</option>
               <option value="Available">Available</option>
@@ -123,7 +123,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             <select 
               name="completeness" 
               defaultValue={completeness}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900"
             >
               <option value="">All Data</option>
               <option value="incomplete">Incomplete Only</option>
@@ -133,7 +133,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             Filter
           </button>
           {(search || status || completeness) && (
-            <Link href="/assets" className="w-full md:w-auto text-center text-gray-500 hover:text-gray-700 font-medium px-2 py-2">
+            <Link href="/assets" className="w-full md:w-auto text-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 font-medium px-2 py-2">
               Clear
             </Link>
           )}
@@ -142,7 +142,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
 
       <AssetTable assets={assets} role={session?.role as string} isTrash={trash === 'true'} />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">  
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">  
         <Pagination 
           currentPage={currentPage} 
           totalPages={totalPages} 

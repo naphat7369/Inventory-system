@@ -113,7 +113,7 @@ export function DocumentPreviewModal({ isOpen, onClose, attachment }: DocumentPr
           {isPdf ? (
             <iframe
               src={previewUrl}
-              className="w-full h-full rounded-md border border-gray-800 bg-white"
+              className="w-full h-full rounded-md border border-gray-800 bg-white dark:bg-slate-900"
               title={attachment.fileName}
             />
           ) : isImage ? (

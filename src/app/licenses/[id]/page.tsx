@@ -28,7 +28,7 @@ export default async function LicenseDetailsPage({ params }: { params: Promise<{
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <div className="mb-6">
-        <Link href="/licenses" className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors w-fit">
+        <Link href="/licenses" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 transition-colors w-fit">
           <ArrowLeft size={20} /> Back to Licenses
         </Link>
       </div>
@@ -38,7 +38,7 @@ export default async function LicenseDetailsPage({ params }: { params: Promise<{
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Key className="text-blue-600" /> {license.name}
           </h1>
-          <div className="flex items-center gap-4 mt-2 text-gray-500">
+          <div className="flex items-center gap-4 mt-2 text-gray-500 dark:text-gray-400">
             {license.property && <span className="flex items-center gap-1"><ShieldCheck size={16}/> {license.property.name}</span>}
             <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${license.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
               {license.status}
@@ -67,16 +67,16 @@ export default async function LicenseDetailsPage({ params }: { params: Promise<{
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-gray-500 text-sm font-medium mb-1 flex items-center gap-2"><Mail size={16}/> Account Email</h3>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1 flex items-center gap-2"><Mail size={16}/> Account Email</h3>
           <p className="font-medium text-lg">{license.accountEmail || '-'}</p>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-gray-500 text-sm font-medium mb-1 flex items-center gap-2"><Key size={16}/> Product Key</h3>
-          <p className="font-mono text-sm bg-gray-50 p-2 rounded border border-gray-100 overflow-x-auto">{license.productKey || '-'}</p>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1 flex items-center gap-2"><Key size={16}/> Product Key</h3>
+          <p className="font-mono text-sm bg-gray-50 dark:bg-slate-800/50 p-2 rounded border border-gray-100 overflow-x-auto">{license.productKey || '-'}</p>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h3 className="text-gray-500 text-sm font-medium mb-1 flex items-center gap-2"><Calendar size={16}/> Expiration</h3>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1 flex items-center gap-2"><Calendar size={16}/> Expiration</h3>
           <p className="font-medium text-lg">
             {license.expirationDate ? new Date(license.expirationDate).toLocaleDateString() : 'Lifetime'}
           </p>
@@ -84,42 +84,42 @@ export default async function LicenseDetailsPage({ params }: { params: Promise<{
       </div>
 
       {/* Slot Management Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
           <div>
             <h2 className="text-xl font-bold">Slot Management</h2>
-            <p className="text-gray-500 text-sm">Assign available slots to team members</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Assign available slots to team members</p>
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold flex items-end gap-1">
               <span className={isFull ? 'text-red-600' : 'text-blue-600'}>{usedSlots}</span>
               <span className="text-gray-400 text-lg">/ {license.totalSlots}</span>
             </div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Slots Used</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Slots Used</p>
           </div>
         </div>
 
         <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 order-2 lg:order-1">
-            <h3 className="font-semibold mb-4 text-gray-700 flex items-center gap-2">
+            <h3 className="font-semibold mb-4 text-gray-700 dark:text-gray-300 flex items-center gap-2">
               <User size={18} /> Assigned Users
             </h3>
             
             {license.assignments.length === 0 ? (
-              <div className="text-center p-8 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-gray-500">
+              <div className="text-center p-8 bg-gray-50 dark:bg-slate-800/50 border border-dashed border-gray-300 dark:border-slate-600 rounded-xl text-gray-500 dark:text-gray-400">
                 No users assigned yet. Use the form to assign a slot.
               </div>
             ) : (
               <div className="space-y-3">
                 {license.assignments.map((assignment, idx) => (
-                  <div key={assignment.id} className="flex justify-between items-center p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                  <div key={assignment.id} className="flex justify-between items-center p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl">
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-sm">
                         {idx + 1}
                       </div>
                       <div>
                         <p className="font-semibold">{assignment.assignedTo}</p>
-                        {assignment.assignedEmail && <p className="text-sm text-gray-500">{assignment.assignedEmail}</p>}
+                        {assignment.assignedEmail && <p className="text-sm text-gray-500 dark:text-gray-400">{assignment.assignedEmail}</p>}
                       </div>
                     </div>
                     

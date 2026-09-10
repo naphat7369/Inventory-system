@@ -7,7 +7,7 @@
   --color-text: #1C1C1A;
   --color-accent-primary: #E24A22;
   --color-accent-secondary: #4C6246;
-  --color-border: #D4D6CF;
+  --color-border: #C2C5BC; /* Darkened from #D4D6CF for better contrast in light mode */
 }
 
 .dark {

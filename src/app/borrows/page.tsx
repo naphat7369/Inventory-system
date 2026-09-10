@@ -157,7 +157,7 @@ export default function BorrowsPage() {
       {currentUser && currentUser.role !== 'ADMIN' && (
         <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-white/20 backdrop-blur-xs rounded-full text-xs font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-white dark:bg-slate-900/20 backdrop-blur-xs rounded-full text-xs font-bold uppercase tracking-wider">
               <span>สำหรับพนักงาน (Staff Portal)</span>
             </div>
             <h2 className="text-xl font-extrabold">แบบฟอร์มยื่นคำขอยืมอุปกรณ์</h2>
@@ -169,14 +169,14 @@ export default function BorrowsPage() {
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setIsQrOpen(true)}
-              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold text-sm rounded-xl border border-white/20 transition flex items-center gap-2"
+              className="px-4 py-2.5 bg-white dark:bg-slate-900/10 hover:bg-white dark:bg-slate-900/20 text-white font-semibold text-sm rounded-xl border border-white/20 transition flex items-center gap-2"
             >
               <QrCode className="w-4 h-4" />
               <span>สแกน QR อุปกรณ์</span>
             </button>
             <button
               onClick={() => handleOpenBorrow()}
-              className="px-5 py-2.5 bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-sm rounded-xl shadow-sm transition flex items-center gap-2"
+              className="px-5 py-2.5 bg-white dark:bg-slate-900 text-indigo-700 hover:bg-indigo-50 font-bold text-sm rounded-xl shadow-sm transition flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               <span>กรอกแบบฟอร์มขอยืมอุปกรณ์</span>

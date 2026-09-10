@@ -96,7 +96,7 @@ export default function VoidConfirmModal({
               placeholder="ระบุเหตุผล เช่น คีย์ลงรายการผิดคน, สแกนรหัสอุปกรณ์ผิดเครื่อง"
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden dark:text-slate-100 resize-none"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden dark:text-slate-100 resize-none"
               required
             />
           </div>

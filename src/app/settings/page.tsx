@@ -26,12 +26,12 @@ export default async function SettingsPage() {
               name="name"
               placeholder="Field Name (e.g. MAC Address)"
               required
-              className="flex-1 w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="flex-1 w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <select
               name="type"
               required
-              className="w-full md:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full md:w-auto px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="text">Text</option>
               <option value="number">Number</option>
@@ -40,7 +40,7 @@ export default async function SettingsPage() {
             <select
               name="categoryId"
               required
-              className="w-full md:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full md:w-auto px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Select Category</option>
               {categories.map(cat => (
@@ -48,7 +48,7 @@ export default async function SettingsPage() {
               ))}
             </select>
           </div>
-          <button type="submit" className="w-full md:w-auto md:self-end px-6 py-2 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900">
+          <button type="submit" className="w-full md:w-auto md:self-end px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">
             Add Field
           </button>
         </form>
@@ -67,13 +67,13 @@ export default async function SettingsPage() {
           </thead>
           <tbody>
             {customFields.map(field => (
-              <tr key={field.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50">
+              <tr key={field.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                 <td className="p-4 font-medium">{field.name}</td>
                 <td className="p-4 text-gray-600 dark:text-gray-400 capitalize">{field.type}</td>
                 <td className="p-4 text-gray-600 dark:text-gray-400">{field.category.name}</td>
                 <td className="p-4">
                   <form action={deleteCustomField.bind(null, field.id)}>
-                    <button type="submit" className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50">
+                    <button type="submit" className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
                       <Trash2 size={18} />
                     </button>
                   </form>

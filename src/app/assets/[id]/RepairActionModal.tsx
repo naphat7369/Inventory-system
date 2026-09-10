@@ -56,18 +56,18 @@ export function RepairActionModal({ assetId, status, existingActiveRepair }: { a
 
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#F8F9F5] rounded-sm shadow-xl w-full max-w-md overflow-hidden border border-[#D4D6CF]">
-            <div className="bg-white dark:bg-slate-900 p-4 border-b border-[#D4D6CF] flex justify-between items-center">
-              <h2 className="font-bold text-lg text-[#1C1C1A]">Send Asset to Repair</h2>
-              <button onClick={() => setIsOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100">
+          <div className="bg-white dark:bg-slate-900 rounded-sm shadow-xl w-full max-w-md overflow-hidden border border-[#D4D6CF] dark:border-slate-700">
+            <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700 flex justify-between items-center">
+              <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">Send Asset to Repair</h2>
+              <button onClick={() => setIsOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-sm text-sm">{error}</div>}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white dark:bg-slate-900">
+              {error && <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 rounded-sm text-sm">{error}</div>}
               
               <div>
-                <label htmlFor="reason" className="block text-sm font-medium text-[#1C1C1A] mb-1">
+                <label htmlFor="reason" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Reason for Repair <span className="text-[#E24A22]">*</span>
                 </label>
                 <textarea 
@@ -75,29 +75,29 @@ export function RepairActionModal({ assetId, status, existingActiveRepair }: { a
                   name="reason" 
                   required
                   rows={3}
-                  className="w-full border border-[#D4D6CF] rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 resize-none font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] dark:border-slate-700 rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 resize-none font-[family-name:var(--font-inter)]"
                   placeholder="Describe the issue..."
                 />
               </div>
 
               <div>
-                <label htmlFor="technician" className="block text-sm font-medium text-[#1C1C1A] mb-1">
+                <label htmlFor="technician" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Technician / Vendor (Optional)
                 </label>
                 <input 
                   type="text" 
                   id="technician" 
                   name="technician" 
-                  className="w-full border border-[#D4D6CF] rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] dark:border-slate-700 rounded-sm p-3 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-[family-name:var(--font-inter)]"
                   placeholder="e.g. IT Dept or FixIt Shop"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-[#D4D6CF]">
+              <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-[#D4D6CF] dark:border-slate-700">
                 <button 
                   type="button" 
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 text-[#1C1C1A] font-medium hover:bg-gray-100 dark:bg-slate-800 rounded-sm transition-colors border border-[#D4D6CF] bg-white dark:bg-slate-900"
+                  className="px-4 py-2 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 rounded-sm transition-colors border border-[#D4D6CF] dark:border-slate-700 bg-white dark:bg-slate-800"
                 >
                   Cancel
                 </button>

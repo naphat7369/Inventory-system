@@ -1,9 +1,9 @@
-'use me';
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { Building, RefreshCw, PieChart as PieIcon, Table } from 'lucide-react';
 import { getDepartmentBorrowStats } from '../borrows/actions';
+import { useTheme } from 'next-themes';
 import {
   ResponsiveContainer,
   PieChart,
@@ -17,6 +17,14 @@ export function DepartmentBorrowAnalytics() {
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'CHART' | 'TABLE'>('CHART');
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const COLORS = [
     '#E24A22', // Safety Orange
@@ -119,7 +127,8 @@ export function DepartmentBorrowAnalytics() {
                   outerRadius={85}
                   paddingAngle={4}
                   dataKey="value"
-                  stroke="none"
+                  stroke={isDark ? '#0F172A' : '#F8F9F5'}
+                  strokeWidth={1.5}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -127,20 +136,24 @@ export function DepartmentBorrowAnalytics() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#F8F9F5',
-                    borderColor: '#D4D6CF',
+                    backgroundColor: isDark ? '#1E293B' : '#F8F9F5',
+                    borderColor: isDark ? '#475569' : '#D4D6CF',
                     borderRadius: '4px',
-                    color: '#1C1C1A',
+                    color: isDark ? '#F8FAFC' : '#1C1C1A',
                     fontFamily: 'var(--font-inter)',
                     fontSize: '12px',
                   }}
-                  itemStyle={{ color: '#1C1C1A' }}
+                  itemStyle={{ color: isDark ? '#F8FAFC' : '#1C1C1A' }}
                 />
                 <Legend
                   verticalAlign="bottom"
                   height={36}
                   iconType="circle"
-                  wrapperStyle={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: '#1C1C1A' }}
+                  wrapperStyle={{ 
+                    fontFamily: 'var(--font-inter)', 
+                    fontSize: '12px', 
+                    color: isDark ? '#94A3B8' : '#1C1C1A' 
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -151,7 +164,7 @@ export function DepartmentBorrowAnalytics() {
             {stats.map((item, idx) => (
               <div
                 key={idx}
-                className="bg-gray-50 dark:bg-slate-800/50/50 dark:bg-slate-900/50 p-4 border border-border rounded-none md:rounded-sm space-y-2 hover:border-accent-primary/50 transition"
+                className="bg-gray-50 dark:bg-slate-900/50 p-4 border border-border rounded-none md:rounded-sm space-y-2 hover:border-accent-primary/50 transition"
               >
                 <div className="flex items-center justify-between border-b border-border/60 pb-2">
                   <span className="font-bold text-text text-sm flex items-center gap-1.5">

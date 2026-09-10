@@ -1,4 +1,3 @@
-'use me';
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -169,14 +168,14 @@ export default function BorrowsPage() {
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setIsQrOpen(true)}
-              className="px-4 py-2.5 bg-white dark:bg-slate-900/10 hover:bg-white dark:bg-slate-900/20 text-white font-semibold text-sm rounded-xl border border-white/20 transition flex items-center gap-2"
+              className="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white font-semibold text-sm rounded-xl border border-white/30 transition flex items-center gap-2"
             >
               <QrCode className="w-4 h-4" />
               <span>สแกน QR อุปกรณ์</span>
             </button>
             <button
               onClick={() => handleOpenBorrow()}
-              className="px-5 py-2.5 bg-white dark:bg-slate-900 text-indigo-700 hover:bg-indigo-50 font-bold text-sm rounded-xl shadow-sm transition flex items-center gap-2"
+              className="px-5 py-2.5 bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-sm rounded-xl shadow-sm transition flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               <span>กรอกแบบฟอร์มขอยืมอุปกรณ์</span>

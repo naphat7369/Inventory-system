@@ -24,21 +24,21 @@ export async function RecentActivity() {
           {activities.map(activity => {
             const actor = activity.userId ? `User ${activity.userId}` : 'System'; // Replace with User object when auth exists
             
-            let color = 'text-gray-500 dark:text-gray-400';
-            if (activity.action === 'CREATED') color = 'text-green-600';
-            if (activity.action === 'DELETED') color = 'text-red-600';
-            if (activity.action === 'UPDATED') color = 'text-blue-600';
+            let color = 'text-slate-500 dark:text-slate-400';
+            if (activity.action === 'CREATED') color = 'text-emerald-600 dark:text-emerald-400';
+            if (activity.action === 'DELETED') color = 'text-rose-600 dark:text-rose-400';
+            if (activity.action === 'UPDATED') color = 'text-blue-600 dark:text-blue-400';
 
             return (
-              <li key={activity.id} className="text-sm font-mono flex items-start gap-4 p-3 bg-[#F8F9F5] border border-border">
-                <div className="min-w-[120px] text-text/50">
+              <li key={activity.id} className="text-sm font-mono flex items-start gap-4 p-3.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-sm">
+                <div className="min-w-[130px] text-slate-500 dark:text-slate-400 text-xs mt-0.5">
                   {new Date(activity.createdAt).toLocaleString()}
                 </div>
-                <div className="flex-1">
-                  <span className="font-bold text-text">{actor}</span>{' '}
-                  <span className={color}>{activity.action}</span>{' '}
-                  <span className="font-bold">{activity.entity}</span>{' '}
-                  <span className="text-text/70">({activity.entityId})</span>
+                <div className="flex-1 text-slate-700 dark:text-slate-300">
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{actor}</span>{' '}
+                  <span className={`font-semibold ${color}`}>{activity.action}</span>{' '}
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{activity.entity}</span>{' '}
+                  <span className="text-slate-500 dark:text-slate-400 text-xs">({activity.entityId})</span>
                 </div>
               </li>
             );

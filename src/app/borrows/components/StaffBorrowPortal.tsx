@@ -1,4 +1,3 @@
-'use me';
 'use client';
 
 import React, { useState } from 'react';
@@ -153,7 +152,7 @@ export function StaffBorrowPortal({
         <button
           type="button"
           onClick={() => setIsQrOpen(true)}
-          className="px-4 py-3 bg-white dark:bg-slate-900/10 hover:bg-white dark:bg-slate-900/20 text-white font-bold text-sm rounded-2xl border border-white/20 transition flex items-center gap-2 shrink-0 shadow-sm"
+          className="px-4 py-3 bg-white/15 hover:bg-white/25 text-white font-bold text-sm rounded-2xl border border-white/30 transition flex items-center gap-2 shrink-0 shadow-sm"
         >
           <QrCode className="w-5 h-5 text-indigo-200" />
           <span>สแกน QR Code</span>
@@ -232,7 +231,7 @@ export function StaffBorrowPortal({
                   max={selectedAsset.availableQuantity || 1}
                   value={borrowQuantity}
                   onChange={(e) => setBorrowQuantity(Math.max(1, parseInt(e.target.value || '1', 10)))}
-                  className="w-24 px-3 py-2 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-base font-extrabold text-center text-indigo-600 dark:text-indigo-300 focus:ring-2 focus:ring-indigo-500"
+                  className="w-24 px-3 py-2 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-xl text-base font-extrabold text-center text-indigo-600 dark:text-indigo-300 focus:ring-2 focus:ring-indigo-500"
                   required
                 />
               </div>

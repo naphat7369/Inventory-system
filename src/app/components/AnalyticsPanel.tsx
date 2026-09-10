@@ -152,7 +152,7 @@ export async function AnalyticsPanel({ searchParams }: { searchParams: { [key: s
                 {overdueRepairs.map(repair => {
                   const days = Math.floor((today.getTime() - new Date(repair.sentDate).getTime()) / (1000 * 3600 * 24));
                   return (
-                    <li key={repair.id} className="p-4 hover:bg-gray-50 dark:bg-slate-800/50 transition-colors">
+                    <li key={repair.id} className="p-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors">
                       <Link href={`/repairs`} className="flex items-start gap-3">
                         <div className="bg-accent-primary/10 text-accent-primary p-2 rounded-sm mt-0.5">
                           <Wrench size={16} />
@@ -169,7 +169,7 @@ export async function AnalyticsPanel({ searchParams }: { searchParams: { [key: s
                 {expiringLicenses.map(license => {
                   const daysLeft = license.expirationDate ? Math.floor((new Date(license.expirationDate).getTime() - today.getTime()) / (1000 * 3600 * 24)) : 0;
                   return (
-                    <li key={license.id} className="p-4 hover:bg-gray-50 dark:bg-slate-800/50 transition-colors">
+                    <li key={license.id} className="p-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors">
                       <Link href={`/licenses/${license.id}`} className="flex items-start gap-3">
                         <div className="bg-yellow-100 text-yellow-700 p-2 rounded-sm mt-0.5">
                           <Clock size={16} />

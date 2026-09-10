@@ -51,7 +51,7 @@ export default async function RepairsPage({
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-[#1C1C1A]">Repair Center</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Repair Center</h1>
           <p className="text-gray-500 dark:text-gray-400">Manage all asset repairs and maintenance</p>
         </div>
       </div>

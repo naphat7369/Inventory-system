@@ -1,4 +1,3 @@
-'use me';
 'use client';
 
 import React, { useState } from 'react';
@@ -62,13 +61,13 @@ export function DashboardTabs({
                 className={`p-3 text-left rounded-none md:rounded-sm transition border flex items-center gap-2.5 ${
                   isActive
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-gray-50 dark:bg-slate-800/50/50 dark:bg-slate-900/50 text-text/80 border-border hover:bg-slate-100 dark:hover:bg-slate-800'
+                    : 'bg-gray-50 dark:bg-slate-900/50 text-text/80 border-border hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <div
-                  className={`p-2 rounded-sm shrink-0 ${
+                  className={`p-2 rounded-sm shrink-0 transition-colors ${
                     isActive
-                      ? 'bg-white dark:bg-slate-900/20 text-white'
+                      ? 'bg-white text-indigo-600 dark:bg-indigo-950 dark:text-indigo-200 shadow-xs'
                       : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                   }`}
                 >

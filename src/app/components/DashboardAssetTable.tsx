@@ -72,7 +72,7 @@ export async function DashboardAssetTable({ searchParams }: { searchParams: { [k
       </div>
       
       {totalPages > 1 && (
-        <div className="p-4 border-t border-border bg-gray-50 dark:bg-slate-800/50/50 dark:bg-slate-900/50">
+        <div className="p-4 border-t border-border bg-gray-50 dark:bg-slate-900/50">
           <Pagination 
             currentPage={currentPage} 
             totalPages={totalPages} 

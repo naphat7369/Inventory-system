@@ -28,7 +28,7 @@ export default async function PropertiesPage() {
               name="name" 
               required 
               placeholder="e.g. Headquarters, Branch 1"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="w-48">
@@ -38,7 +38,7 @@ export default async function PropertiesPage() {
               name="prefix" 
               placeholder="e.g. HQ, B1"
               maxLength={4}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
+              className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
             />
           </div>
           <button 
@@ -62,7 +62,7 @@ export default async function PropertiesPage() {
           </thead>
           <tbody>
             {properties.map(property => (
-              <tr key={property.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50">
+              <tr key={property.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                 <td className="p-4 font-medium">{property.name}</td>
                 <td className="p-4 text-gray-500 dark:text-gray-400">{property.prefix || '-'}</td>
                 <td className="p-4 text-gray-500 dark:text-gray-400">{property._count.assets} items</td>
@@ -73,7 +73,7 @@ export default async function PropertiesPage() {
                   }}>
                     <button 
                       type="submit" 
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
                       disabled={property._count.assets > 0}
                       title={property._count.assets > 0 ? "Cannot delete property with assets" : "Delete Property"}
                     >

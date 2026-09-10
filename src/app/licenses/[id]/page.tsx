@@ -28,7 +28,7 @@ export default async function LicenseDetailsPage({ params }: { params: Promise<{
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <div className="mb-6">
-        <Link href="/licenses" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 transition-colors w-fit">
+        <Link href="/licenses" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors w-fit">
           <ArrowLeft size={20} /> Back to Licenses
         </Link>
       </div>
@@ -138,25 +138,25 @@ export default async function LicenseDetailsPage({ params }: { params: Promise<{
 
           {session?.role === 'ADMIN' && (
             <div className="lg:col-span-1 order-1 lg:order-2">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">
-                <h3 className="font-semibold mb-4 text-blue-900 flex items-center gap-2">
+              <div className="bg-blue-50 dark:bg-slate-800/80 border border-blue-100 dark:border-blue-900/40 rounded-xl p-6">
+                <h3 className="font-semibold mb-4 text-blue-900 dark:text-blue-200 flex items-center gap-2">
                   <UserPlus size={18} /> Assign New Slot
                 </h3>
                 
                 {isFull ? (
-                  <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+                  <div className="text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/40 p-3 rounded-lg border border-red-100 dark:border-red-900/40">
                     All {license.totalSlots} slots are currently assigned. Remove an existing user to free up a slot.
                   </div>
                 ) : (
                   <form action={assignLicenseSlot} className="space-y-4">
                     <input type="hidden" name="licenseId" value={license.id} />
                     <div>
-                      <label className="block text-sm font-medium text-blue-900 mb-1">Name <span className="text-red-500">*</span></label>
-                      <input type="text" name="assignedTo" required placeholder="User's name" className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">Name <span className="text-red-500">*</span></label>
+                      <input type="text" name="assignedTo" required placeholder="User's name" className="w-full px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-blue-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-blue-900 mb-1">Email (Optional)</label>
-                      <input type="email" name="assignedEmail" placeholder="user@example.com" className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <label className="block text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">Email (Optional)</label>
+                      <input type="email" name="assignedEmail" placeholder="user@example.com" className="w-full px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-blue-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
                     <button type="submit" className="w-full bg-blue-600 text-white font-medium py-2 rounded-lg hover:bg-blue-700 transition-colors">
                       Assign Slot

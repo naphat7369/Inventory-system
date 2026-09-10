@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useDrilldownFilter } from '../hooks/useDrilldownFilter';
+import { useTheme } from 'next-themes';
 import { FilterX } from 'lucide-react';
 
 type ChartData = {
@@ -20,6 +22,14 @@ export function InteractivePieChart({
   title: string
 }) {
   const { activeValues, toggle, clear, isPending } = useDrilldownFilter(paramKey);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const COLORS = [
     '#2563EB', // Blue 600
@@ -68,7 +78,9 @@ export function InteractivePieChart({
                 {data.map((entry, index) => {
                   const isSelected = activeValues.includes(entry.id || entry.name);
                   const opacity = activeValues.length === 0 || isSelected ? 1 : 0.3;
-                  const strokeProps = isSelected ? { stroke: '#1C1C1A', strokeWidth: 2 } : { stroke: 'none' };
+                  const strokeProps = isSelected 
+                    ? { stroke: isDark ? '#FFFFFF' : '#1C1C1A', strokeWidth: 3 } 
+                    : { stroke: isDark ? '#0F172A' : '#F8F9F5', strokeWidth: 1.5 };
                   
                   return (
                     <Cell 
@@ -82,19 +94,23 @@ export function InteractivePieChart({
               </Pie>
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#F8F9F5', 
-                  borderColor: '#D4D6CF',
-                  borderRadius: '2px',
-                  color: '#1C1C1A',
+                  backgroundColor: isDark ? '#1E293B' : '#F8F9F5', 
+                  borderColor: isDark ? '#475569' : '#D4D6CF',
+                  borderRadius: '4px',
+                  color: isDark ? '#F8FAFC' : '#1C1C1A',
                   fontFamily: 'var(--font-inter)'
                 }} 
-                itemStyle={{ color: '#1C1C1A' }}
+                itemStyle={{ color: isDark ? '#F8FAFC' : '#1C1C1A' }}
               />
               <Legend 
                 verticalAlign="bottom" 
                 height={36} 
                 iconType="circle"
-                wrapperStyle={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: '#1C1C1A' }}
+                wrapperStyle={{ 
+                  fontFamily: 'var(--font-inter)', 
+                  fontSize: '12px', 
+                  color: isDark ? '#94A3B8' : '#1C1C1A' 
+                }}
               />
             </PieChart>
           </ResponsiveContainer>

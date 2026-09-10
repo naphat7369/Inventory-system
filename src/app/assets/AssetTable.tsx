@@ -94,10 +94,10 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">
       {role === 'ADMIN' && !isSelectionMode && assets.length > 0 && (
-        <div className="bg-gray-50 dark:bg-slate-800/50 p-2 px-4 border-b border-gray-200 dark:border-slate-700 flex justify-end">
+        <div className="bg-gray-50 dark:bg-slate-800/60 p-2 px-4 border-b border-gray-200 dark:border-slate-700 flex justify-end">
           <button 
             onClick={() => setIsSelectionMode(true)}
-            className="flex items-center gap-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium border border-red-200"
+            className="flex items-center gap-2 text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium border border-red-200 dark:border-red-900/60"
           >
             <Trash2 size={16} /> Bulk Delete
           </button>
@@ -105,12 +105,12 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
       )}
       
       {isSelectionMode && (
-        <div className="bg-red-50 p-3 border-b border-red-200 flex items-center justify-between">
+        <div className="bg-red-50 dark:bg-red-950/40 p-3 border-b border-red-200 dark:border-red-900/60 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-red-700 font-medium px-2">{selectedIds.length} items selected</span>
+            <span className="text-red-700 dark:text-red-300 font-medium px-2">{selectedIds.length} items selected</span>
             <button 
               onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }}
-              className="text-red-600 text-sm hover:underline"
+              className="text-red-600 dark:text-red-400 text-sm hover:underline"
             >
               Cancel
             </button>
@@ -124,9 +124,9 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
           </button>
         </div>
       )}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto w-full">
         <table className="w-full text-left whitespace-nowrap">
-          <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
+          <thead className="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-slate-700">
             <tr>
               {role === 'ADMIN' && isSelectionMode && (
                 <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 w-12 text-center">
@@ -135,38 +135,38 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
                   </button>
                 </th>
               )}
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('assetId')}>
+              <th className="p-4 w-[12%] min-w-[130px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('assetId')}>
                 Asset ID <SortIcon columnKey="assetId" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('name')}>
+              <th className="p-4 w-[22%] min-w-[180px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('name')}>
                 Name <SortIcon columnKey="name" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('owner')}>
+              <th className="p-4 w-[10%] min-w-[100px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('owner')}>
                 Owner <SortIcon columnKey="owner" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('department')}>
+              <th className="p-4 w-[8%] min-w-[90px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('department')}>
                 Dept <SortIcon columnKey="department" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('property')}>
+              <th className="p-4 w-[10%] min-w-[100px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('property')}>
                 Property <SortIcon columnKey="property" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('category')}>
+              <th className="p-4 w-[10%] min-w-[110px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('category')}>
                 Category <SortIcon columnKey="category" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('location')}>
+              <th className="p-4 w-[12%] min-w-[130px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('location')}>
                 Location <SortIcon columnKey="location" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 select-none" onClick={() => requestSort('status')}>
+              <th className="p-4 w-[10%] min-w-[130px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/60 select-none transition-colors" onClick={() => requestSort('status')}>
                 Status <SortIcon columnKey="status" />
               </th>
-              <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Action</th>
+              <th className="p-4 w-[6%] min-w-[100px] font-semibold text-gray-600 dark:text-gray-300">Action</th>
             </tr>
           </thead>
           <tbody>
             {sortedAssets.map(asset => (
               <tr 
                 key={asset.id} 
-                className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50 ${isSelectionMode ? 'cursor-pointer' : ''}`}
+                className={`border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors ${isSelectionMode ? 'cursor-pointer' : ''}`}
                 onClick={(e) => {
                   if (isSelectionMode && !(e.target as HTMLElement).closest('a, button')) {
                     toggleSelect(asset.id);
@@ -180,26 +180,26 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
                     </button>
                   </td>
                 )}
-                <td className="p-4 font-medium text-blue-600">
+                <td className="p-4 font-medium text-blue-600 dark:text-blue-400">
                   <Link href={`/assets/${asset.id}`}>{asset.assetId}</Link>
                 </td>
                 <td className={`p-4 ${asset.name === 'Unknown Asset' ? 'text-red-500 font-semibold' : 'text-gray-900 dark:text-gray-100 font-medium'}`}>
                   {asset.name}
                 </td>
-                <td className="p-4">{asset.owner || '-'}</td>
-                <td className="p-4 text-gray-600 dark:text-gray-400">{asset.department || '-'}</td>
-                <td className="p-4 text-gray-600 dark:text-gray-400">{asset.property?.name || '-'}</td>
-                <td className={`p-4 ${asset.category?.name === 'Uncategorized' ? 'text-red-500 font-semibold' : 'text-gray-600 dark:text-gray-400'}`}>
+                <td className="p-4 text-gray-700 dark:text-gray-300">{asset.owner || '-'}</td>
+                <td className="p-4 text-gray-600 dark:text-gray-300">{asset.department || '-'}</td>
+                <td className="p-4 text-gray-600 dark:text-gray-300">{asset.property?.name || '-'}</td>
+                <td className={`p-4 ${asset.category?.name === 'Uncategorized' ? 'text-red-500 font-semibold' : 'text-gray-600 dark:text-gray-300'}`}>
                   {asset.category?.name || '-'}
                 </td>
-                <td className="p-4 text-gray-600 dark:text-gray-400">{asset.location || '-'}</td>
+                <td className="p-4 text-gray-600 dark:text-gray-300">{asset.location || '-'}</td>
                 <td className="p-4">
                   <InlineStatusSelect id={asset.id} currentStatus={asset.status} role={role} />
                 </td>
                 <td className="p-4 flex gap-2">
                   <Link 
                     href={`/assets/${asset.id}`} 
-                    className="flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                    className="flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 dark:hover:bg-blue-900/60 transition-colors"
                     title="View Details"
                   >
                     <Eye size={18} />
@@ -210,7 +210,7 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
                         <>
                           <Link 
                             href={`/assets/${asset.id}/edit`} 
-                            className="flex items-center justify-center p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 hover:text-green-700 transition-colors"
+                            className="flex items-center justify-center p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 hover:text-green-700 dark:bg-green-950/50 dark:text-green-400 dark:hover:bg-green-900/60 transition-colors"
                             title="Edit Asset"
                           >
                             <Pencil size={18} />
@@ -222,7 +222,7 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
                           <RestoreAssetButton id={asset.id} />
                           <button 
                             onClick={() => handleSingleHardDelete(asset.id)}
-                            className="flex items-center justify-center p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors border border-red-300"
+                            className="flex items-center justify-center p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors border border-red-300 dark:bg-red-950/50 dark:text-red-400 dark:border-red-900/60"
                             title="Hard Delete"
                           >
                             <Trash2 size={18} />

@@ -9,7 +9,7 @@ export default async function NewLicensePage() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-6">
-        <Link href="/licenses" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 transition-colors w-fit">
+        <Link href="/licenses" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors w-fit">
           <ArrowLeft size={20} /> Back to Licenses
         </Link>
       </div>

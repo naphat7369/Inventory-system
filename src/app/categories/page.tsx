@@ -24,16 +24,16 @@ export default async function CategoriesPage() {
             name="name"
             placeholder="Category Name (e.g. IT Equipment)"
             required
-            className="flex-[2] w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-[2] w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="text"
             name="prefix"
             placeholder="Prefix (e.g. IT)"
-            className="flex-1 w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
+            className="flex-1 w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
             maxLength={5}
           />
-          <button type="submit" className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+          <button type="submit" className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
             Add
           </button>
         </form>
@@ -52,13 +52,13 @@ export default async function CategoriesPage() {
           </thead>
           <tbody>
             {categories.map(cat => (
-              <tr key={cat.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50">
+              <tr key={cat.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                 <td className="p-4 font-medium">{cat.name}</td>
                 <td className="p-4 text-gray-500 dark:text-gray-400">{cat.prefix || '-'}</td>
                 <td className="p-4 text-gray-600 dark:text-gray-400">{cat._count.assets}</td>
                 <td className="p-4">
                   <form action={deleteCategory.bind(null, cat.id)}>
-                    <button type="submit" className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50">
+                    <button type="submit" className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
                       <Trash2 size={18} />
                     </button>
                   </form>

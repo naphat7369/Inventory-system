@@ -198,7 +198,7 @@ export default function BorrowModal({
                     setSelectedAssetId(e.target.value);
                     setBorrowQuantity(1);
                   }}
-                  className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                  className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                   required
                 >
                   <option value="">-- เลือกอุปกรณ์พร้อมใช้งาน ({availableAssets.length} รายการ) --</option>
@@ -239,7 +239,7 @@ export default function BorrowModal({
                     max={selectedAsset.availableQuantity || 1}
                     value={borrowQuantity}
                     onChange={(e) => setBorrowQuantity(Math.max(1, parseInt(e.target.value || '1', 10)))}
-                    className="w-20 px-3 py-1.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-lg text-sm font-bold text-center text-indigo-600 dark:text-indigo-300 focus:ring-2 focus:ring-indigo-500"
+                    className="w-20 px-3 py-1.5 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-lg text-sm font-bold text-center text-indigo-600 dark:text-indigo-300 focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                 </div>
@@ -289,7 +289,7 @@ export default function BorrowModal({
                 <select
                   value={selectedUserId}
                   onChange={(e) => handleUserSelect(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                 >
                   <option value="">-- เลือกผู้ใช้ในระบบ --</option>
                   {users.map((u) => (
@@ -305,7 +305,7 @@ export default function BorrowModal({
                     placeholder="ชื่อ-นามสกุล ผู้ยืม *"
                     value={borrowerName}
                     onChange={(e) => setBorrowerName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                     required={borrowerType === 'EXTERNAL'}
                   />
                 </div>
@@ -322,7 +322,7 @@ export default function BorrowModal({
                     placeholder="เช่น แผนก IT, การเงิน, การตลาด"
                     value={borrowerDept}
                     onChange={(e) => setBorrowerDept(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                   />
                 </div>
                 <div>
@@ -334,7 +334,7 @@ export default function BorrowModal({
                     placeholder="เช่น 081-234-5678, เบอร์ภายใน 102"
                     value={borrowerContact}
                     onChange={(e) => setBorrowerContact(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function BorrowModal({
                   type="date"
                   value={expectedReturnDate}
                   onChange={(e) => setExpectedReturnDate(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                   required
                 />
               </div>
@@ -371,7 +371,7 @@ export default function BorrowModal({
                   placeholder="เช่น นำไปใช้งานจัดงานสัมมนา, ใช้งานนอกสถานที่"
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100"
                 />
               </div>
               <div>
@@ -383,7 +383,7 @@ export default function BorrowModal({
                   placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)"
                   value={borrowNotes}
                   onChange={(e) => setBorrowNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 resize-none"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 resize-none"
                 />
               </div>
             </div>

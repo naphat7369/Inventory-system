@@ -68,7 +68,7 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
               const isExpired = license.expirationDate && new Date(license.expirationDate) < new Date();
               
               return (
-                <tr key={license.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50 transition-colors">
+                <tr key={license.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors">
                   <td className="p-4">
                     <div className="font-semibold text-gray-900 dark:text-gray-100">{license.name}</div>
                     {license.accountEmail && <div className="text-sm text-gray-500 dark:text-gray-400">{license.accountEmail}</div>}

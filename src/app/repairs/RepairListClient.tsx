@@ -73,15 +73,15 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
 
   return (
     <>
-      <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden">
-        <div className="bg-[#F8F9F5] p-4 border-b border-[#D4D6CF] flex items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] dark:border-slate-800 overflow-hidden">
+        <div className="bg-[#F8F9F5] dark:bg-slate-800/80 p-4 border-b border-[#D4D6CF] dark:border-slate-700 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter size={18} className="text-gray-500 dark:text-gray-400" />
               <select 
                 value={currentStatus}
                 onChange={(e) => updateFilters('status', e.target.value)}
-                className="bg-white dark:bg-slate-900 border border-[#D4D6CF] rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1C1C1A]"
+                className="bg-white dark:bg-slate-900 border border-[#D4D6CF] dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="IN_PROGRESS">In Progress</option>
@@ -94,7 +94,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
               <select 
                 value={currentSort}
                 onChange={(e) => updateFilters('sort', e.target.value)}
-                className="bg-white dark:bg-slate-900 border border-[#D4D6CF] rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1C1C1A]"
+                className="bg-white dark:bg-slate-900 border border-[#D4D6CF] dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="sent-date-desc">Newest First</option>
                 <option value="sent-date-asc">Oldest First</option>
@@ -106,14 +106,14 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-white dark:bg-slate-900 border-b border-[#D4D6CF]">
+            <thead className="bg-gray-50 dark:bg-slate-800/60 border-b border-[#D4D6CF] dark:border-slate-700">
               <tr>
-                <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Asset</th>
-                <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Status</th>
-                <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Reason</th>
-                <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Sent Date</th>
-                <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Days Pending</th>
-                <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Cost</th>
+                <th className="p-4 font-semibold text-slate-800 dark:text-slate-200 text-sm">Asset</th>
+                <th className="p-4 font-semibold text-slate-800 dark:text-slate-200 text-sm">Status</th>
+                <th className="p-4 font-semibold text-slate-800 dark:text-slate-200 text-sm">Reason</th>
+                <th className="p-4 font-semibold text-slate-800 dark:text-slate-200 text-sm">Sent Date</th>
+                <th className="p-4 font-semibold text-slate-800 dark:text-slate-200 text-sm">Days Pending</th>
+                <th className="p-4 font-semibold text-slate-800 dark:text-slate-200 text-sm">Cost</th>
               </tr>
             </thead>
             <tbody>
@@ -124,27 +124,27 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                   <tr 
                     key={repair.id} 
                     onClick={() => setSelectedRepair(repair)}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50 cursor-pointer"
+                    className="border-b border-gray-100 dark:border-slate-800/80 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 cursor-pointer transition-colors"
                   >
                     <td className="p-4">
-                      <div className="font-medium text-blue-600">{repair.asset.assetId}</div>
+                      <div className="font-medium text-blue-600 dark:text-blue-400">{repair.asset.assetId}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{repair.asset.name}</div>
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-sm text-xs font-bold uppercase tracking-wider ${
-                        repair.status === 'COMPLETED' ? 'bg-[#4C6246]/10 text-[#4C6246]' :
-                        repair.status === 'IN_PROGRESS' ? 'bg-[#E24A22]/10 text-[#E24A22]' :
-                        'bg-yellow-100 text-yellow-800'
+                        repair.status === 'COMPLETED' ? 'bg-[#4C6246]/10 text-[#4C6246] dark:bg-emerald-950/40 dark:text-emerald-400' :
+                        repair.status === 'IN_PROGRESS' ? 'bg-[#E24A22]/10 text-[#E24A22] dark:bg-orange-950/40 dark:text-orange-400' :
+                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-400'
                       }`}>
                         {repair.status.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="p-4 text-sm text-[#1C1C1A] max-w-[200px] truncate">{repair.reason}</td>
+                    <td className="p-4 text-sm text-slate-800 dark:text-slate-200 max-w-[200px] truncate">{repair.reason}</td>
                     <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)] text-gray-600 dark:text-gray-400">
                       {new Date(repair.sentDate).toLocaleDateString()}
                     </td>
                     <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)]">
-                      <span className={isWarning ? 'text-[#E24A22] font-bold' : 'text-gray-600 dark:text-gray-400'}>
+                      <span className={isWarning ? 'text-[#E24A22] dark:text-orange-400 font-bold' : 'text-gray-600 dark:text-gray-400'}>
                         {days} days
                       </span>
                     </td>
@@ -164,7 +164,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
         </div>
         
         {totalPages > 1 && (
-          <div className="bg-[#F8F9F5] p-4 border-t border-[#D4D6CF] flex items-center justify-between">
+          <div className="bg-[#F8F9F5] dark:bg-slate-800/80 p-4 border-t border-[#D4D6CF] dark:border-slate-700 flex items-center justify-between">
             <div className="text-sm text-gray-600 dark:text-gray-400 font-[family-name:var(--font-inter)]">
               Page {currentPage} of {totalPages}
             </div>
@@ -172,14 +172,14 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
               <button 
                 disabled={currentPage <= 1}
                 onClick={() => updateFilters('page', (currentPage - 1).toString())}
-                className="p-1.5 rounded-sm border border-[#D4D6CF] bg-white dark:bg-slate-900 text-[#1C1C1A] disabled:opacity-50 hover:bg-gray-50 dark:bg-slate-800/50"
+                className="p-1.5 rounded-sm border border-[#D4D6CF] dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <ChevronLeft size={18} />
               </button>
               <button 
                 disabled={currentPage >= totalPages}
                 onClick={() => updateFilters('page', (currentPage + 1).toString())}
-                className="p-1.5 rounded-sm border border-[#D4D6CF] bg-white dark:bg-slate-900 text-[#1C1C1A] disabled:opacity-50 hover:bg-gray-50 dark:bg-slate-800/50"
+                className="p-1.5 rounded-sm border border-[#D4D6CF] dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <ChevronRight size={18} />
               </button>
@@ -190,44 +190,44 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
 
       {selectedRepair && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#F8F9F5] rounded-sm shadow-xl w-full max-w-lg overflow-hidden border border-[#D4D6CF]">
-            <div className="bg-white dark:bg-slate-900 p-4 border-b border-[#D4D6CF] flex justify-between items-center">
-              <h2 className="font-bold text-lg text-[#1C1C1A]">Update Repair Job</h2>
-              <button onClick={() => setSelectedRepair(null)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100">
+          <div className="bg-white dark:bg-slate-900 rounded-sm shadow-xl w-full max-w-lg overflow-hidden border border-[#D4D6CF] dark:border-slate-700">
+            <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700 flex justify-between items-center">
+              <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">Update Repair Job</h2>
+              <button onClick={() => setSelectedRepair(null)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                 <X size={20} />
               </button>
             </div>
             
-            <div className="p-6 bg-white dark:bg-slate-900 border-b border-[#D4D6CF]">
+            <div className="p-6 bg-white dark:bg-slate-900 border-b border-[#D4D6CF] dark:border-slate-700">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-bold text-blue-600">{selectedRepair.asset.assetId}</h3>
+                  <h3 className="font-bold text-blue-600 dark:text-blue-400">{selectedRepair.asset.assetId}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{selectedRepair.asset.name}</p>
                 </div>
                 <span className={`px-2 py-1 rounded-sm text-xs font-bold uppercase tracking-wider ${
-                  selectedRepair.status === 'COMPLETED' ? 'bg-[#4C6246]/10 text-[#4C6246]' :
-                  selectedRepair.status === 'IN_PROGRESS' ? 'bg-[#E24A22]/10 text-[#E24A22]' :
-                  'bg-yellow-100 text-yellow-800'
+                  selectedRepair.status === 'COMPLETED' ? 'bg-[#4C6246]/10 text-[#4C6246] dark:bg-emerald-950/40 dark:text-emerald-400' :
+                  selectedRepair.status === 'IN_PROGRESS' ? 'bg-[#E24A22]/10 text-[#E24A22] dark:bg-orange-950/40 dark:text-orange-400' :
+                  'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-400'
                 }`}>
                   {selectedRepair.status.replace(/_/g, ' ')}
                 </span>
               </div>
-              <div className="text-sm text-[#1C1C1A] bg-[#F8F9F5] p-3 rounded-sm border border-[#D4D6CF]">
+              <div className="text-sm text-slate-800 dark:text-slate-200 bg-[#F8F9F5] dark:bg-slate-800 p-3 rounded-sm border border-[#D4D6CF] dark:border-slate-700">
                 <strong>Reason:</strong> {selectedRepair.reason}
               </div>
             </div>
 
-            <form onSubmit={handleUpdate} className="p-6 space-y-4">
-              {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-sm text-sm">{error}</div>}
+            <form onSubmit={handleUpdate} className="p-6 space-y-4 bg-white dark:bg-slate-900">
+              {error && <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 rounded-sm text-sm">{error}</div>}
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-[#1C1C1A] mb-1">Status</label>
+                  <label htmlFor="status" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
                   <select 
                     id="status" 
                     name="status" 
                     defaultValue={selectedRepair.status}
-                    className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-inter)]"
+                    className="w-full border border-[#D4D6CF] dark:border-slate-700 rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-[family-name:var(--font-inter)]"
                   >
                     <option value="IN_PROGRESS">In Progress</option>
                     <option value="WAITING_FOR_PARTS">Waiting for Parts</option>
@@ -235,7 +235,7 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="cost" className="block text-sm font-medium text-[#1C1C1A] mb-1">Cost ($)</label>
+                  <label htmlFor="cost" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cost ($)</label>
                   <input 
                     type="number" 
                     step="0.01"
@@ -243,43 +243,43 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                     id="cost" 
                     name="cost"
                     defaultValue={selectedRepair.costCents ? (selectedRepair.costCents / 100).toFixed(2) : ''}
-                    className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-jetbrains)]"
+                    className="w-full border border-[#D4D6CF] dark:border-slate-700 rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-[family-name:var(--font-jetbrains)]"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="technician" className="block text-sm font-medium text-[#1C1C1A] mb-1">Technician / Vendor</label>
+                <label htmlFor="technician" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Technician / Vendor</label>
                 <input 
                   type="text" 
                   id="technician" 
                   name="technician" 
                   defaultValue={selectedRepair.technician || ''}
-                  className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] dark:border-slate-700 rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-[family-name:var(--font-inter)]"
                   placeholder="Who is repairing this?"
                 />
               </div>
 
               <div>
-                <label htmlFor="resolution" className="block text-sm font-medium text-[#1C1C1A] mb-1">Resolution / Fix Description</label>
+                <label htmlFor="resolution" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Resolution / Fix Description</label>
                 <textarea 
                   id="resolution" 
                   name="resolution" 
                   rows={2}
                   defaultValue={selectedRepair.resolution || ''}
-                  className="w-full border border-[#D4D6CF] rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-[#1C1C1A] bg-white dark:bg-slate-900 resize-none font-[family-name:var(--font-inter)]"
+                  className="w-full border border-[#D4D6CF] dark:border-slate-700 rounded-sm p-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 resize-none font-[family-name:var(--font-inter)]"
                   placeholder="What was fixed?"
                 />
               </div>
 
-              <div className="flex justify-between items-center pt-4 mt-4 border-t border-[#D4D6CF]">
+              <div className="flex justify-between items-center pt-4 mt-4 border-t border-[#D4D6CF] dark:border-slate-700">
                 {selectedRepair.status !== 'COMPLETED' ? (
                   <button 
                     type="button" 
                     onClick={markCompleted}
                     disabled={isUpdating}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#4C6246] text-white font-medium rounded-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#4C6246] dark:bg-emerald-600 text-white font-medium rounded-sm hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
                     <Check size={18} /> Mark as Completed
                   </button>
@@ -288,14 +288,14 @@ export function RepairListClient({ repairs, currentStatus, currentSort, currentP
                   <button 
                     type="button" 
                     onClick={() => setSelectedRepair(null)}
-                    className="px-4 py-2 text-[#1C1C1A] font-medium hover:bg-gray-100 dark:bg-slate-800 rounded-sm transition-colors border border-[#D4D6CF] bg-white dark:bg-slate-900"
+                    className="px-4 py-2 text-slate-700 dark:text-slate-300 font-medium hover:bg-gray-100 dark:hover:bg-slate-800 rounded-sm transition-colors border border-[#D4D6CF] dark:border-slate-700 bg-white dark:bg-slate-800"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     disabled={isUpdating}
-                    className="px-4 py-2 bg-[#1C1C1A] text-white font-medium rounded-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="px-4 py-2 bg-slate-900 dark:bg-blue-600 text-white font-medium rounded-sm hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
                     Save Changes
                   </button>

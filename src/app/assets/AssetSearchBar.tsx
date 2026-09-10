@@ -82,7 +82,7 @@ export function AssetSearchBar({ defaultValue }: { defaultValue: string }) {
                 <li 
                   key={asset.id}
                   onClick={() => handleSelect(asset.name)}
-                  className="px-4 py-2 hover:bg-gray-50 dark:bg-slate-800/50 cursor-pointer flex flex-col border-b border-gray-50 last:border-0"
+                  className="px-4 py-2 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 cursor-pointer flex flex-col border-b border-gray-50 last:border-0"
                 >
                   <span className="font-medium text-gray-900 dark:text-gray-100">{asset.name}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{asset.assetId} {asset.owner ? `• ${asset.owner}` : ''}</span>

@@ -1,9 +1,9 @@
-'use me';
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { PackageCheck, RefreshCw, PieChart as PieIcon, Table } from 'lucide-react';
 import { getQuantityAssetsStock } from '../borrows/actions';
+import { useTheme } from 'next-themes';
 import {
   ResponsiveContainer,
   PieChart,
@@ -17,6 +17,14 @@ export function QuantityAssetStock() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'CHART' | 'TABLE'>('CHART');
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted && resolvedTheme === 'dark';
 
   const COLORS = [
     '#2563EB', // Blue 600
@@ -137,7 +145,8 @@ export function QuantityAssetStock() {
                   outerRadius={85}
                   paddingAngle={4}
                   dataKey="value"
-                  stroke="none"
+                  stroke={isDark ? '#0F172A' : '#F8F9F5'}
+                  strokeWidth={1.5}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -145,20 +154,24 @@ export function QuantityAssetStock() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#F8F9F5',
-                    borderColor: '#D4D6CF',
+                    backgroundColor: isDark ? '#1E293B' : '#F8F9F5',
+                    borderColor: isDark ? '#475569' : '#D4D6CF',
                     borderRadius: '4px',
-                    color: '#1C1C1A',
+                    color: isDark ? '#F8FAFC' : '#1C1C1A',
                     fontFamily: 'var(--font-inter)',
                     fontSize: '12px',
                   }}
-                  itemStyle={{ color: '#1C1C1A' }}
+                  itemStyle={{ color: isDark ? '#F8FAFC' : '#1C1C1A' }}
                 />
                 <Legend
                   verticalAlign="bottom"
                   height={36}
                   iconType="circle"
-                  wrapperStyle={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: '#1C1C1A' }}
+                  wrapperStyle={{ 
+                    fontFamily: 'var(--font-inter)', 
+                    fontSize: '12px', 
+                    color: isDark ? '#94A3B8' : '#1C1C1A' 
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -176,7 +189,7 @@ export function QuantityAssetStock() {
                   className={`p-4 border rounded-none md:rounded-sm space-y-2 transition ${
                     isLowStock
                       ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800'
-                      : 'bg-gray-50 dark:bg-slate-800/50/50 dark:bg-slate-900/50 border-border hover:border-indigo-500/50'
+                      : 'bg-gray-50 dark:bg-slate-900/50 border-border hover:border-indigo-500/50'
                   }`}
                 >
                   <div className="flex items-start justify-between">

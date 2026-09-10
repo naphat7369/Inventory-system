@@ -50,7 +50,7 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <Link href="/assets" className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 mb-6 font-medium">
+      <Link href="/assets" className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-6 font-medium">
         <ChevronLeft size={20} /> Back to Assets
       </Link>
       
@@ -66,14 +66,14 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
             <RepairActionModal assetId={asset.id} status={asset.status} existingActiveRepair={hasActiveRepair} />
             <Link 
               href={`/assets/${asset.id}/edit`} 
-              className="flex items-center gap-2 bg-[#1C1C1A] text-white px-4 py-2 rounded-sm font-medium hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 bg-[#1C1C1A] dark:bg-slate-800 text-white px-4 py-2 rounded-sm font-medium hover:bg-gray-800 dark:hover:bg-slate-700 transition-colors"
             >
               <Pencil size={20} /> Edit Asset
             </Link>
             <form action={deleteAsset.bind(null, asset.id)}>
               <button 
                 type="submit" 
-                className="flex items-center gap-2 bg-white dark:bg-slate-900 text-red-600 px-4 py-2 rounded-sm font-medium hover:bg-red-50 transition-colors border border-red-200"
+                className="flex items-center gap-2 bg-white dark:bg-slate-900 text-red-600 px-4 py-2 rounded-sm font-medium hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors border border-red-200 dark:border-red-900/50 dark:text-red-400"
               >
                 Delete Asset
               </button>
@@ -84,56 +84,56 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden">
-            <div className="bg-[#F8F9F5] p-4 border-b border-[#D4D6CF]">
-              <h3 className="font-bold text-[#1C1C1A]">General Information</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] dark:border-slate-700 overflow-hidden">
+            <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700">
+              <h3 className="font-bold text-[#1C1C1A] dark:text-slate-100">General Information</h3>
             </div>
             <div className="p-6 grid grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Property</p>
-                <p className="font-medium text-[#1C1C1A]">{asset.property?.name || '-'}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{asset.property?.name || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Department</p>
-                <p className="font-medium text-[#1C1C1A]">{asset.department || '-'}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{asset.department || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Owner Inventory</p>
-                <p className="font-medium text-[#1C1C1A]">{asset.owner || '-'}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{asset.owner || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Location</p>
-                <p className="font-medium text-[#1C1C1A]">{asset.location || '-'}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{asset.location || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">IP Address</p>
-                <p className="font-medium text-[#1C1C1A]">{asset.ipAddress || '-'}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{asset.ipAddress || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">OS</p>
-                <p className="font-medium text-[#1C1C1A]">{asset.os || '-'}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{asset.os || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Added On</p>
-                <p className="font-medium text-[#1C1C1A] font-[family-name:var(--font-jetbrains)]">{new Date(asset.createdAt).toLocaleDateString()}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200 font-[family-name:var(--font-jetbrains)]">{new Date(asset.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
-                <p className="font-medium text-[#1C1C1A]">{asset.status}</p>
+                <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{asset.status}</p>
               </div>
             </div>
           </div>
 
           {asset.category.customFields.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden">
-              <div className="bg-[#F8F9F5] p-4 border-b border-[#D4D6CF]">
-                <h3 className="font-bold text-[#1C1C1A]">Custom Fields</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] dark:border-slate-700 overflow-hidden">
+              <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700">
+                <h3 className="font-bold text-[#1C1C1A] dark:text-slate-100">Custom Fields</h3>
               </div>
               <div className="p-6 grid grid-cols-2 gap-6">
                 {asset.category.customFields.map((field) => (
                   <div key={field.id}>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{field.name}</p>
-                    <p className="font-medium text-[#1C1C1A]">{(customData as any)[field.id] || '-'}</p>
+                    <p className="font-medium text-[#1C1C1A] dark:text-slate-200">{(customData as any)[field.id] || '-'}</p>
                   </div>
                 ))}
               </div>
@@ -141,25 +141,25 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
           )}
           
           {asset.repairLogs.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden mt-8">
-              <div className="bg-[#F8F9F5] p-4 border-b border-[#D4D6CF]">
-                <h3 className="font-bold text-[#1C1C1A]">Repair History</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] dark:border-slate-700 overflow-hidden mt-8">
+              <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700">
+                <h3 className="font-bold text-[#1C1C1A] dark:text-slate-100">Repair History</h3>
               </div>
               <div className="p-0 overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-[#F8F9F5] border-b border-[#D4D6CF]">
+                  <thead className="bg-[#F8F9F5] dark:bg-slate-800 border-b border-[#D4D6CF] dark:border-slate-700">
                     <tr>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm whitespace-nowrap">Status</th>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm whitespace-nowrap">Reason</th>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm whitespace-nowrap">Sent Date</th>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm whitespace-nowrap">Completed Date</th>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm whitespace-nowrap">Cost</th>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm min-w-[200px]">Resolution</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm whitespace-nowrap">Status</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm whitespace-nowrap">Reason</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm whitespace-nowrap">Sent Date</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm whitespace-nowrap">Completed Date</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm whitespace-nowrap">Cost</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm min-w-[200px]">Resolution</th>
                     </tr>
                   </thead>
                   <tbody>
                     {asset.repairLogs.map(log => (
-                      <tr key={log.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50">
+                      <tr key={log.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                         <td className="p-4 whitespace-nowrap">
                           <span className={`px-2 py-1 rounded-sm text-xs font-bold uppercase tracking-wider ${
                             log.status === 'COMPLETED' ? 'bg-[#4C6246]/10 text-[#4C6246]' :
@@ -169,7 +169,7 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
                             {log.status.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="p-4 text-sm text-[#1C1C1A]">{log.reason}</td>
+                        <td className="p-4 text-sm text-[#1C1C1A] dark:text-slate-200">{log.reason}</td>
                         <td className="p-4 text-sm text-gray-500 dark:text-gray-400 font-[family-name:var(--font-jetbrains)]">{new Date(log.sentDate).toLocaleDateString()}</td>
                         <td className="p-4 text-sm text-gray-500 dark:text-gray-400 font-[family-name:var(--font-jetbrains)]">{log.completionDate ? new Date(log.completionDate).toLocaleDateString() : '-'}</td>
                         <td className="p-4 text-sm font-[family-name:var(--font-jetbrains)]">
@@ -185,14 +185,14 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
           )}
 
           {asset.parent && (
-            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden">
-              <div className="bg-[#F8F9F5] p-4 border-b border-[#D4D6CF]">
-                <h3 className="font-bold text-[#1C1C1A]">Connected To (Parent Asset)</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] dark:border-slate-700 overflow-hidden">
+              <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700">
+                <h3 className="font-bold text-[#1C1C1A] dark:text-slate-100">Connected To (Parent Asset)</h3>
               </div>
               <div className="p-6">
-                <div className="flex items-center justify-between border border-[#D4D6CF] p-4 rounded-sm">
+                <div className="flex items-center justify-between border border-[#D4D6CF] dark:border-slate-700 p-4 rounded-sm">
                   <div>
-                    <Link href={`/assets/${asset.parent.id}`} className="font-semibold text-[#1C1C1A] hover:underline">
+                    <Link href={`/assets/${asset.parent.id}`} className="font-semibold text-[#1C1C1A] dark:text-slate-200 hover:underline">
                       {asset.parent.assetId} - {asset.parent.name}
                     </Link>
                   </div>
@@ -209,22 +209,22 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
           )}
 
           {asset.children.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] overflow-hidden">
-              <div className="bg-[#F8F9F5] p-4 border-b border-[#D4D6CF]">
-                <h3 className="font-bold text-[#1C1C1A]">Linked Accessories</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] dark:border-slate-700 overflow-hidden">
+              <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700">
+                <h3 className="font-bold text-[#1C1C1A] dark:text-slate-100">Linked Accessories</h3>
               </div>
               <div className="p-0">
                 <table className="w-full text-left">
-                  <thead className="bg-[#F8F9F5] border-b border-[#D4D6CF]">
+                  <thead className="bg-[#F8F9F5] dark:bg-slate-800 border-b border-[#D4D6CF] dark:border-slate-700">
                     <tr>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Asset ID</th>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm">Name</th>
-                      <th className="p-4 font-semibold text-[#1C1C1A] text-sm w-24">Action</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm">Asset ID</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm">Name</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-sm w-24">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {asset.children.map(child => (
-                      <tr key={child.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:bg-slate-800/50">
+                      <tr key={child.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                         <td className="p-4 font-medium text-blue-600">
                           <Link href={`/assets/${child.id}`}>{child.assetId}</Link>
                         </td>

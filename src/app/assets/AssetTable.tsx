@@ -2,15 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Pencil, Trash2, CheckSquare, Square, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Eye, Pencil, Trash2, CheckSquare, Square, ArrowUpDown, ArrowUp, ArrowDown, Printer } from 'lucide-react';
 import { DeleteAssetButton } from './DeleteAssetButton';
 import { RestoreAssetButton } from './RestoreAssetButton';
 import { InlineStatusSelect } from './InlineStatusSelect';
 import { hardDeleteAssets, hardDeleteAsset, softDeleteAssets } from '@/app/actions';
+import { createPrintSession } from './print/actions';
 
 export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: string, isTrash: boolean }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'assetId', direction: 'asc' });
 
@@ -26,6 +28,28 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
+  };
+
+  const handlePrintSelected = async () => {
+    if (selectedIds.length === 0) return;
+    setIsPrinting(true);
+    try {
+      if (selectedIds.length <= 20) {
+        window.open(`/assets/print?ids=${selectedIds.join(',')}`, '_blank');
+      } else {
+        const res = await createPrintSession(selectedIds);
+        if (res.success && res.token) {
+          window.open(`/assets/print?token=${res.token}`, '_blank');
+        } else {
+          window.open(`/assets/print?ids=${selectedIds.slice(0, 100).join(',')}`, '_blank');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to initiate print session', e);
+      window.open(`/assets/print?ids=${selectedIds.slice(0, 50).join(',')}`, '_blank');
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   const handleBulkAction = async () => {
@@ -93,42 +117,67 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">
-      {role === 'ADMIN' && !isSelectionMode && assets.length > 0 && (
-        <div className="bg-gray-50 dark:bg-slate-800/60 p-2 px-4 border-b border-gray-200 dark:border-slate-700 flex justify-end">
+      {!isSelectionMode && assets.length > 0 && (
+        <div className="bg-gray-50 dark:bg-slate-800/60 p-2 px-4 border-b border-gray-200 dark:border-slate-700 flex justify-end items-center gap-2">
           <button 
             onClick={() => setIsSelectionMode(true)}
-            className="flex items-center gap-2 text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium border border-red-200 dark:border-red-900/60"
+            className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium border border-indigo-200 dark:border-indigo-900/60"
           >
-            <Trash2 size={16} /> Bulk Delete
+            <CheckSquare size={16} /> เลือกหลายรายการ (Select)
           </button>
+          {role === 'ADMIN' && (
+            <button 
+              onClick={() => setIsSelectionMode(true)}
+              className="flex items-center gap-2 text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium border border-red-200 dark:border-red-900/60"
+            >
+              <Trash2 size={16} /> Bulk Delete
+            </button>
+          )}
         </div>
       )}
       
       {isSelectionMode && (
-        <div className="bg-red-50 dark:bg-red-950/40 p-3 border-b border-red-200 dark:border-red-900/60 flex items-center justify-between">
+        <div className="bg-indigo-50/60 dark:bg-slate-800/90 p-3 border-b border-indigo-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <span className="text-red-700 dark:text-red-300 font-medium px-2">{selectedIds.length} items selected</span>
+            <span className="text-indigo-900 dark:text-indigo-200 font-bold text-sm px-2">
+              เลือกแล้ว {selectedIds.length} รายการ
+            </span>
             <button 
               onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }}
-              className="text-red-600 dark:text-red-400 text-sm hover:underline"
+              className="text-slate-500 dark:text-slate-400 text-sm hover:underline"
             >
-              Cancel
+              ยกเลิก
             </button>
           </div>
-          <button 
-            onClick={handleBulkAction}
-            disabled={isDeleting || selectedIds.length === 0}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2"
-          >
-            <Trash2 size={18} /> {isDeleting ? 'Processing...' : (isTrash ? `Delete Permanently (${selectedIds.length})` : `Move to Trash (${selectedIds.length})`)}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrintSelected}
+              disabled={isPrinting || selectedIds.length === 0}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white disabled:text-slate-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 shadow-xs disabled:cursor-not-allowed"
+            >
+              <Printer size={16} />
+              <span>{isPrinting ? 'กำลังเตรียมพิมพ์...' : `พิมพ์ป้ายกำกับที่เลือก (${selectedIds.length})`}</span>
+            </button>
+
+            {role === 'ADMIN' && (
+              <button 
+                onClick={handleBulkAction}
+                disabled={isDeleting || selectedIds.length === 0}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm"
+              >
+                <Trash2 size={16} /> {isDeleting ? 'Processing...' : (isTrash ? `Delete (${selectedIds.length})` : `Move to Trash (${selectedIds.length})`)}
+              </button>
+            )}
+          </div>
         </div>
       )}
       <div className="overflow-x-auto w-full">
         <table className="w-full text-left whitespace-nowrap">
           <thead className="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-slate-700">
             <tr>
-              {role === 'ADMIN' && isSelectionMode && (
+              {isSelectionMode && (
                 <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 w-12 text-center">
                   <button onClick={toggleSelectAll} className="text-gray-500 dark:text-gray-400 hover:text-blue-600">
                     {assets.length > 0 && selectedIds.length === assets.length ? <CheckSquare size={18} /> : <Square size={18} />}
@@ -173,7 +222,7 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
                   }
                 }}
               >
-                {role === 'ADMIN' && isSelectionMode && (
+                {isSelectionMode && (
                   <td className="p-4 text-center">
                     <button onClick={() => toggleSelect(asset.id)} className="text-gray-400 hover:text-blue-600">
                       {selectedIds.includes(asset.id) ? <CheckSquare size={18} className="text-blue-600" /> : <Square size={18} />}

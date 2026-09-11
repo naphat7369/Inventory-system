@@ -14,7 +14,11 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
     include: {
       property: true,
       _count: {
-        select: { assignments: true }
+        select: {
+          assignments: {
+            where: { isActive: true }
+          }
+        }
       }
     },
     orderBy: { createdAt: 'desc' }

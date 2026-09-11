@@ -1,12 +1,19 @@
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
-import { Package, Pencil, Unlink } from 'lucide-react';
+import { Package, Pencil, Unlink, Key, ChevronLeft } from 'lucide-react';
 import PrintableLabel from './PrintableLabel';
-import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { unlinkAsset, deleteAsset } from '@/app/actions';
 import { RepairActionModal } from './RepairActionModal';
+
+function maskProductKey(key: string | null): string {
+  if (!key) return '-';
+  const cleanKey = key.trim();
+  if (cleanKey.length <= 4) return '••••';
+  const last4 = cleanKey.slice(-4);
+  return `••••-••••-${last4}`;
+}
 
 export default async function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,6 +40,12 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
       },
       repairLogs: {
         orderBy: { sentDate: 'desc' }
+      },
+      licenseAssignments: {
+        include: {
+          license: true
+        },
+        orderBy: { createdAt: 'desc' }
       }
     }
   });
@@ -245,6 +258,93 @@ export default async function AssetDetailsPage({ params }: { params: Promise<{ i
               </div>
             </div>
           )}
+
+          {/* Software & Licenses Section */}
+          <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm border border-[#D4D6CF] dark:border-slate-700 overflow-hidden">
+            <div className="bg-[#F8F9F5] dark:bg-slate-800 p-4 border-b border-[#D4D6CF] dark:border-slate-700 flex justify-between items-center">
+              <h3 className="font-bold text-[#1C1C1A] dark:text-slate-100 flex items-center gap-2">
+                <Key size={18} className="text-blue-600 dark:text-blue-400" />
+                Software & Licenses
+              </h3>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                {asset.licenseAssignments.filter((a) => a.isActive).length} active
+              </span>
+            </div>
+
+            {asset.licenseAssignments.length === 0 ? (
+              <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                No software or licenses are currently assigned to this asset.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[#F8F9F5] dark:bg-slate-800 border-b border-[#D4D6CF] dark:border-slate-700 text-xs">
+                    <tr>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200">License</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200">User</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200">Product Key</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200">Assigned</th>
+                      <th className="p-4 font-semibold text-[#1C1C1A] dark:text-slate-200 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                    {asset.licenseAssignments.map((assignment) => (
+                      <tr
+                        key={assignment.id}
+                        className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors ${
+                          !assignment.isActive ? 'opacity-60 bg-gray-50/30' : ''
+                        }`}
+                      >
+                        <td className="p-4">
+                          <Link
+                            href={`/licenses/${assignment.license.id}`}
+                            className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                            title="View License details"
+                          >
+                            {assignment.license.name}
+                          </Link>
+                          {assignment.license.expirationDate && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              Exp: {new Date(assignment.license.expirationDate).toLocaleDateString('th-TH')}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {assignment.assignedTo}
+                          </div>
+                          {assignment.department && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {assignment.department}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4 font-mono text-xs text-gray-600 dark:text-gray-400">
+                          {maskProductKey(assignment.license.productKey)}
+                        </td>
+                        <td className="p-4 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                          {assignment.assignedDate
+                            ? new Date(assignment.assignedDate).toLocaleDateString('th-TH')
+                            : '-'}
+                        </td>
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                              assignment.isActive
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'
+                            }`}
+                          >
+                            {assignment.isActive ? 'Active' : 'Archived'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="md:col-span-1 space-y-6">

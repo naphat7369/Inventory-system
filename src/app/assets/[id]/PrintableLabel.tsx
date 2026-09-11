@@ -13,16 +13,8 @@ export default function PrintableLabel({ asset, role }: { asset: any, role?: str
     contentRef: componentRef,
   });
 
-  // Collect all items to print
+  // Print only this specific asset (exclude parent or other assets)
   const itemsToPrint = [asset];
-  if (asset.parent) {
-    itemsToPrint.push(asset.parent);
-  }
-  // Optional: Also print children? The user specifically asked for "label ของ Parent Asset เพิ่มมาอีกอัน".
-  // If we also want children, uncomment the following:
-  // if (asset.children && asset.children.length > 0) {
-  //   itemsToPrint.push(...asset.children);
-  // }
 
   return (
     <div className="flex flex-col gap-6">

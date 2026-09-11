@@ -610,43 +610,254 @@ export async function deleteLicense(id: string) {
   redirect('/licenses');
 }
 
+export async function getLicenseSlotUsage(licenseId: string) {
+  const license = await prisma.license.findUnique({
+    where: { id: licenseId },
+    select: {
+      totalSlots: true,
+      _count: {
+        select: {
+          assignments: {
+            where: { isActive: true }
+          }
+        }
+      }
+    }
+  });
+  if (!license) return null;
+  const usedSlots = license._count.assignments;
+  const availableSlots = Math.max(0, license.totalSlots - usedSlots);
+  return {
+    totalSlots: license.totalSlots,
+    usedSlots,
+    availableSlots,
+    isFull: availableSlots <= 0
+  };
+}
+
+export async function searchUsers(query: string) {
+  await requireAdmin();
+  const trimmed = query ? query.trim() : '';
+
+  return prisma.user.findMany({
+    where: trimmed ? {
+      OR: [
+        { username: { contains: trimmed } },
+        { fullName: { contains: trimmed } },
+        { department: { contains: trimmed } },
+      ]
+    } : undefined,
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      department: true,
+      phone: true
+    },
+    take: 15,
+    orderBy: { username: 'asc' }
+  });
+}
+
+export async function searchAssets(query: string) {
+  await requireAdmin();
+  const trimmed = query ? query.trim() : '';
+
+  return prisma.asset.findMany({
+    where: {
+      isDeleted: false,
+      ...(trimmed ? {
+        OR: [
+          { assetId: { contains: trimmed } },
+          { name: { contains: trimmed } },
+          { ipAddress: { contains: trimmed } },
+          { owner: { contains: trimmed } },
+          { department: { contains: trimmed } },
+        ]
+      } : {})
+    },
+    select: {
+      id: true,
+      assetId: true,
+      name: true,
+      department: true,
+      owner: true
+    },
+    take: 15,
+    orderBy: { assetId: 'asc' }
+  });
+}
+
 export async function assignLicenseSlot(formData: FormData) {
   await requireAdmin();
   const licenseId = formData.get('licenseId') as string;
-  const assignedTo = formData.get('assignedTo') as string;
-  const assignedEmail = formData.get('assignedEmail') as string;
+  const userId = (formData.get('userId') as string) || null;
+  const assignedTo = (formData.get('assignedTo') as string) || '';
+  const assignedEmail = (formData.get('assignedEmail') as string) || null;
+  const department = (formData.get('department') as string) || null;
+  const phone = (formData.get('phone') as string) || null;
+  const assetId = (formData.get('assetId') as string) || null;
+  const deviceName = (formData.get('deviceName') as string) || null;
+  const assignedDateStr = (formData.get('assignedDate') as string) || null;
+  const notes = (formData.get('notes') as string) || null;
 
-  if (!licenseId || !assignedTo) return;
+  if (!licenseId || !assignedTo.trim()) {
+    throw new Error('License ID and Assigned Name are required');
+  }
 
+  // Validate User if linked
+  if (userId) {
+    const userExists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!userExists) {
+      throw new Error('Selected user was not found');
+    }
+  }
 
-  const license = await prisma.license.findUnique({
-    where: { id: licenseId },
-    include: { assignments: true }
+  // Validate Asset if linked
+  if (assetId) {
+    const assetExists = await prisma.asset.findUnique({ where: { id: assetId }, select: { id: true } });
+    if (!assetExists) {
+      throw new Error('Selected asset was not found');
+    }
+  }
+
+  const assignedDate = assignedDateStr ? new Date(assignedDateStr) : new Date();
+
+  // Transaction with lock/slot validation
+  const assignment = await prisma.$transaction(async (tx) => {
+    const license = await tx.license.findUnique({
+      where: { id: licenseId },
+      include: {
+        assignments: {
+          where: { isActive: true }
+        }
+      }
+    });
+
+    if (!license) throw new Error('License not found');
+    if (license.assignments.length >= license.totalSlots) {
+      throw new Error('No available license slots.');
+    }
+
+    return tx.licenseAssignment.create({
+      data: {
+        licenseId,
+        userId: userId || null,
+        assignedTo: assignedTo.trim(),
+        assignedEmail: assignedEmail?.trim() || null,
+        department: department?.trim() || null,
+        phone: phone?.trim() || null,
+        assetId: assetId || null,
+        deviceName: deviceName?.trim() || null,
+        assignedDate,
+        notes: notes?.trim() || null,
+        isActive: true
+      }
+    });
   });
 
-  if (!license) throw new Error('License not found');
-  if (license.assignments.length >= license.totalSlots) throw new Error('No available slots');
+  revalidatePath('/licenses');
+  revalidatePath(`/licenses/${licenseId}`);
+  if (assetId) {
+    revalidatePath(`/assets/${assetId}`);
+  }
 
-  await prisma.licenseAssignment.create({
+  return { success: true, id: assignment.id };
+}
+
+export async function updateLicenseSlot(formData: FormData) {
+  await requireAdmin();
+  const assignmentId = formData.get('assignmentId') as string;
+  const rawUserId = formData.get('userId') as string;
+  const clearUser = formData.get('clearUser') === 'true';
+  const assignedTo = (formData.get('assignedTo') as string) || '';
+  const assignedEmail = (formData.get('assignedEmail') as string) || null;
+  const department = (formData.get('department') as string) || null;
+  const phone = (formData.get('phone') as string) || null;
+  const rawAssetId = formData.get('assetId') as string;
+  const clearAsset = formData.get('clearAsset') === 'true';
+  const deviceName = (formData.get('deviceName') as string) || null;
+  const assignedDateStr = (formData.get('assignedDate') as string) || null;
+  const notes = (formData.get('notes') as string) || null;
+
+  if (!assignmentId || !assignedTo.trim()) {
+    throw new Error('Assignment ID and Name are required');
+  }
+
+  const existing = await prisma.licenseAssignment.findUnique({
+    where: { id: assignmentId }
+  });
+  if (!existing) throw new Error('Assignment not found');
+
+  let finalUserId: string | null = existing.userId;
+  if (clearUser) {
+    finalUserId = null;
+  } else if (rawUserId !== undefined && rawUserId !== null && rawUserId !== '') {
+    finalUserId = rawUserId;
+  }
+
+  let finalAssetId: string | null = existing.assetId;
+  if (clearAsset) {
+    finalAssetId = null;
+  } else if (rawAssetId !== undefined && rawAssetId !== null && rawAssetId !== '') {
+    finalAssetId = rawAssetId;
+  }
+
+  const assignedDate = assignedDateStr ? new Date(assignedDateStr) : existing.assignedDate;
+
+  await prisma.licenseAssignment.update({
+    where: { id: assignmentId },
     data: {
-      licenseId,
-      assignedTo,
-      assignedEmail: assignedEmail || null
+      userId: finalUserId,
+      assignedTo: assignedTo.trim(),
+      assignedEmail: assignedEmail?.trim() || null,
+      department: department?.trim() || null,
+      phone: phone?.trim() || null,
+      assetId: finalAssetId,
+      deviceName: deviceName?.trim() || null,
+      assignedDate,
+      notes: notes?.trim() || null,
     }
   });
 
-  revalidatePath(`/licenses/${licenseId}`);
   revalidatePath('/licenses');
+  revalidatePath(`/licenses/${existing.licenseId}`);
+  if (existing.assetId) {
+    revalidatePath(`/assets/${existing.assetId}`);
+  }
+  if (finalAssetId && finalAssetId !== existing.assetId) {
+    revalidatePath(`/assets/${finalAssetId}`);
+  }
+
+  return { success: true };
+}
+
+export async function unassignLicenseSlot(assignmentId: string) {
+  await requireAdmin();
+  const existing = await prisma.licenseAssignment.findUnique({
+    where: { id: assignmentId }
+  });
+  if (!existing) throw new Error('Assignment not found');
+
+  await prisma.licenseAssignment.update({
+    where: { id: assignmentId },
+    data: {
+      isActive: false,
+      unassignedDate: new Date()
+    }
+  });
+
+  revalidatePath('/licenses');
+  revalidatePath(`/licenses/${existing.licenseId}`);
+  if (existing.assetId) {
+    revalidatePath(`/assets/${existing.assetId}`);
+  }
+
+  return { success: true };
 }
 
 export async function removeLicenseSlot(assignmentId: string) {
-  await requireAdmin();
-  const assignment = await prisma.licenseAssignment.delete({
-    where: { id: assignmentId }
-  });
-  
-  revalidatePath(`/licenses/${assignment.licenseId}`);
-  revalidatePath('/licenses');
+  return unassignLicenseSlot(assignmentId);
 }
 
 export async function importAssets(rows: any[]) {

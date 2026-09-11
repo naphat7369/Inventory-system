@@ -74,6 +74,7 @@ model Asset {
   
   repairLogs       RepairLog[]
   borrowLogs       BorrowLog[]
+  licenseAssignments LicenseAssignment[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -149,6 +150,7 @@ model User {
   phone        String?     // เบอร์โทรศัพท์ / ช่องทางติดต่อ
   role         String      @default("STAFF") // ADMIN or STAFF
   borrowLogs   BorrowLog[]
+  licenseAssignments LicenseAssignment[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
@@ -173,12 +175,36 @@ model License {
 }
 
 model LicenseAssignment {
-  id            String   @id @default(uuid())
-  licenseId     String
-  license       License  @relation(fields: [licenseId], references: [id], onDelete: Cascade)
-  assignedTo    String   // Person's name
-  assignedEmail String?  // Person's email
-  createdAt     DateTime @default(now())
+  id             String    @id @default(uuid())
+  licenseId      String
+  license        License   @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  userId         String?
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  assignedTo     String    // Person's name snapshot
+  assignedEmail  String?   // Person's email snapshot
+  department     String?   // Department snapshot
+  phone          String?   // Phone snapshot
+
+  assetId        String?
+  asset          Asset?    @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  deviceName     String?   // Device / Machine Name snapshot
+
+  assignedDate   DateTime  @default(now())
+  unassignedDate DateTime?
+
+  notes          String?
+  isActive       Boolean   @default(true)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([licenseId])
+  @@index([userId])
+  @@index([assetId])
+  @@index([isActive])
 }
 
 model AuditLog {

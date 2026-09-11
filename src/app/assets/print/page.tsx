@@ -1,82 +1,156 @@
 import prisma from '@/lib/prisma';
-import PrintAllButton from './PrintAllButton';
-import { QRCodeSVG } from 'qrcode.react';
+import { getSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { PrintLabelsClient } from './PrintLabelsClient';
+import { getPrintSessionIds } from './actions';
 
-export default async function PrintAssetsPage({ searchParams }: { searchParams: Promise<{ search?: string, status?: string }> }) {
-  const { search = '', status = '' } = await searchParams;
+export default async function PrintAssetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    search?: string;
+    status?: string;
+    category?: string;
+    property?: string;
+    ids?: string;
+    token?: string;
+  }>;
+}) {
+  const session = await getSession();
+  if (!session) {
+    redirect('/login');
+  }
 
-  const whereClause: any = {};
-  
+  const {
+    search = '',
+    status = '',
+    category = '',
+    property = '',
+    ids = '',
+    token = '',
+  } = await searchParams;
+
+  // 1. Gather & Validate Requested Asset IDs
+  let requestedIds: string[] = [];
+
+  // If token is provided, retrieve IDs from the server-side print session
+  if (token) {
+    const sessionIds = await getPrintSessionIds(token);
+    if (sessionIds && sessionIds.length > 0) {
+      requestedIds.push(...sessionIds);
+    }
+  }
+
+  // If ids parameter is provided, parse and validate
+  if (ids) {
+    const parsedIds = ids
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(id));
+    requestedIds.push(...parsedIds);
+  }
+
+  // Deduplicate and enforce max limit (500 items per request)
+  const uniqueRequestedIds = Array.from(new Set(requestedIds)).slice(0, 500);
+
+  // 2. Build Strict Where Clause: Primary Assets Only (Exclude Quantity-Based Stock and Soft-Deleted Trash)
+  const andConditions: any[] = [
+    { isDeleted: false },       // Do not include deleted trash items
+    { isQuantityBased: false },  // Strictly primary assets only (exclude quantity borrowable stock)
+  ];
+
+  // Specific IDs filter if provided
+  if (uniqueRequestedIds.length > 0) {
+    andConditions.push({
+      id: { in: uniqueRequestedIds },
+    });
+  }
+
+  // Text search filter
   if (search) {
-    whereClause.OR = [
-      { name: { contains: search } },
-      { assetId: { contains: search } },
-      { owner: { contains: search } },
-    ];
-  }
-  
-  if (status) {
-    whereClause.status = status;
+    andConditions.push({
+      OR: [
+        { name: { contains: search } },
+        { assetId: { contains: search } },
+        { owner: { contains: search } },
+        { department: { contains: search } },
+        { location: { contains: search } },
+      ],
+    });
   }
 
-  const assets = await prisma.asset.findMany({
-    where: whereClause,
-    include: {
-      category: true,
-      property: true,
-      parent: true
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  // Status filter
+  if (status && status !== 'ALL') {
+    andConditions.push({ status });
+  }
+
+  // Category filter
+  if (category && category !== 'ALL') {
+    andConditions.push({ categoryId: category });
+  }
+
+  // Property filter
+  if (property && property !== 'ALL') {
+    andConditions.push({ propertyId: property });
+  }
+
+  // 3. Query Prisma Database
+  const [assets, categories, properties] = await Promise.all([
+    prisma.asset.findMany({
+      where: { AND: andConditions },
+      include: {
+        category: {
+          select: { id: true, name: true },
+        },
+        property: {
+          select: { id: true, name: true },
+        },
+        parent: {
+          select: { id: true, assetId: true, name: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.category.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.property.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
+
+  // 4. Check for Missing / Inaccessible IDs
+  let warningMessage: string | null = null;
+  if (uniqueRequestedIds.length > 0) {
+    const foundIdSet = new Set(assets.map((a) => a.id));
+    const missingIds = uniqueRequestedIds.filter((id) => !foundIdSet.has(id));
+
+    if (missingIds.length > 0) {
+      warningMessage = `พบ ${missingIds.length} รายการที่ระบุในคำขอไม่พบในระบบ หรือถูกลบ/ไม่ใช่สินทรัพย์หลักแล้ว (ระบบได้คัดกรองออกเพื่อความถูกต้อง)`;
+    }
+  }
+
+  // 5. Preserve Requested Order if specific IDs were supplied
+  let orderedAssets = assets;
+  if (uniqueRequestedIds.length > 0) {
+    const assetMap = new Map(assets.map((a) => [a.id, a]));
+    orderedAssets = uniqueRequestedIds
+      .map((id) => assetMap.get(id))
+      .filter((a): a is typeof assets[0] => a !== undefined);
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || undefined;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto flex flex-col items-center print:p-0 print:max-w-none print:block">
-      <div className="mb-8 print:hidden flex justify-center w-full">
-        <PrintAllButton />
-      </div>
-
-      <div className="flex flex-wrap gap-8 justify-center print:grid print:grid-cols-2 print:gap-4 print:w-full">
-        {assets.map(asset => {
-          const qrUrl = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_BASE_URL 
-            ? `${process.env.NEXT_PUBLIC_BASE_URL}/assets/${asset.id}`
-            : `http://localhost:3000/assets/${asset.id}`;
-
-          return (
-            <div 
-              key={asset.id}
-              className="border-2 border-gray-800 rounded-lg p-6 w-96 bg-white dark:bg-slate-900 break-inside-avoid mb-8 print:mb-0 print:border-2 print:border-solid print:border-gray-800 print:w-auto"
-            >
-              <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-4">
-                <div>
-                  <h2 className="font-bold text-xl uppercase tracking-wider">{asset.category.name}</h2>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">Asset ID: {asset.assetId}</p>
-                </div>
-                <div className="w-12 h-12 bg-gray-900 rounded flex items-center justify-center text-white font-bold text-xs">
-                  LOGO
-                </div>
-              </div>
-              
-              <div className="flex gap-6 items-center">
-                <div className="flex-1 space-y-2 min-w-0">
-                  <p className="font-semibold text-lg break-words leading-tight">{asset.name}</p>
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 mb-1 text-xs">Prop / Loc</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm break-words">{asset.property?.name || '-'}{asset.location ? ` / ${asset.location}` : ''}</p>
-                  </div>
-                  <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Dept:</span> {asset.department || '-'}</p>
-                  {asset.parent && (
-                    <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">Conn:</span> {asset.parent.assetId}</p>
-                  )}
-                  <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">IP:</span> {asset.ipAddress || '-'}</p>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-2 border border-gray-200 dark:border-slate-700 rounded-lg shrink-0">
-                  <QRCodeSVG value={qrUrl} size={96} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <PrintLabelsClient
+      assets={orderedAssets as any}
+      categories={categories}
+      properties={properties}
+      warning={warningMessage}
+      initialSelectedIds={orderedAssets.map((a) => a.id)}
+      baseUrl={baseUrl}
+    />
   );
 }

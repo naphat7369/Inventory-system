@@ -21,7 +21,7 @@ export async function createSession(payload: {
     
   (await cookies()).set('session', session, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' && process.env.NEXTAUTH_URL?.startsWith('https://'),
     expires: expiresAt,
     sameSite: 'lax',
     path: '/',

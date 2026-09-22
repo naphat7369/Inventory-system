@@ -395,7 +395,8 @@ export async function login(formData: FormData) {
   }
 
   const user = await prisma.user.findUnique({
-    where: { username }
+    where: { username },
+    include: { department: true }
   });
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
@@ -407,7 +408,8 @@ export async function login(formData: FormData) {
     username: user.username,
     role: user.role,
     fullName: user.fullName,
-    department: user.department,
+    department: user.department?.name || null,
+    departmentId: user.departmentId,
     phone: user.phone,
   });
 
@@ -427,18 +429,36 @@ export async function getUsers() {
   const session = await getSession();
   if (session?.role !== 'ADMIN') throw new Error('Unauthorized');
 
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     select: {
       id: true,
       username: true,
       fullName: true,
-      department: true,
+      departmentId: true,
+      department: {
+        select: {
+          id: true,
+          name: true,
+          code: true
+        }
+      },
       phone: true,
       role: true,
       createdAt: true,
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  return users.map(u => ({
+    id: u.id,
+    username: u.username,
+    fullName: u.fullName,
+    department: u.department?.name || null,
+    departmentId: u.departmentId,
+    phone: u.phone,
+    role: u.role,
+    createdAt: u.createdAt,
+  }));
 }
 
 export async function createUser(formData: FormData) {
@@ -448,7 +468,7 @@ export async function createUser(formData: FormData) {
   const username = (formData.get('username') as string)?.trim();
   const password = formData.get('password') as string;
   const fullName = (formData.get('fullName') as string)?.trim() || null;
-  const department = (formData.get('department') as string)?.trim() || null;
+  const rawDept = (formData.get('departmentId') as string)?.trim() || (formData.get('department') as string)?.trim() || null;
   const phone = (formData.get('phone') as string)?.trim() || null;
   const role = (formData.get('role') as string) || 'STAFF';
 
@@ -461,6 +481,22 @@ export async function createUser(formData: FormData) {
     return { error: 'Username นี้ถูกใช้งานไปแล้ว' };
   }
 
+  let departmentId: string | null = null;
+  if (rawDept) {
+    const dept = await prisma.department.findFirst({
+      where: {
+        OR: [
+          { id: rawDept },
+          { name: rawDept },
+          { code: rawDept }
+        ]
+      }
+    });
+    if (dept) {
+      departmentId = dept.id;
+    }
+  }
+
   const passwordHash = await bcrypt.hash(password, 10);
 
   await prisma.user.create({
@@ -468,7 +504,7 @@ export async function createUser(formData: FormData) {
       username,
       passwordHash,
       fullName,
-      department,
+      departmentId,
       phone,
       role,
     },
@@ -484,6 +520,7 @@ export async function updateUser(
     username?: string;
     password?: string;
     fullName?: string | null;
+    departmentId?: string | null;
     department?: string | null;
     phone?: string | null;
     role?: string;
@@ -503,7 +540,24 @@ export async function updateUser(
   const updateData: any = {};
   if (data.username) updateData.username = data.username.trim();
   if (data.fullName !== undefined) updateData.fullName = data.fullName ? data.fullName.trim() : null;
-  if (data.department !== undefined) updateData.department = data.department ? data.department.trim() : null;
+  
+  const rawDept = data.departmentId !== undefined ? data.departmentId : data.department;
+  if (rawDept !== undefined) {
+    if (!rawDept || !rawDept.trim()) {
+      updateData.departmentId = null;
+    } else {
+      const dept = await prisma.department.findFirst({
+        where: {
+          OR: [
+            { id: rawDept.trim() },
+            { name: rawDept.trim() },
+            { code: rawDept.trim() }
+          ]
+        }
+      });
+      updateData.departmentId = dept ? dept.id : null;
+    }
+  }
   if (data.phone !== undefined) updateData.phone = data.phone ? data.phone.trim() : null;
   if (data.role) updateData.role = data.role;
 
@@ -639,24 +693,40 @@ export async function searchUsers(query: string) {
   await requireAdmin();
   const trimmed = query ? query.trim() : '';
 
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: trimmed ? {
       OR: [
         { username: { contains: trimmed } },
         { fullName: { contains: trimmed } },
-        { department: { contains: trimmed } },
+        { department: { name: { contains: trimmed } } },
       ]
     } : undefined,
     select: {
       id: true,
       username: true,
       fullName: true,
-      department: true,
+      departmentId: true,
+      department: {
+        select: {
+          id: true,
+          name: true,
+          code: true
+        }
+      },
       phone: true
     },
     take: 15,
     orderBy: { username: 'asc' }
   });
+
+  return users.map(u => ({
+    id: u.id,
+    username: u.username,
+    fullName: u.fullName,
+    department: u.department?.name || null,
+    departmentId: u.departmentId,
+    phone: u.phone
+  }));
 }
 
 export async function searchAssets(query: string) {

@@ -83,3 +83,61 @@ body {
   height: 16px;
   width: 100%;
 }
+
+/* Permanently suppress third-party ad-skipping overlays and extension badges across all views */
+[class*="ad-skip" i],
+[class*="adskip" i],
+[class*="ad_skip" i],
+[class*="skipp" i]:not(input):not(button.btn-skip),
+[id*="ad-skip" i],
+[id*="adskip" i],
+[id*="ad_skip" i],
+[id*="skipp" i],
+[aria-label*="ad-skip" i],
+[aria-label*="skip ad" i],
+[title*="ad-skip" i],
+[title*="skip ad" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  top: -99999px !important;
+  left: -99999px !important;
+  overflow: hidden !important;
+}
+
+/* Suppress all scripts, third-party extension overlays, floating widgets, and dev tools during print */
+@media print {
+  script,
+  style,
+  noscript,
+  template,
+  body > script,
+  body script,
+  [class*="ad-skip" i],
+  [class*="adskip" i],
+  [class*="ad_skip" i],
+  [class*="skipp" i],
+  [id*="ad-skip" i],
+  [id*="adskip" i],
+  [id*="ad_skip" i],
+  [id*="skipp" i],
+  [class*="extension" i],
+  [id*="extension" i],
+  nextjs-portal,
+  [data-nextjs-toast],
+  [data-nextjs-dev-tools],
+  [data-nextjs-dialog-overlay] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+  }
+}

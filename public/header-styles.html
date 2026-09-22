@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตัวอย่างรูปแบบ Header Memo (5 แบบ)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 2rem 1rem 4rem;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .header-intro {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .header-intro h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .header-intro p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Live Switcher Toolbar */
+    .toolbar {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    .toolbar label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #334155;
+    }
+
+    .dept-selector {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-chip {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-chip:hover {
+      background: #e2e8f0;
+    }
+
+    .btn-chip.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    /* Style Showcase Grid */
+    .style-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.04);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .style-card:hover {
+      box-shadow: 0 14px 25px -5px rgba(0,0,0,0.08);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      background: #eff6ff;
+      color: #2563eb;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-recommended {
+      background: #ecfdf5;
+      color: #059669;
+    }
+
+    /* Simulated Paper Header */
+    .paper-header {
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 2rem 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      min-height: 140px;
+    }
+
+    .logo-container {
+      width: 160px;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .logo-container img {
+      max-width: 150px;
+      max-height: 105px;
+      object-contain: fit;
+    }
+
+    /* ========================================================
+       STYLE 1: กล่องคู่ขนาดกว้างเท่ากันเป๊ะ (Equal Width Double Box)
+       ======================================================== */
+    .header-style-1 {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .style-1-box {
+      width: 250px;
+      border: 1.5px solid #1f2937;
+      text-align: center;
+      background: #f3f4f6;
+    }
+
+    .style-1-top {
+      background: #e5e7eb;
+      font-family: 'Arial', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.22em;
+      padding: 4px 0 3px;
+      color: #000000;
+      border-bottom: 1.5px solid #1f2937;
+    }
+
+    .style-1-bottom {
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      padding: 5px 4px;
+      color: #000000;
+      background: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .style-1-docno {
+      margin-top: 10px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #000000;
+      letter-spacing: 0.05em;
+    }
+
+    /* ========================================================
+       STYLE 2: กล่องพรีเมียมสีเข้ม-อ่อน ประกบสองชั้น (Modern Contrast)
+       ======================================================== */
+    .style-2-box {
+      width: 250px;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #111827;
+      text-align: center;
+    }
+
+    .style-2-top {
+      background: #111827;
+      color: #ffffff;
+      font-family: 'Arial', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.26em;
+      padding: 5px 0 4px;
+    }
+
+    .style-2-bottom {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      padding: 4px 6px;
+      border-top: 1px solid #cbd5e1;
+    }
+
+    /* ========================================================
+       STYLE 3: กรอบเส้นคู่สไตล์คลาสสิกทางการ (Double Line Border Frame)
+       ======================================================== */
+    .style-3-box {
+      width: 250px;
+      border: 3px double #000000;
+      padding: 6px 8px;
+      text-align: center;
+      background: #fafafa;
+    }
+
+    .style-3-top {
+      font-family: 'Arial', sans-serif;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: 0.22em;
+      color: #000000;
+      margin-bottom: 2px;
+    }
+
+    .style-3-divider {
+      width: 80%;
+      height: 1px;
+      background: #000000;
+      margin: 2px auto 4px;
+    }
+
+    .style-3-bottom {
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: #1f2937;
+    }
+
+    /* ========================================================
+       STYLE 4: แถบสีเทาเดี่ยว พร้อมเส้นใต้เน้นความเสมอกัน (Clean Minimal Accent)
+       ======================================================== */
+    .style-4-box {
+      width: 250px;
+      text-align: center;
+    }
+
+    .style-4-top {
+      background: #e2e8f0;
+      font-family: 'Arial', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.25em;
+      padding: 4px 0;
+      color: #0f172a;
+      border-radius: 2px;
+    }
+
+    .style-4-bottom {
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      font-size: 11.5px;
+      letter-spacing: 0.14em;
+      padding: 4px 0 2px;
+      color: #1e293b;
+      border-bottom: 2px solid #0f172a;
+      margin-top: 3px;
+    }
+
+    /* ========================================================
+       STYLE 5: แบบฟอร์มทางการพร้อมช่องเลขที่เอกสารในตัว (All-In-One Header Card)
+       ======================================================== */
+    .style-5-box {
+      width: 250px;
+      border: 1.5px solid #000000;
+      text-align: center;
+      background: #ffffff;
+    }
+
+    .style-5-top {
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Arial', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.25em;
+      padding: 4px 0 3px;
+    }
+
+    .style-5-mid {
+      background: #f8fafc;
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      padding: 4px 6px;
+      color: #0f172a;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    .style-5-bottom {
+      padding: 3px 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #000000;
+      background: #ffffff;
+    }
+
+    .notes {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-intro">
+      <h1>ตัวอย่างรูปแบบส่วนหัวเอกสาร Memo (5 แบบ)</h1>
+      <p>ปรับขนาด Logo ให้ใหญ่ขึ้นสมส่วน พร้อมออกแบบบล็อก <strong>MEMORANDUM</strong> และ <strong>ชื่อแผนก</strong> ให้ความกว้างเสมอกันและสวยงาม</p>
+    </div>
+
+    <!-- Live Department Switcher -->
+    <div class="toolbar">
+      <label>🔍 ทดสอบเปลี่ยนชื่อแผนกดูผลลัพธ์แบบ Real-time:</label>
+      <div class="dept-selector">
+        <button class="btn-chip active" onclick="setDept('IT DEPARTMENT', 'IT 001/2569')">IT DEPARTMENT</button>
+        <button class="btn-chip" onclick="setDept('FOOD & BEVERAGE DEPARTMENT', 'FB 015/2568')">FOOD & BEVERAGE DEPARTMENT</button>
+        <button class="btn-chip" onclick="setDept('ACCOUNT DEPARTMENT', 'ACC 003/2569')">ACCOUNT DEPARTMENT</button>
+        <button class="btn-chip" onclick="setDept('HUMAN RESOURCES DEPARTMENT', 'HR 008/2569')">HUMAN RESOURCES DEPARTMENT</button>
+        <button class="btn-chip" onclick="setDept('ENGINEERING DEPARTMENT', 'ENG 002/2569')">ENGINEERING DEPARTMENT</button>
+      </div>
+    </div>
+
+    <!-- STYLE 1 -->
+    <div class="style-card">
+      <div class="card-top">
+        <div class="card-title">
+          <span>แบบที่ 1: กล่องคู่ขนานขนาดกว้างเท่ากันเป๊ะ (Equal-Width Dual Box)</span>
+          <span class="badge badge-recommended">★ แนะนำ (ใกล้เคียงต้นฉบับที่สุด)</span>
+        </div>
+      </div>
+      <div class="paper-header">
+        <div class="logo-container">
+          <img src="/assets/branding/s-hotel-default-v1.png" alt="S Hotel Logo">
+        </div>
+        <div class="header-style-1">
+          <div class="style-1-box">
+            <div class="style-1-top">MEMORANDUM</div>
+            <div class="style-1-bottom dept-text">IT DEPARTMENT</div>
+          </div>
+          <div class="style-1-docno docno-text">IT 001/2569</div>
+        </div>
+      </div>
+      <p class="notes"><strong>จุดเด่น:</strong> กรอบความกว้างคงที่ 250px ทั้งบนและล่าง ทำให้ไม่ว่าชื่อแผนกจะสั้นหรือยาว แถบจะกว้างเสมอกัน 100% ตัว MEMORANDUM อยู่ในแถบสีเทา และชื่อแผนกอยู่ในกรอบขาวรองรับ</p>
+    </div>
+
+    <!-- STYLE 2 -->
+    <div class="style-card">
+      <div class="card-top">
+        <div class="card-title">
+          <span>แบบที่ 2: กล่องคอนทราสต์ทูโทน พรีเมียมโมเดิร์น (Modern Contrast Dual-Box)</span>
+          <span class="badge">Modern & Clean</span>
+        </div>
+      </div>
+      <div class="paper-header">
+        <div class="logo-container">
+          <img src="/assets/branding/s-hotel-default-v1.png" alt="S Hotel Logo">
+        </div>
+        <div class="header-style-1">
+          <div class="style-2-box">
+            <div class="style-2-top">MEMORANDUM</div>
+            <div class="style-2-bottom dept-text">IT DEPARTMENT</div>
+          </div>
+          <div class="style-1-docno docno-text">IT 001/2569</div>
+        </div>
+      </div>
+      <p class="notes"><strong>จุดเด่น:</strong> แถบ MEMORANDUM พื้นหลังสีเข้มตัดกับตัวหนังสือสีขาว และแถบชื่อแผนกสีเทาอ่อน สวยเด่น ชัดเจน ดูเป็นมืออาชีพ</p>
+    </div>
+
+    <!-- STYLE 3 -->
+    <div class="style-card">
+      <div class="card-top">
+        <div class="card-title">
+          <span>แบบที่ 3: กรอบเส้นคู่คลาสสิกทางการ (Double Line Luxury Frame)</span>
+          <span class="badge">Classic Hotel Style</span>
+        </div>
+      </div>
+      <div class="paper-header">
+        <div class="logo-container">
+          <img src="/assets/branding/s-hotel-default-v1.png" alt="S Hotel Logo">
+        </div>
+        <div class="header-style-1">
+          <div class="style-3-box">
+            <div class="style-3-top">MEMORANDUM</div>
+            <div class="style-3-divider"></div>
+            <div class="style-3-bottom dept-text">IT DEPARTMENT</div>
+          </div>
+          <div class="style-1-docno docno-text">IT 001/2569</div>
+        </div>
+      </div>
+      <p class="notes"><strong>จุดเด่น:</strong> ล้อมกรอบเส้นคู่ (Double Border) โค้งมนประณีตแบบเอกสารโรงแรม 5 ดาว โปร่งตา สะอาด และมีคลาส</p>
+    </div>
+
+    <!-- STYLE 4 -->
+    <div class="style-card">
+      <div class="card-top">
+        <div class="card-title">
+          <span>แบบที่ 4: แถบสีเทาบน + เส้นขีดล่างเน้นความยาวเท่ากัน (Header Bar & Underline Accent)</span>
+          <span class="badge">Minimal Corporate</span>
+        </div>
+      </div>
+      <div class="paper-header">
+        <div class="logo-container">
+          <img src="/assets/branding/s-hotel-default-v1.png" alt="S Hotel Logo">
+        </div>
+        <div class="header-style-1">
+          <div class="style-4-box">
+            <div class="style-4-top">MEMORANDUM</div>
+            <div class="style-4-bottom dept-text">IT DEPARTMENT</div>
+          </div>
+          <div class="style-1-docno docno-text">IT 001/2569</div>
+        </div>
+      </div>
+      <p class="notes"><strong>จุดเด่น:</strong> แถบสีเทาด้านบนสำหรับ MEMORANDUM และชื่อแผนกมีเส้นขีดปิดท้ายด้านล่างความยาว 250px เท่ากันเป๊ะ ดูเรียบหรูและทันสมัย</p>
+    </div>
+
+    <!-- STYLE 5 -->
+    <div class="style-card">
+      <div class="card-top">
+        <div class="card-title">
+          <span>แบบที่ 5: บล็อก 3 ชั้นรวมเลขที่เอกสารในตัว (All-in-One Executive Card)</span>
+          <span class="badge">Structured & Official</span>
+        </div>
+      </div>
+      <div class="paper-header">
+        <div class="logo-container">
+          <img src="/assets/branding/s-hotel-default-v1.png" alt="S Hotel Logo">
+        </div>
+        <div class="header-style-1">
+          <div class="style-5-box">
+            <div class="style-5-top">MEMORANDUM</div>
+            <div class="style-5-mid dept-text">IT DEPARTMENT</div>
+            <div class="style-5-bottom docno-text">IT 001/2569</div>
+          </div>
+        </div>
+      </div>
+      <p class="notes"><strong>จุดเด่น:</strong> รวบรวมทั้ง MEMORANDUM, ชื่อแผนก และเลขที่เอกสาร เข้ามาไว้ในกรอบเดียวกันอย่างเป็นระเบียบเรียบร้อย เหมาะกับองค์กรที่ต้องการความกระชับรัดกุม</p>
+    </div>
+
+  </div>
+
+  <script>
+    function setDept(name, docNo) {
+      document.querySelectorAll('.dept-text').forEach(el => {
+        el.textContent = name;
+      });
+      document.querySelectorAll('.docno-text').forEach(el => {
+        el.textContent = docNo;
+      });
+      document.querySelectorAll('.btn-chip').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.trim() === name) {
+          btn.classList.add('active');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

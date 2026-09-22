@@ -146,11 +146,13 @@ model User {
   username     String      @unique
   passwordHash String
   fullName     String?     // ชื่อ - นามสกุล
-  department   String?     // แผนก / หน่วยงาน
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
   phone        String?     // เบอร์โทรศัพท์ / ช่องทางติดต่อ
   role         String      @default("STAFF") // ADMIN or STAFF
   borrowLogs   BorrowLog[]
   licenseAssignments LicenseAssignment[]
+  deletedMemos Memo[]      @relation("DeletedMemos")
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
@@ -279,5 +281,88 @@ model RenewalHistory {
   createdAt         DateTime            @default(now())
 
   @@index([contractId])
+}
+
+model LogoAsset {
+  id          String       @id @default(uuid())
+  fileName    String       @unique
+  url         String       @unique
+  mimeType    String
+  size        Int
+  departments Department[]
+  memos       Memo[]
+  createdAt   DateTime     @default(now())
+}
+
+model Department {
+  id          String      @id @default(uuid())
+  name        String
+  nameEn      String?     // English header e.g. "FOOD & BEVERAGE DEPARTMENT"
+  code        String      @unique
+  isActive    Boolean     @default(true)
+  logoAssetId String?
+  logoAsset   LogoAsset?  @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
+  logoUrl     String?     // Current logo URL for new memos
+  users       User[]
+  memos       Memo[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([logoAssetId])
+}
+
+model Memo {
+  id           String          @id @default(uuid())
+  departmentId String
+  department   Department      @relation(fields: [departmentId], references: [id])
+  sequence     Int?
+  buddhistYear Int?
+  documentNo   String?         @unique
+  documentDate DateTime
+  recipient    String
+  sender       String
+  subject      String
+  subHeader    String?         // Uppercase department header snapshot (e.g. "FOOD & BEVERAGE DEPARTMENT")
+  logoAssetId  String?
+  logoAsset    LogoAsset?      @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
+  logoUrl      String?         // Fixed snapshot of logo URL at memo creation
+  reference    String?
+  carbonCopy   String?
+  content      String          // SQLite does not support @db.Text, String is text by default
+  remark       String?         // หมายเหตุกั้นท้าย / หมายเหตุเพิ่มเติม
+  status       String          @default("DRAFT") // DRAFT, FINAL, CANCELLED
+  
+  createdById  String?
+  updatedById  String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  cancelledAt  DateTime?
+
+  deletedAt    DateTime?
+  deletedById  String?
+  deletedBy    User?           @relation("DeletedMemos", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  signatures   MemoSignature[]
+
+  @@unique([departmentId, buddhistYear, sequence])
+  @@index([departmentId])
+  @@index([status])
+  @@index([documentDate])
+  @@index([documentNo])
+  @@index([logoAssetId])
+  @@index([deletedAt])
+  @@index([deletedById])
+}
+
+model MemoSignature {
+  id        String   @id @default(uuid())
+  memoId    String
+  memo      Memo     @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  role      String   
+  name      String?
+  position  String?
+  sortOrder Int      @default(0)
+
+  @@index([memoId])
 }
 

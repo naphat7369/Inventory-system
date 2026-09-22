@@ -4,6 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, Shield, User } from 'lucide-react';
 import { updateUser } from '@/app/actions';
 
+interface DepartmentItem {
+  id: string;
+  name: string;
+  code: string;
+}
+
 interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -12,17 +18,19 @@ interface EditUserModalProps {
     username: string;
     fullName?: string | null;
     department?: string | null;
+    departmentId?: string | null;
     phone?: string | null;
     role: string;
   } | null;
+  departments?: DepartmentItem[];
   onSuccess: () => void;
 }
 
-export function EditUserModal({ isOpen, onClose, user, onSuccess }: EditUserModalProps) {
+export function EditUserModal({ isOpen, onClose, user, departments = [], onSuccess }: EditUserModalProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [department, setDepartment] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('STAFF');
 
@@ -34,7 +42,7 @@ export function EditUserModal({ isOpen, onClose, user, onSuccess }: EditUserModa
       setUsername(user.username || '');
       setPassword('');
       setFullName(user.fullName || '');
-      setDepartment(user.department || '');
+      setDepartmentId(user.departmentId || '');
       setPhone(user.phone || '');
       setRole(user.role || 'STAFF');
       setError('');
@@ -59,7 +67,7 @@ export function EditUserModal({ isOpen, onClose, user, onSuccess }: EditUserModa
         username: username.trim(),
         password: password.trim() || undefined,
         fullName: fullName.trim() || null,
-        department: department.trim() || null,
+        departmentId: departmentId.trim() || null,
         phone: phone.trim() || null,
         role,
       });
@@ -149,13 +157,18 @@ export function EditUserModal({ isOpen, onClose, user, onSuccess }: EditUserModa
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               แผนก / หน่วยงานที่สังกัด (Department)
             </label>
-            <input
-              type="text"
-              placeholder="เช่น แผนก IT, การเงิน, การตลาด"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
-            />
+            >
+              <option value="">-- ไม่ระบุแผนก --</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({d.code})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Phone */}

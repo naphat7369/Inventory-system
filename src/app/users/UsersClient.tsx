@@ -11,17 +11,25 @@ interface UserItem {
   username: string;
   fullName?: string | null;
   department?: string | null;
+  departmentId?: string | null;
   phone?: string | null;
   role: string;
   createdAt: Date | string;
 }
 
+interface DepartmentItem {
+  id: string;
+  name: string;
+  code: string;
+}
+
 interface UsersClientProps {
   users: UserItem[];
+  departments?: DepartmentItem[];
   currentUserId: string;
 }
 
-export function UsersClient({ users, currentUserId }: UsersClientProps) {
+export function UsersClient({ users, departments = [], currentUserId }: UsersClientProps) {
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
 
@@ -95,12 +103,17 @@ export function UsersClient({ users, currentUserId }: UsersClientProps) {
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   แผนก / หน่วยงานที่สังกัด (Department)
                 </label>
-                <input
-                  type="text"
-                  name="department"
-                  placeholder="เช่น แผนก IT, การเงิน, การตลาด"
+                <select
+                  name="departmentId"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
-                />
+                >
+                  <option value="">-- ไม่ระบุแผนก --</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -229,6 +242,7 @@ export function UsersClient({ users, currentUserId }: UsersClientProps) {
         isOpen={!!editingUser}
         onClose={() => setEditingUser(null)}
         user={editingUser}
+        departments={departments}
         onSuccess={handleRefresh}
       />
     </div>

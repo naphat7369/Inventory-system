@@ -33,6 +33,7 @@ export function Sidebar({ user }: { user: any }) {
       { name: 'อุปกรณ์นับจำนวน (Stock)', href: '/quantity-assets', icon: Boxes },
       { name: 'ยืม-คืน (Borrows)', href: '/borrows', icon: ArrowLeftRight },
       { name: 'Licenses', href: '/licenses', icon: Key },
+      { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText },
       { name: 'เอกสารต่ออายุ (Renewals)', href: '/renewals', icon: FileText, badge: expiringCount },
       { name: 'Categories', href: '/categories', icon: Tag },
       { name: 'Properties', href: '/properties', icon: Building },
@@ -41,19 +42,20 @@ export function Sidebar({ user }: { user: any }) {
       { name: 'Settings', href: '/settings', icon: Settings },
     ];
   } else {
-    // Staff role strictly sees only Borrow Form
+    // Staff role strictly sees only Borrow Form and Memos
     links = [
       { name: 'ขอยืมอุปกรณ์ (Borrow Form)', href: '/borrows', icon: ArrowLeftRight },
+      { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText },
     ];
   }
 
 
   return (
-    <>
+    <div suppressHydrationWarning className="contents">
       {/* Mobile Header */}
       <div suppressHydrationWarning className="md:hidden flex items-center justify-between bg-gray-900 text-white p-4 w-full print:hidden z-30 relative shadow-sm">
-        <div className="text-xl font-bold">Inventory System</div>
-        <div className="flex items-center gap-1">
+        <div suppressHydrationWarning className="text-xl font-bold">Inventory System</div>
+        <div suppressHydrationWarning className="flex items-center gap-1">
           <ThemeToggle />
           <button 
             onClick={() => setIsOpen(true)}
@@ -77,8 +79,8 @@ export function Sidebar({ user }: { user: any }) {
 
       {/* Sidebar Panel */}
       <div suppressHydrationWarning className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-gray-900 text-white min-h-screen print:hidden transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} dark:border-r dark:border-slate-800 shadow-[4px_0_24px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.4)]`}>
-        <div className="p-4 text-xl font-bold border-b border-gray-800 flex justify-between items-center">
-          <span>Inventory System</span>
+        <div suppressHydrationWarning className="p-4 text-xl font-bold border-b border-gray-800 flex justify-between items-center">
+          <span suppressHydrationWarning>Inventory System</span>
           <button 
             onClick={() => setIsOpen(false)}
             aria-label="Close Menu"
@@ -134,6 +136,6 @@ export function Sidebar({ user }: { user: any }) {
         </form>
       </div>
     </div>
-    </>
+    </div>
   );
 }

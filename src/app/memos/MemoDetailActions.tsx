@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit, CheckCircle, Printer, Copy, XCircle, Trash2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Edit, CheckCircle, Printer, Copy, XCircle, Trash2, CheckCircle2, AlertCircle, Loader2, BookmarkPlus } from 'lucide-react';
 import { DeleteMemoModal } from './DeleteMemoModal';
 
 interface MemoDetailActionsProps {
@@ -12,6 +12,7 @@ interface MemoDetailActionsProps {
   subject?: string;
   canDelete?: boolean;
   canEdit?: boolean;
+  signatures?: any[];
 }
 
 export function MemoDetailActions({ 
@@ -20,7 +21,8 @@ export function MemoDetailActions({
   documentNo,
   subject,
   canDelete = true,
-  canEdit = true
+  canEdit = true,
+  signatures = []
 }: MemoDetailActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -84,6 +86,46 @@ export function MemoDetailActions({
       router.push(`/memos/${data.id}/edit`);
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Error duplicating memo', 'error');
+      setLoading(false);
+    }
+  };
+
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState('');
+
+  const handleSaveAsTemplate = () => {
+    if (!signatures || signatures.length === 0) {
+      showToast('ไม่มีรายชื่อผู้เซ็นให้บันทึกเป็นเทมเพลต', 'error');
+      return;
+    }
+    setSaveTemplateName('');
+    setIsSaveModalOpen(true);
+  };
+
+  const submitSaveTemplate = async () => {
+    if (!saveTemplateName || saveTemplateName.trim() === '') return;
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/signature-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveTemplateName,
+          items: signatures
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save template');
+      }
+
+      showToast('บันทึกเป็นเทมเพลตเรียบร้อยแล้ว', 'success');
+      setIsSaveModalOpen(false);
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
       setLoading(false);
     }
   };
@@ -327,6 +369,16 @@ export function MemoDetailActions({
           <Copy size={18} /> ทำสำเนา
         </button>
 
+        {signatures && signatures.length > 0 && (
+          <button 
+            onClick={handleSaveAsTemplate} 
+            disabled={loading} 
+            className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+          >
+            <BookmarkPlus size={18} /> เซฟเป็นเทมเพลตลายเซ็น
+          </button>
+        )}
+
         {status === 'FINAL' && (
           <button 
             onClick={() => setConfirmCancelOpen(true)} 
@@ -448,6 +500,60 @@ export function MemoDetailActions({
             <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
           )}
           <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Save Template Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-800 flex flex-col gap-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center">
+                <BookmarkPlus size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">บันทึกเป็นเทมเพลต</h3>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                ตั้งชื่อเทมเพลตชุดลายเซ็นนี้
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={saveTemplateName}
+                onChange={(e) => setSaveTemplateName(e.target.value)}
+                placeholder="เช่น หัวหน้าแผนกบุคคล"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitSaveTemplate();
+                  }
+                }}
+              />
+            </div>
+            
+            <div className="flex items-center justify-end gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                disabled={loading}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={submitSaveTemplate}
+                disabled={!saveTemplateName.trim() || loading}
+                className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {loading && <Loader2 size={16} className="animate-spin" />}
+                บันทึก
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

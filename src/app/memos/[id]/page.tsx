@@ -80,6 +80,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           subject={memo.subject}
           canDelete={canDelete}
           canEdit={canEdit}
+          signatures={signatures}
         />
 
         {/* Status Badge - Hidden in Print */}

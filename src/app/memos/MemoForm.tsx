@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichTextEditor } from '@/components/RichTextEditor';
-import { Plus, Trash2, ArrowUp, ArrowDown, Save, Eye, Lock } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, Save, Eye, Lock, Bookmark, BookmarkPlus, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
+import { SignatureTemplateManager, SignatureTemplate } from './components/SignatureTemplateManager';
 
 export type Signature = {
   id?: string;
@@ -63,6 +64,13 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const [loading, setLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Template States
+  const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
+  const [saveTemplateLoading, setSaveTemplateLoading] = useState(false);
+  const [templates, setTemplates] = useState<SignatureTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+
   // Determine initial department ID
   const defaultDeptId = isEdit
     ? (initialData?.departmentId || '')
@@ -109,6 +117,27 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
+
+  useEffect(() => {
+    if (!isFinal && !isCancelled) {
+      fetchTemplates();
+    }
+  }, [isFinal, isCancelled]);
+
+  const fetchTemplates = async () => {
+    setIsLoadingTemplates(true);
+    try {
+      const res = await fetch('/api/signature-templates');
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch templates');
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
 
   const handleChange = () => {
     if (!isDirty) setIsDirty(true);
@@ -158,6 +187,106 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     
     setSignatures(newSigs);
     handleChange();
+  };
+
+  const [pendingTemplate, setPendingTemplate] = useState<SignatureTemplate | null>(null);
+
+  const executeApplyTemplate = (template: SignatureTemplate) => {
+    const copiedSignatures = template.items.map((item, index) => ({
+      id: crypto.randomUUID(),
+      role: item.role,
+      name: item.name,
+      position: item.position ?? "",
+      sortOrder: index,
+    }));
+
+    setSignatures(copiedSignatures);
+    setIsTemplateManagerOpen(false);
+    setSelectedTemplateId(template.id);
+    handleChange();
+  };
+
+  const handleApplyTemplate = (template: SignatureTemplate): boolean => {
+    if (signatures.length > 0 && signatures.some(s => s.role || s.name)) {
+      setPendingTemplate(template);
+      return false; // wait for modal
+    }
+    executeApplyTemplate(template);
+    return true;
+  };
+
+  const handleTemplateSelection = (templateId: string) => {
+    if (!templateId) {
+      setSelectedTemplateId('');
+      return;
+    }
+    
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      handleApplyTemplate(template);
+    }
+  };
+
+  const confirmTemplateOverwrite = () => {
+    if (pendingTemplate) {
+      executeApplyTemplate(pendingTemplate);
+      setPendingTemplate(null);
+    }
+  };
+
+  const cancelTemplateOverwrite = () => {
+    setPendingTemplate(null);
+    setSelectedTemplateId('');
+  };
+
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState('');
+
+  const handleSaveAsTemplate = () => {
+    if (signatures.length === 0) {
+      alert('กรุณาเพิ่มผู้เซ็นอย่างน้อย 1 คนก่อนบันทึกเทมเพลต');
+      return;
+    }
+
+    const validSignatures = signatures.filter(s => s.role.trim() !== '' && s.name?.trim() !== '');
+    if (validSignatures.length !== signatures.length) {
+      alert('กรุณากรอกบทบาทและชื่อผู้เซ็นให้ครบถ้วนก่อนบันทึกเทมเพลต');
+      return;
+    }
+
+    setSaveTemplateName('');
+    setIsSaveModalOpen(true);
+  };
+
+  const submitSaveTemplate = async () => {
+    if (!saveTemplateName || saveTemplateName.trim() === '') return;
+
+    setSaveTemplateLoading(true);
+    try {
+      const validSignatures = signatures.filter(s => s.role.trim() !== '' && s.name?.trim() !== '');
+      const res = await fetch('/api/signature-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveTemplateName,
+          items: validSignatures
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save template');
+      }
+
+      alert('บันทึกเทมเพลตเรียบร้อยแล้ว');
+      await fetchTemplates(); // Refresh list
+      setSelectedTemplateId(data.id);
+      setIsSaveModalOpen(false);
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setSaveTemplateLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent, isPreview: boolean = false) => {
@@ -419,15 +548,59 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
 
       {/* Signatures Form */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-        <div className="flex justify-between items-center mb-6 border-b pb-4">
+        <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 border-b pb-4 gap-4">
           <div>
-            <h2 className="text-xl font-bold">Signatures (รายชื่อผู้เซ็น)</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              Signatures (รายชื่อผู้เซ็น)
+            </h2>
             <p className="text-xs text-gray-500 mt-1">ระบบจะจัดตำแหน่งให้อยู่กึ่งกลางสวยงามตามจำนวนผู้เซ็นโดยอัตโนมัติ</p>
           </div>
-          {!isCancelled && (
-            <button type="button" onClick={addSignature} className="text-sm flex items-center gap-1 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors">
-              <Plus size={16} /> Add Signature Box
-            </button>
+          
+          {!isCancelled && !isFinal && (
+            <div className="flex flex-col items-end gap-2">
+              {/* Template Selector Section */}
+              <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 p-2 rounded-lg border border-gray-200 dark:border-slate-700 w-full md:w-auto">
+                {isLoadingTemplates ? (
+                  <div className="flex items-center text-sm text-gray-500 px-3 py-1.5"><Loader2 size={16} className="animate-spin mr-2"/> โหลดเทมเพลต...</div>
+                ) : (
+                  <>
+                    <select 
+                      value={selectedTemplateId} 
+                      onChange={e => handleTemplateSelection(e.target.value)}
+                      className="text-sm px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-500 min-w-[150px]"
+                    >
+                      <option value="">-- เลือกเทมเพลตลายเซ็น --</option>
+                      {templates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.items.length})</option>
+                      ))}
+                    </select>
+                    <button 
+                      type="button" 
+                      onClick={() => setIsTemplateManagerOpen(true)}
+                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-md transition-colors"
+                      title="จัดการเทมเพลต"
+                    >
+                      <Bookmark size={16} />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button" 
+                  onClick={handleSaveAsTemplate} 
+                  disabled={saveTemplateLoading || signatures.length === 0}
+                  className="text-sm flex items-center gap-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1.5 font-medium transition-colors disabled:opacity-50"
+                >
+                  {saveTemplateLoading ? <Loader2 size={16} className="animate-spin" /> : <BookmarkPlus size={16} />} 
+                  บันทึกเป็นเทมเพลต
+                </button>
+                <button type="button" onClick={addSignature} className="text-sm flex items-center gap-1 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors font-medium border border-gray-200 dark:border-slate-600">
+                  <Plus size={16} /> Add Signature Box
+                </button>
+              </div>
+            </div>
           )}
         </div>
         
@@ -533,6 +706,105 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
           </>
         )}
       </div>
+      
+      {isTemplateManagerOpen && (
+        <SignatureTemplateManager
+          isOpen={isTemplateManagerOpen}
+          onClose={() => {
+            setIsTemplateManagerOpen(false);
+            fetchTemplates(); // refresh list in case it was edited/deleted
+          }}
+          onApplyTemplate={handleApplyTemplate}
+          currentSignatures={signatures}
+        />
+      )}
+
+      {/* Confirm Overwrite Modal */}
+      {pendingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-800 flex flex-col gap-4 text-center">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-2">
+              <Bookmark size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">ใช้เทมเพลต "{pendingTemplate.name}" หรือไม่?</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                รายชื่อผู้เซ็นที่คุณกรอกไว้อยู่ในขณะนี้จะถูก <strong className="text-gray-700 dark:text-gray-200">แทนที่ทั้งหมด</strong> ด้วยข้อมูลจากเทมเพลต
+              </p>
+            </div>
+            <div className="flex items-center gap-3 w-full mt-2">
+              <button
+                type="button"
+                onClick={cancelTemplateOverwrite}
+                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={confirmTemplateOverwrite}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm"
+              >
+                ตกลง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Template Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-800 flex flex-col gap-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center">
+                <BookmarkPlus size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">บันทึกเป็นเทมเพลต</h3>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                ตั้งชื่อเทมเพลตชุดลายเซ็นนี้
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={saveTemplateName}
+                onChange={(e) => setSaveTemplateName(e.target.value)}
+                placeholder="เช่น หัวหน้าแผนกบุคคล"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitSaveTemplate();
+                  }
+                }}
+              />
+            </div>
+            
+            <div className="flex items-center justify-end gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                disabled={saveTemplateLoading}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={submitSaveTemplate}
+                disabled={!saveTemplateName.trim() || saveTemplateLoading}
+                className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saveTemplateLoading && <Loader2 size={16} className="animate-spin" />}
+                บันทึก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

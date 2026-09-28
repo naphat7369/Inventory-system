@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText } from 'lucide-react';
+import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText, Workflow, FileCheck2, PenLine, ShieldCheck } from 'lucide-react';
 import { logout, getExpiringRenewalsCount } from '@/app/actions';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/app/components/ThemeToggle';
+import type { JWTPayload } from 'jose';
 
-export function Sidebar({ user }: { user: any }) {
+export function Sidebar({ user }: { user: JWTPayload }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [expiringCount, setExpiringCount] = useState<number>(0);
@@ -28,14 +29,18 @@ export function Sidebar({ user }: { user: any }) {
 
   if (user?.role === 'ADMIN') {
     links = [
-      { name: 'Dashboard', href: '/', icon: Home },
+      { name: 'Dashboard', href: '/', icon: Home, section: 'ภาพรวม' },
       { name: 'Assets', href: '/assets', icon: Package },
       { name: 'อุปกรณ์นับจำนวน (Stock)', href: '/quantity-assets', icon: Boxes },
       { name: 'ยืม-คืน (Borrows)', href: '/borrows', icon: ArrowLeftRight },
       { name: 'Licenses', href: '/licenses', icon: Key },
-      { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText },
+      { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText, section: 'เอกสารและการอนุมัติ' },
+      ...(user?.isApprover ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
+      { name: 'ลายเซ็นของฉัน', href: '/memos/signatures', icon: PenLine },
+      { name: 'E‑Approve', href: '/e-approve/admin', icon: Workflow },
+      { name: 'Audit & Operations', href: '/e-approve/admin/audit-logs', icon: ShieldCheck },
       { name: 'เอกสารต่ออายุ (Renewals)', href: '/renewals', icon: FileText, badge: expiringCount },
-      { name: 'Categories', href: '/categories', icon: Tag },
+      { name: 'Categories', href: '/categories', icon: Tag, section: 'การจัดการระบบ' },
       { name: 'Properties', href: '/properties', icon: Building },
       { name: 'Repair Center', href: '/repairs', icon: Wrench },
       { name: 'Users', href: '/users', icon: Users },
@@ -46,8 +51,16 @@ export function Sidebar({ user }: { user: any }) {
     links = [
       { name: 'ขอยืมอุปกรณ์ (Borrow Form)', href: '/borrows', icon: ArrowLeftRight },
       { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText },
+      ...(user?.isApprover ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
+      { name: 'ลายเซ็นของฉัน', href: '/memos/signatures', icon: PenLine },
     ];
   }
+
+  // Only the most specific route is active. This prevents both `/memos` and
+  // `/memos/approvals` from being highlighted at the same time.
+  const activeHref = links
+    .filter((link) => pathname === link.href || (link.href !== '/' && pathname.startsWith(`${link.href}/`)))
+    .sort((first, second) => second.href.length - first.href.length)[0]?.href;
 
 
   return (
@@ -92,11 +105,12 @@ export function Sidebar({ user }: { user: any }) {
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {links.map((link) => {
           const Icon = link.icon;
-          const isActive = pathname === link.href || (pathname.startsWith(link.href) && link.href !== '/');
+          const isActive = activeHref === link.href;
           
           return (
+            <div key={link.name}>
+            {'section' in link && link.section && <div className="px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">{link.section}</div>}
             <Link
-              key={link.name}
               href={link.href}
               onClick={() => setIsOpen(false)}
               className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
@@ -111,6 +125,7 @@ export function Sidebar({ user }: { user: any }) {
                 </span>
               )}
             </Link>
+            </div>
 
           );
         })}
@@ -123,8 +138,8 @@ export function Sidebar({ user }: { user: any }) {
               <User size={20} />
             </div>
             <div>
-              <p className="text-sm font-medium">{user.username}</p>
-              <p className="text-xs text-gray-500">{user.role}</p>
+              <p className="text-sm font-medium">{String(user.username ?? '')}</p>
+              <p className="text-xs text-gray-500">{String(user.role ?? '')}</p>
             </div>
           </div>
           <ThemeToggle />

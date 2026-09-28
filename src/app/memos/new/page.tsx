@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { MemoForm } from '../MemoForm';
 import { FileText, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { getAttachmentLimits } from '@/lib/memo-attachments';
 
 export default async function NewMemoPage() {
   const session = await getSession();
@@ -50,10 +51,14 @@ export default async function NewMemoPage() {
   }
 
   // Active departments only
-  const departments = await prisma.department.findMany({
-    where: { isActive: true },
-    orderBy: { name: 'asc' }
-  });
+  const [departments, memoTypes, attachmentLimits] = await Promise.all([
+    prisma.department.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
+    prisma.memoType.findMany({
+      where: { isActive: true }, orderBy: { name: 'asc' },
+      select: { id: true, name: true, code: true, branchId: true },
+    }),
+    getAttachmentLimits(prisma),
+  ]);
 
   return (
     <div className="p-4 md:p-8 max-w-[1700px] mx-auto w-full">
@@ -70,6 +75,8 @@ export default async function NewMemoPage() {
         departments={departments} 
         userDepartmentId={currentUser.departmentId}
         isAdmin={isAdmin}
+        memoTypes={memoTypes}
+        attachmentLimits={attachmentLimits}
       />
     </div>
   );

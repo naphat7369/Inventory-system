@@ -1,0 +1,45 @@
+import { NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+import { buildApprovalChain, ApprovalRuleError } from '@/lib/eapprove/chain';
+import { eApproveErrorResponse } from '@/lib/eapprove/http';
+import { EApproveError } from '@/lib/eapprove/errors';
+
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await getSession();
+    if (!session?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { id } = await params;
+    const memo = await prisma.memo.findUnique({
+      where: { id },
+      include: {
+        department: { include: { hod: true, branch: { include: { generalManager: true } } } },
+        memoType: { include: { requiredApprovers: { orderBy: { sortOrder: 'asc' }, include: { approver: true } } } },
+      },
+    });
+    if (!memo || memo.deletedAt) throw new EApproveError('MEMO_NOT_FOUND', 'ไม่พบ Memo', 404);
+    if (memo.createdById !== String(session.id)) throw new EApproveError('FORBIDDEN', 'เฉพาะผู้สร้าง Memo เท่านั้น', 403);
+    if (!memo.memoType?.isActive) throw new EApproveError('MEMO_TYPE_REQUIRED', 'กรุณาเลือก Memo Type ที่เปิดใช้งาน');
+    const branch = memo.department.branch;
+    if (!branch?.isActive) throw new EApproveError('BRANCH_REQUIRED', 'แผนกยังไม่ได้กำหนดสาขาที่เปิดใช้งาน');
+    try {
+      const chain = buildApprovalChain({
+        creatorId: String(session.id), branchId: branch.id,
+        hod: memo.department.hod,
+        gmFallback: memo.department.hod ? null : branch.generalManager,
+        required: memo.memoType.requiredApprovers.map((rule) => ({
+          approver: rule.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: rule.id,
+        })),
+      });
+      return NextResponse.json({
+        memoType: { id: memo.memoType.id, name: memo.memoType.name, code: memo.memoType.code },
+        branch: { id: branch.id, name: branch.name, code: branch.code }, chain,
+      });
+    } catch (error) {
+      if (error instanceof ApprovalRuleError) throw new EApproveError(error.code, error.message);
+      throw error;
+    }
+  } catch (error) {
+    return eApproveErrorResponse(error);
+  }
+}

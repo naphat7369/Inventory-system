@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, AlertCircle, Shield, User } from 'lucide-react';
+import { X, AlertCircle, User } from 'lucide-react';
 import { updateUser } from '@/app/actions';
 
 interface DepartmentItem {
   id: string;
   name: string;
   code: string;
+  branchId?: string | null;
 }
+interface BranchItem { id: string; name: string; code: string; }
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -21,18 +23,28 @@ interface EditUserModalProps {
     departmentId?: string | null;
     phone?: string | null;
     role: string;
+    branchId?: string | null;
+    isAllBranches?: boolean;
+    isActive?: boolean;
+    position?: string | null;
+    email?: string | null;
   } | null;
   departments?: DepartmentItem[];
+  branches?: BranchItem[];
   onSuccess: () => void;
 }
 
-export function EditUserModal({ isOpen, onClose, user, departments = [], onSuccess }: EditUserModalProps) {
+export function EditUserModal({ isOpen, onClose, user, departments = [], branches = [], onSuccess }: EditUserModalProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('STAFF');
+  const [branchId, setBranchId] = useState('');
+  const [isActive, setIsActive] = useState(true);
+  const [position, setPosition] = useState('');
+  const [email, setEmail] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -45,6 +57,10 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], onSucce
       setDepartmentId(user.departmentId || '');
       setPhone(user.phone || '');
       setRole(user.role || 'STAFF');
+      setBranchId(user.isAllBranches ? '__ALL__' : (user.branchId || ''));
+      setIsActive(user.isActive !== false);
+      setPosition(user.position || '');
+      setEmail(user.email || '');
       setError('');
     }
   }, [user]);
@@ -70,6 +86,11 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], onSucce
         departmentId: departmentId.trim() || null,
         phone: phone.trim() || null,
         role,
+        branchId: branchId === '__ALL__' ? null : (branchId || null),
+        isAllBranches: branchId === '__ALL__',
+        isActive,
+        position: position || null,
+        email: email || null,
       });
 
       if (res.success) {
@@ -153,6 +174,7 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], onSucce
           </div>
 
           {/* Department */}
+          <div><label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">สาขา (Branch)</label><select value={branchId} onChange={(e) => { setBranchId(e.target.value); setDepartmentId(''); }} className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm"><option value="">-- ไม่ระบุสาขา --</option><option value="__ALL__">ทุกสาขา (สำนักงานใหญ่ / ผู้บริหารส่วนกลาง)</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}</select></div>
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               แผนก / หน่วยงานที่สังกัด (Department)
@@ -163,13 +185,16 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], onSucce
               className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
             >
               <option value="">-- ไม่ระบุแผนก --</option>
-              {departments.map((d) => (
+              {departments.filter((d) => branchId !== '__ALL__' && (!branchId || d.branchId === branchId)).map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name} ({d.code})
                 </option>
               ))}
             </select>
           </div>
+
+          <div className="grid grid-cols-2 gap-3"><div><label className="block text-xs font-bold mb-1">ตำแหน่ง</label><input value={position} onChange={(e) => setPosition(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl dark:bg-slate-800"/></div><div><label className="block text-xs font-bold mb-1">Email</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3.5 py-2.5 border rounded-xl dark:bg-slate-800"/></div></div>
+          <label className="flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-3 text-sm font-semibold"><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)}/> Active</label>
 
           {/* Phone */}
           <div>
@@ -196,7 +221,7 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], onSucce
               className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-semibold"
             >
               <option value="STAFF">STAFF (ยืมอุปกรณ์ & ดูสถานะตนเอง)</option>
-              <option value="ADMIN">ADMIN (อนุมัติ, จัดการสต็อก & สิทธิ์ทั้งหมด)</option>
+              <option value="ADMIN">ADMIN (จัดการระบบ สต็อก และสิทธิ์ทั้งหมด)</option>
             </select>
           </div>
 

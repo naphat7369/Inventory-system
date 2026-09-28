@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { getSession } from '@/lib/auth';
+import { promises as fs } from 'node:fs';
+import { memoAttachmentPath } from '@/lib/memo-attachments';
 
 const prisma = new PrismaClient();
 
@@ -12,19 +14,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
+    const currentUser = await prisma.user.findUnique({ where: { id: String(session.id) } });
+    if (!currentUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     const memo = await prisma.memo.findUnique({
       where: { id },
       include: {
         department: true,
         signatures: {
           orderBy: { sortOrder: 'asc' }
-        }
+        },
+        approvalRounds: { include: { steps: { select: { approverId: true } } } },
       }
     });
 
     if (!memo || memo.deletedAt !== null) {
       return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
     }
+    const participates = memo.approvalRounds.some((round) => round.steps.some((step) => step.approverId === currentUser.id));
+    const canView = currentUser.role === 'ADMIN' || memo.createdById === currentUser.id || currentUser.departmentId === memo.departmentId || participates;
+    if (!canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     return NextResponse.json(memo);
   } catch (error) {
@@ -60,12 +68,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     // Permission check for editing
-    if (currentUser.role !== 'ADMIN' && currentUser.departmentId !== existing.departmentId) {
-      return NextResponse.json({ error: 'Forbidden: You cannot edit memos from another department' }, { status: 403 });
+    if (currentUser.role !== 'ADMIN' && existing.createdById !== currentUser.id) {
+      return NextResponse.json({ error: 'Forbidden: Only the memo creator can edit this document' }, { status: 403 });
     }
     
     if (existing.status === 'CANCELLED') {
       return NextResponse.json({ error: 'Cannot edit cancelled memo' }, { status: 400 });
+    }
+    if (!['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(existing.approvalStatus)) {
+      return NextResponse.json({ error: 'Cannot edit a submitted or approved memo snapshot' }, { status: 409 });
     }
 
     // Prepare update data
@@ -80,6 +91,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       content: data.content,
       remark: data.remark !== undefined ? (data.remark?.trim() || null) : undefined,
     };
+
+    if (data.memoTypeId) {
+      const effectiveDepartmentId = existing.status === 'DRAFT' && data.departmentId
+        ? data.departmentId
+        : existing.departmentId;
+      const [department, memoType] = await Promise.all([
+        prisma.department.findUnique({ where: { id: effectiveDepartmentId } }),
+        prisma.memoType.findFirst({ where: { id: data.memoTypeId, isActive: true } }),
+      ]);
+      if (!department || !memoType || (memoType.branchId && memoType.branchId !== department.branchId)) {
+        return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
+      }
+      updateData.memoType = { connect: { id: memoType.id } };
+      updateData.branch = department.branchId ? { connect: { id: department.branchId } } : { disconnect: true };
+    }
 
     // If FINAL: STRICTLY LOCK Logo, subHeader, and departmentId
     if (existing.status === 'FINAL') {
@@ -149,7 +175,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     
     const memo = await prisma.memo.findUnique({
       where: { id },
-      include: { department: true }
+      include: { department: true, attachments: true }
     });
 
     if (!memo || memo.deletedAt !== null) {
@@ -157,65 +183,41 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     // Permission check
-    if (currentUser.role !== 'ADMIN') {
-      if (!currentUser.departmentId || currentUser.departmentId !== memo.departmentId) {
-        return NextResponse.json({ 
-          error: 'Forbidden: You do not have permission to delete memos from another department' 
-        }, { status: 403 });
-      }
+    if (currentUser.role !== 'ADMIN' && memo.createdById !== currentUser.id) {
+      return NextResponse.json({
+        error: 'Forbidden: Only the memo creator can delete this document'
+      }, { status: 403 });
     }
 
-    // FINAL status cannot be deleted
-    if (memo.status === 'FINAL') {
+    // Any issued document number is permanent; cancellation never makes it deletable.
+    if (memo.documentNo) {
       return NextResponse.json({ 
-        error: 'ไม่สามารถลบเอกสารที่ออกเลขแล้ว กรุณายกเลิกเอกสารก่อน' 
+        error: 'ไม่สามารถลบเอกสารที่ออกเลขแล้วได้'
       }, { status: 400 });
     }
 
+    const deleteMemoAndFiles = async () => {
+      await prisma.memo.delete({ where: { id: memo.id } });
+      await Promise.all(memo.attachments.map((attachment) => {
+        const { target } = memoAttachmentPath(memo.id, attachment.storedFileName);
+        return fs.unlink(target).catch(() => undefined);
+      }));
+    };
+
     // DRAFT without documentNo -> Hard Delete
     if (memo.status === 'DRAFT' && !memo.documentNo) {
-      await prisma.memo.delete({
-        where: { id: memo.id }
-      });
+      await deleteMemoAndFiles();
       return NextResponse.json({ success: true, deletionType: 'hard' });
-    }
-
-    // CANCELLED with documentNo -> Soft Delete
-    if (memo.status === 'CANCELLED' && memo.documentNo) {
-      await prisma.memo.update({
-        where: { id: memo.id },
-        data: {
-          deletedAt: new Date(),
-          deletedById: currentUser.id,
-        }
-      });
-      return NextResponse.json({ success: true, deletionType: 'soft' });
     }
 
     // CANCELLED without documentNo -> Hard Delete
     if (memo.status === 'CANCELLED' && !memo.documentNo) {
-      await prisma.memo.delete({
-        where: { id: memo.id }
-      });
+      await deleteMemoAndFiles();
       return NextResponse.json({ success: true, deletionType: 'hard' });
     }
 
-    // Fallback for any memo with documentNo that is not FINAL (e.g. edge cases) -> Soft Delete
-    if (memo.documentNo) {
-      await prisma.memo.update({
-        where: { id: memo.id },
-        data: {
-          deletedAt: new Date(),
-          deletedById: currentUser.id,
-        }
-      });
-      return NextResponse.json({ success: true, deletionType: 'soft' });
-    }
-
     // Otherwise Hard Delete
-    await prisma.memo.delete({
-      where: { id: memo.id }
-    });
+    await deleteMemoAndFiles();
     return NextResponse.json({ success: true, deletionType: 'hard' });
 
   } catch (error) {

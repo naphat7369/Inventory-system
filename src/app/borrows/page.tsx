@@ -156,7 +156,7 @@ export default function BorrowsPage() {
       {currentUser && currentUser.role !== 'ADMIN' && (
         <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-white dark:bg-slate-900/20 backdrop-blur-xs rounded-full text-xs font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-indigo-950/35 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-sm">
               <span>สำหรับพนักงาน (Staff Portal)</span>
             </div>
             <h2 className="text-xl font-extrabold">แบบฟอร์มยื่นคำขอยืมอุปกรณ์</h2>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { cleanAndCropSignatureImage } from '@/lib/signature-image';
 
 // ========================================================
 // TYPES & CONTENT BLOCK DEFINITION
@@ -18,6 +19,9 @@ export type MemoSignatureItem = {
   name?: string | null;
   position?: string | null;
   sortOrder?: number;
+  approvalSignatureType?: 'TYPED' | 'DRAWN' | 'UPLOADED';
+  approvalSignatureData?: string;
+  approvedAt?: string | null;
 };
 
 export type MemoDocumentPaginationProps = {
@@ -260,9 +264,13 @@ export function MemoDocumentPagination({
         const textContent = pDoc.body.textContent || '';
         
         let words: string[] = [];
-        if (typeof Intl !== 'undefined' && (Intl as any).Segmenter) {
-          const segmenter = new (Intl as any).Segmenter('th', { granularity: 'word' });
-          words = Array.from(segmenter.segment(textContent)).map((s: any) => s.segment);
+        type WordSegment = { segment: string };
+        type SegmenterInstance = { segment: (input: string) => Iterable<WordSegment> };
+        type SegmenterConstructor = new (locale: string, options: { granularity: 'word' }) => SegmenterInstance;
+        const segmenterApi = (Intl as typeof Intl & { Segmenter?: SegmenterConstructor }).Segmenter;
+        if (typeof Intl !== 'undefined' && segmenterApi) {
+          const segmenter = new segmenterApi('th', { granularity: 'word' });
+          words = Array.from(segmenter.segment(textContent)).map((item) => item.segment);
         } else {
           words = textContent.split(/(\s+)/).filter(Boolean);
         }
@@ -847,6 +855,16 @@ export function MemoDocumentPagination({
         .memo-signature-item {
           break-inside: avoid;
           page-break-inside: avoid;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        .memo-approval-signature-image {
+          filter: none !important;
+          -webkit-filter: none !important;
+          opacity: 1 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
 
         .memo-footer-note {
@@ -1125,12 +1143,49 @@ function SignatureBox({ sig, width = "w-48" }: { sig: MemoSignatureItem; width?:
   return (
     <div className={`memo-signature-item ${width} text-center flex flex-col items-center`}>
       <div className="font-semibold text-[14pt] text-black mb-0.5">{sig.role}</div>
-      {/* Physical handwritten signature whitespace */}
-      <div className="h-14 w-full" />
+      <div className="h-14 w-full flex items-center justify-center overflow-hidden" aria-label={sig.approvalSignatureData ? `ลายเซ็นอนุมัติของ ${sig.name ?? ''}` : undefined}>
+        {sig.approvalSignatureData && sig.approvalSignatureType === 'TYPED' && (
+          <span className="memo-approval-signature-text max-w-[88%] truncate px-1 font-serif text-[14pt] italic leading-none text-[#1e3a8a]">
+            {sig.approvalSignatureData}
+          </span>
+        )}
+        {sig.approvalSignatureData && sig.approvalSignatureType === 'DRAWN' && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={sig.approvalSignatureData}
+            alt={`ลายเซ็นของ ${sig.name ?? 'ผู้อนุมัติ'}`}
+            className="memo-approval-signature-image max-h-[52px] max-w-full object-contain"
+          />
+        )}
+        {sig.approvalSignatureData && sig.approvalSignatureType === 'UPLOADED' && (
+          <CleanUploadedSignatureImage source={sig.approvalSignatureData} name={sig.name ?? 'ผู้อนุมัติ'} />
+        )}
+      </div>
       <div className="font-medium text-[14pt] text-black mb-0.5">{sig.name || ''}</div>
       <div className="text-[12.5pt] text-black">
         {sig.position ? `( ${sig.position} )` : ''}
       </div>
     </div>
+  );
+}
+
+function CleanUploadedSignatureImage({ source, name }: { source: string; name: string }) {
+  const [processedSource, setProcessedSource] = useState(source);
+
+  useEffect(() => {
+    let active = true;
+    void cleanAndCropSignatureImage(source).then((result) => {
+      if (active) setProcessedSource(result);
+    });
+    return () => { active = false; };
+  }, [source]);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={processedSource}
+      alt={`ลายเซ็นของ ${name}`}
+      className="memo-approval-signature-image max-h-[52px] max-w-[95%] object-contain"
+    />
   );
 }

@@ -211,6 +211,7 @@ export async function createBorrowLog(input: CreateBorrowInput) {
       // 5. Record AuditLog
       await tx.auditLog.create({
         data: {
+          module: 'BORROW',
           action: 'CREATED',
           entity: 'BORROW',
           entityId: borrowLog.id,
@@ -303,6 +304,7 @@ export async function approveBorrowLog(borrowLogId: string) {
       // AuditLog
       await tx.auditLog.create({
         data: {
+          module: 'BORROW',
           action: 'UPDATED',
           entity: 'BORROW',
           entityId: borrowLogId,
@@ -361,6 +363,7 @@ export async function rejectBorrowLog(borrowLogId: string, input: RejectBorrowIn
 
       await tx.auditLog.create({
         data: {
+          module: 'BORROW',
           action: 'UPDATED',
           entity: 'BORROW',
           entityId: borrowLogId,
@@ -455,6 +458,7 @@ export async function returnBorrowLog(borrowLogId: string, input: ReturnBorrowIn
 
       await tx.auditLog.create({
         data: {
+          module: 'BORROW',
           action: 'UPDATED',
           entity: 'BORROW',
           entityId: borrowLogId,
@@ -535,6 +539,7 @@ export async function voidBorrowLog(borrowLogId: string, input: VoidBorrowInput)
 
       await tx.auditLog.create({
         data: {
+          module: 'BORROW',
           action: 'DELETED',
           entity: 'BORROW',
           entityId: borrowLogId,
@@ -590,6 +595,7 @@ export async function extendBorrowLog(borrowLogId: string, input: ExtendBorrowIn
 
       await tx.auditLog.create({
         data: {
+          module: 'BORROW',
           action: 'UPDATED',
           entity: 'BORROW',
           entityId: borrowLogId,

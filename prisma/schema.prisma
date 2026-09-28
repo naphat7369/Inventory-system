@@ -13,7 +13,7 @@ datasource db {
 model Category {
   id           String        @id @default(uuid())
   name         String
-  prefix       String?       // Prefix for generating Asset IDs (e.g., 'IT', 'FUR')
+  prefix       String? // Prefix for generating Asset IDs (e.g., 'IT', 'FUR')
   assets       Asset[]
   customFields CustomField[]
   createdAt    DateTime      @default(now())
@@ -23,8 +23,8 @@ model Category {
 model CustomField {
   id         String   @id @default(uuid())
   name       String
-  type       String   // text, number, date, dropdown
-  options    String?  // JSON string for dropdown options if any
+  type       String // text, number, date, dropdown
+  options    String? // JSON string for dropdown options if any
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
@@ -32,177 +32,194 @@ model CustomField {
 }
 
 model Property {
-  id     String  @id @default(uuid())
-  name   String
-  prefix String?
-  assets Asset[]
+  id       String    @id @default(uuid())
+  name     String
+  prefix   String?
+  assets   Asset[]
   licenses License[]
 }
 
 model Asset {
-  id           String    @id @default(uuid())
-  assetId      String    @unique
-  name         String    // Used as Device Name
-  
+  id      String @id @default(uuid())
+  assetId String @unique
+  name    String // Used as Device Name
+
   // New Fields
-  ipAddress    String?
-  department   String?
-  owner        String?
-  os           String?
-  location     String?   // Changed to String instead of relation
-  
+  ipAddress  String?
+  department String?
+  owner      String?
+  os         String?
+  location   String? // Changed to String instead of relation
+
   purchaseDate DateTime?
   status       String    @default("Available") // Available, In-use, Repairing, Disposed
-  userId       String?   // Holder of the asset
-  
-  categoryId   String
-  category     Category  @relation(fields: [categoryId], references: [id])
-  propertyId   String?
-  property     Property? @relation(fields: [propertyId], references: [id])
-  
-  parentId     String?
-  parent       Asset?    @relation("AssetHierarchy", fields: [parentId], references: [id])
-  children     Asset[]   @relation("AssetHierarchy")
-  
-  customData       String?   // JSON string storing custom field data
-  isDeleted        Boolean   @default(false)
-  isBorrowable     Boolean   @default(true) // Admin flag whether asset can be borrowed
-  
-  isQuantityBased  Boolean   @default(false)
-  totalQuantity    Int       @default(1)
-  availableQuantity Int       @default(1)
-  
-  repairLogs       RepairLog[]
-  borrowLogs       BorrowLog[]
+  userId       String? // Holder of the asset
+
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id])
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+
+  parentId String?
+  parent   Asset?  @relation("AssetHierarchy", fields: [parentId], references: [id])
+  children Asset[] @relation("AssetHierarchy")
+
+  customData   String? // JSON string storing custom field data
+  isDeleted    Boolean @default(false)
+  isBorrowable Boolean @default(true) // Admin flag whether asset can be borrowed
+
+  isQuantityBased   Boolean @default(false)
+  totalQuantity     Int     @default(1)
+  availableQuantity Int     @default(1)
+
+  repairLogs         RepairLog[]
+  borrowLogs         BorrowLog[]
   licenseAssignments LicenseAssignment[]
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RepairLog {
-  id             String        @id @default(uuid())
-  assetId        String
-  asset          Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   reason         String
-  status         String        @default("IN_PROGRESS") // IN_PROGRESS, WAITING_FOR_PARTS, COMPLETED
-  technician     String?       // in-house tech name or external vendor
-  sentDate       DateTime      @default(now())
+  status         String    @default("IN_PROGRESS") // IN_PROGRESS, WAITING_FOR_PARTS, COMPLETED
+  technician     String? // in-house tech name or external vendor
+  sentDate       DateTime  @default(now())
   completionDate DateTime?
-  costCents      Int?          // store money as integer cents, not Float
+  costCents      Int? // store money as integer cents, not Float
   resolution     String?
 
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([assetId, status])
   @@index([status])
 }
 
 model BorrowLog {
-  id                 String    @id @default(uuid())
-  assetId            String
-  asset              Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  userId             String?
-  user               User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id      String  @id @default(uuid())
+  assetId String
+  asset   Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  borrowerName       String
-  borrowerDept       String?
-  borrowerContact    String?
+  borrowerName    String
+  borrowerDept    String?
+  borrowerContact String?
 
-  quantity           Int       @default(1)
+  quantity Int @default(1)
 
   borrowDate         DateTime  @default(now())
   expectedReturnDate DateTime
   originalReturnDate DateTime
   actualReturnDate   DateTime?
 
-  status             String    @default("BORROWED") // PENDING_APPROVAL, BORROWED, REJECTED, RETURNED, VOIDED
-  purpose            String?
-  borrowNotes        String?
-  returnNotes        String?
-  returnCondition    String?   // GOOD, DAMAGED
+  status          String  @default("BORROWED") // PENDING_APPROVAL, BORROWED, REJECTED, RETURNED, VOIDED
+  purpose         String?
+  borrowNotes     String?
+  returnNotes     String?
+  returnCondition String? // GOOD, DAMAGED
 
-  approvedBy         String?
-  approvedAt         DateTime?
-  rejectReason       String?
+  approvedBy   String?
+  approvedAt   DateTime?
+  rejectReason String?
 
-  voidReason         String?
-  voidedBy           String?
-  voidedAt           DateTime?
+  voidReason String?
+  voidedBy   String?
+  voidedAt   DateTime?
 
-  handledBy          String?
+  handledBy String?
 
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([assetId, status])
   @@index([status])
 }
 
 model User {
-  id           String      @id @default(uuid())
-  username     String      @unique
-  passwordHash String
-  fullName     String?     // ชื่อ - นามสกุล
-  departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id])
-  phone        String?     // เบอร์โทรศัพท์ / ช่องทางติดต่อ
-  role         String      @default("STAFF") // ADMIN or STAFF
-  borrowLogs   BorrowLog[]
-  licenseAssignments LicenseAssignment[]
-  deletedMemos Memo[]      @relation("DeletedMemos")
-  signatureTemplates SignatureTemplate[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                    String                     @id @default(uuid())
+  username              String                     @unique
+  passwordHash          String
+  fullName              String? // ชื่อ - นามสกุล
+  departmentId          String?
+  department            Department?                @relation(fields: [departmentId], references: [id])
+  phone                 String? // เบอร์โทรศัพท์ / ช่องทางติดต่อ
+  role                  String                     @default("STAFF") // ADMIN or STAFF
+  email                 String?
+  position              String?
+  isActive              Boolean                    @default(true)
+  isApprover            Boolean                    @default(false)
+  isAllBranches         Boolean                    @default(false)
+  branchId              String?
+  branch                Branch?                    @relation("BranchUsers", fields: [branchId], references: [id], onDelete: SetNull)
+  headedDepartments     Department[]               @relation("DepartmentHod")
+  managedBranches       Branch[]                   @relation("BranchGm")
+  requiredApprovalRules MemoTypeRequiredApprover[]
+  approvalSteps         MemoApprovalStep[]
+  delegationsGiven      ApprovalDelegation[]       @relation("Delegator")
+  delegationsReceived   ApprovalDelegation[]       @relation("Delegate")
+  borrowLogs            BorrowLog[]
+  licenseAssignments    LicenseAssignment[]
+  deletedMemos          Memo[]                     @relation("DeletedMemos")
+  signatureTemplates    SignatureTemplate[]
+  approvalSignatures    ApprovalSignature[]
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+
+  @@index([branchId, isActive, isApprover])
+  @@index([isAllBranches, isActive, isApprover])
 }
 
 model License {
   id             String    @id @default(uuid())
-  name           String    // e.g., "Microsoft 365 Family"
+  name           String // e.g., "Microsoft 365 Family"
   accountEmail   String?
   productKey     String?
   totalSlots     Int       @default(1)
   purchaseDate   DateTime?
   expirationDate DateTime?
   status         String    @default("Active") // Active, Expired
-  
-  propertyId     String?
-  property       Property? @relation(fields: [propertyId], references: [id])
-  
-  assignments    LicenseAssignment[]
-  
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+
+  assignments LicenseAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LicenseAssignment {
-  id             String    @id @default(uuid())
-  licenseId      String
-  license        License   @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  licenseId String
+  license   License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
 
-  userId         String?
-  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  assignedTo     String    // Person's name snapshot
-  assignedEmail  String?   // Person's email snapshot
-  department     String?   // Department snapshot
-  phone          String?   // Phone snapshot
+  assignedTo    String // Person's name snapshot
+  assignedEmail String? // Person's email snapshot
+  department    String? // Department snapshot
+  phone         String? // Phone snapshot
 
-  assetId        String?
-  asset          Asset?    @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
-  deviceName     String?   // Device / Machine Name snapshot
+  deviceName String? // Device / Machine Name snapshot
 
   assignedDate   DateTime  @default(now())
   unassignedDate DateTime?
 
-  notes          String?
-  isActive       Boolean   @default(true)
+  notes    String?
+  isActive Boolean @default(true)
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([licenseId])
   @@index([userId])
@@ -210,39 +227,58 @@ model LicenseAssignment {
   @@index([isActive])
 }
 
+model Branch {
+  id               String       @id @default(uuid())
+  name             String
+  code             String       @unique
+  isActive         Boolean      @default(true)
+  generalManagerId String?
+  generalManager   User?        @relation("BranchGm", fields: [generalManagerId], references: [id], onDelete: SetNull)
+  users            User[]       @relation("BranchUsers")
+  departments      Department[]
+  memoTypes        MemoType[]
+  memos            Memo[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([generalManagerId])
+}
+
 model AuditLog {
   id        String   @id @default(uuid())
-  action    String   // "CREATED", "UPDATED", "DELETED"
-  entity    String   // "ASSET", "REPAIR", "LICENSE"
+  module    String   @default("SYSTEM")
+  action    String // "CREATED", "UPDATED", "DELETED"
+  entity    String // "ASSET", "REPAIR", "LICENSE"
   entityId  String
-  userId    String?  // null until auth exists
-  oldValue  String?  // previous state (JSON string)
-  newValue  String?  // new state (JSON string)
-  details   String?  // optional free-text note
+  userId    String? // null until auth exists
+  oldValue  String? // previous state (JSON string)
+  newValue  String? // new state (JSON string)
+  details   String? // optional free-text note
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([module, createdAt])
   @@index([entity, entityId])
 }
 
 model RenewalContract {
-  id               String              @id @default(uuid())
+  id               String    @id @default(uuid())
   contractNo       String?
   title            String
-  category         String              @default("Service") // MA, Domain, Insurance, License, Service, Other
+  category         String    @default("Service") // MA, Domain, Insurance, License, Service, Other
   vendor           String?
   costCents        Int?
   startDate        DateTime?
   endDate          DateTime
-  alertAdvanceDays Int                 @default(30)
+  alertAdvanceDays Int       @default(30)
   notes            String?
   createdBy        String?
-  
-  attachments      RenewalAttachment[]
-  histories        RenewalHistory[]
-  
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+
+  attachments RenewalAttachment[]
+  histories   RenewalHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([endDate])
 }
@@ -251,17 +287,17 @@ model RenewalAttachment {
   id                 String          @id @default(uuid())
   contractId         String
   contract           RenewalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  fileName           String          // Original uploaded filename
-  storedFileName     String          // UUID disk filename
+  fileName           String // Original uploaded filename
+  storedFileName     String // UUID disk filename
   filePath           String
   fileType           String?
   fileSize           Int?
   attachmentCategory String          @default("General") // "Main Contract", "Quotation", "Receipt", "Renewal Document", "General"
-  
-  renewalHistoryId   String?
-  renewalHistory     RenewalHistory? @relation(fields: [renewalHistoryId], references: [id], onDelete: SetNull)
 
-  createdAt          DateTime        @default(now())
+  renewalHistoryId String?
+  renewalHistory   RenewalHistory? @relation(fields: [renewalHistoryId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
 
   @@index([contractId])
   @@index([renewalHistoryId])
@@ -296,54 +332,114 @@ model LogoAsset {
 }
 
 model Department {
-  id          String      @id @default(uuid())
-  name        String
-  nameEn      String?     // English header e.g. "FOOD & BEVERAGE DEPARTMENT"
-  code        String      @unique
-  isActive    Boolean     @default(true)
-  logoAssetId String?
-  logoAsset   LogoAsset?  @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
-  logoUrl     String?     // Current logo URL for new memos
-  users       User[]
-  memos       Memo[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                String                 @id @default(uuid())
+  name              String
+  nameEn            String? // English header e.g. "FOOD & BEVERAGE DEPARTMENT"
+  code              String                 @unique
+  isActive          Boolean                @default(true)
+  logoAssetId       String?
+  logoAsset         LogoAsset?             @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
+  logoUrl           String? // Current logo URL for new memos
+  users             User[]
+  memos             Memo[]
+  branchId          String?
+  branch            Branch?                @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  hodId             String?
+  hod               User?                  @relation("DepartmentHod", fields: [hodId], references: [id], onDelete: SetNull)
+  approvalTemplates ApprovalTemplate[]
+  documentSequences MemoDocumentSequence[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
 
   @@index([logoAssetId])
+  @@index([branchId])
+  @@index([hodId])
+}
+
+model MemoDocumentSequence {
+  id           String     @id @default(uuid())
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  buddhistYear Int
+  lastSequence Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([departmentId, buddhistYear])
+}
+
+model IdempotencyRecord {
+  id           String    @id @default(uuid())
+  key          String    @unique
+  action       String
+  actorId      String
+  resourceId   String?
+  requestHash  String
+  status       String    @default("PROCESSING")
+  responseJson String?
+  errorCode    String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+  expiresAt    DateTime?
+
+  @@index([actorId, action, createdAt])
+  @@index([status, expiresAt])
+}
+
+model SystemSetting {
+  key         String   @id
+  value       String
+  updatedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Memo {
-  id           String          @id @default(uuid())
-  departmentId String
-  department   Department      @relation(fields: [departmentId], references: [id])
-  sequence     Int?
-  buddhistYear Int?
-  documentNo   String?         @unique
-  documentDate DateTime
-  recipient    String
-  sender       String
-  subject      String
-  subHeader    String?         // Uppercase department header snapshot (e.g. "FOOD & BEVERAGE DEPARTMENT")
-  logoAssetId  String?
-  logoAsset    LogoAsset?      @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
-  logoUrl      String?         // Fixed snapshot of logo URL at memo creation
-  reference    String?
-  carbonCopy   String?
-  content      String          // SQLite does not support @db.Text, String is text by default
-  remark       String?         // หมายเหตุกั้นท้าย / หมายเหตุเพิ่มเติม
-  status       String          @default("DRAFT") // DRAFT, FINAL, CANCELLED
-  
-  createdById  String?
-  updatedById  String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  cancelledAt  DateTime?
+  id             String     @id @default(uuid())
+  departmentId   String
+  department     Department @relation(fields: [departmentId], references: [id])
+  sequence       Int?
+  buddhistYear   Int?
+  documentNo     String?    @unique
+  documentDate   DateTime
+  recipient      String
+  sender         String
+  subject        String
+  subHeader      String? // Uppercase department header snapshot (e.g. "FOOD & BEVERAGE DEPARTMENT")
+  logoAssetId    String?
+  logoAsset      LogoAsset? @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
+  logoUrl        String? // Fixed snapshot of logo URL at memo creation
+  reference      String?
+  carbonCopy     String?
+  content        String // SQLite does not support @db.Text, String is text by default
+  remark         String? // หมายเหตุกั้นท้าย / หมายเหตุเพิ่มเติม
+  status         String     @default("DRAFT") // DRAFT, FINAL, CANCELLED
+  approvalStatus String     @default("DRAFT")
+  pdfStatus      String     @default("NOT_REQUESTED")
+  pdfErrorCode   String?
+  branchId       String?
+  branch         Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  memoTypeId     String?
+  memoType       MemoType?  @relation(fields: [memoTypeId], references: [id], onDelete: SetNull)
 
-  deletedAt    DateTime?
-  deletedById  String?
-  deletedBy    User?           @relation("DeletedMemos", fields: [deletedById], references: [id], onDelete: SetNull)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cancelledAt DateTime?
 
-  signatures   MemoSignature[]
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("DeletedMemos", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  signatures      MemoSignature[]
+  attachments     MemoAttachment[]
+  versions        MemoVersion[]
+  approvalRounds  MemoApprovalRound[]
+  pdfArtifacts    MemoPdfArtifact[]
+  jobs            BackgroundJob[]
+  notifications   Notification[]
+  emailDeliveries EmailDelivery[]
 
   @@unique([departmentId, buddhistYear, sequence])
   @@index([departmentId])
@@ -353,44 +449,297 @@ model Memo {
   @@index([logoAssetId])
   @@index([deletedAt])
   @@index([deletedById])
+  @@index([approvalStatus])
+  @@index([pdfStatus])
+  @@index([branchId])
+  @@index([memoTypeId])
+}
+
+model MemoType {
+  id                String                     @id @default(uuid())
+  name              String
+  code              String                     @unique
+  description       String?
+  isActive          Boolean                    @default(true)
+  sendPdfToIt       Boolean                    @default(false)
+  branchId          String?
+  branch            Branch?                    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  requiredApprovers MemoTypeRequiredApprover[]
+  memos             Memo[]
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@index([branchId, isActive])
+}
+
+model MemoTypeRequiredApprover {
+  id         String   @id @default(uuid())
+  memoTypeId String
+  memoType   MemoType @relation(fields: [memoTypeId], references: [id], onDelete: Cascade)
+  approverId String
+  approver   User     @relation(fields: [approverId], references: [id], onDelete: Restrict)
+  sortOrder  Int
+  createdAt  DateTime @default(now())
+
+  @@unique([memoTypeId, approverId])
+  @@unique([memoTypeId, sortOrder])
+  @@index([approverId])
+}
+
+model ApprovalTemplate {
+  id           String                    @id @default(uuid())
+  name         String
+  departmentId String
+  department   Department                @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  branchId     String
+  isActive     Boolean                   @default(true)
+  version      Int                       @default(1)
+  createdById  String
+  updatedById  String
+  items        ApprovalTemplateItem[]
+  versions     ApprovalTemplateVersion[]
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+
+  @@unique([departmentId, branchId, name])
+  @@index([departmentId, branchId, isActive])
+}
+
+model ApprovalTemplateItem {
+  id         String           @id @default(uuid())
+  templateId String
+  template   ApprovalTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  approverId String
+  sortOrder  Int
+
+  @@unique([templateId, approverId])
+  @@unique([templateId, sortOrder])
+}
+
+model ApprovalTemplateVersion {
+  id          String           @id @default(uuid())
+  templateId  String
+  template    ApprovalTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  version     Int
+  snapshot    String
+  changedById String
+  createdAt   DateTime         @default(now())
+
+  @@unique([templateId, version])
+}
+
+model MemoVersion {
+  id                    String              @id @default(uuid())
+  memoId                String
+  memo                  Memo                @relation(fields: [memoId], references: [id], onDelete: Restrict)
+  version               Int
+  contentSnapshot       String
+  approvalChainSnapshot String
+  attachmentSnapshot    String?
+  contentHash           String
+  createdById           String
+  createdAt             DateTime            @default(now())
+  rounds                MemoApprovalRound[]
+  pdfArtifacts          MemoPdfArtifact[]
+
+  @@unique([memoId, version])
+  @@index([contentHash])
+}
+
+model MemoApprovalRound {
+  id            String             @id @default(uuid())
+  memoId        String
+  memo          Memo               @relation(fields: [memoId], references: [id], onDelete: Restrict)
+  memoVersionId String
+  memoVersion   MemoVersion        @relation(fields: [memoVersionId], references: [id], onDelete: Restrict)
+  roundNumber   Int
+  status        String             @default("ACTIVE")
+  closedAt      DateTime?
+  createdAt     DateTime           @default(now())
+  steps         MemoApprovalStep[]
+
+  @@unique([memoId, roundNumber])
+  @@index([memoId, status])
+}
+
+model MemoApprovalStep {
+  id                       String            @id @default(uuid())
+  roundId                  String
+  round                    MemoApprovalRound @relation(fields: [roundId], references: [id], onDelete: Restrict)
+  sortOrder                Int
+  approverId               String
+  approver                 User              @relation(fields: [approverId], references: [id], onDelete: Restrict)
+  status                   String            @default("WAITING")
+  source                   String
+  sourceMetadata           String
+  approverNameSnapshot     String
+  approverPositionSnapshot String?
+  actedById                String?
+  actedByNameSnapshot      String?
+  signatureSnapshot        String?
+  delegationId             String?
+  decisionReason           String?
+  actedAt                  DateTime?
+  memoVersionId            String
+  integrityHash            String?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  @@unique([roundId, sortOrder])
+  @@unique([roundId, approverId])
+  @@index([approverId, status])
+}
+
+model ApprovalDelegation {
+  id          String    @id @default(uuid())
+  delegatorId String
+  delegator   User      @relation("Delegator", fields: [delegatorId], references: [id], onDelete: Restrict)
+  delegateId  String
+  delegate    User      @relation("Delegate", fields: [delegateId], references: [id], onDelete: Restrict)
+  scope       String
+  memoTypeId  String?
+  memoId      String?
+  startsAt    DateTime
+  endsAt      DateTime
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@index([delegatorId, startsAt, endsAt, isActive])
+  @@index([delegateId, isActive])
+}
+
+model MemoPdfArtifact {
+  id            String      @id @default(uuid())
+  memoId        String
+  memo          Memo        @relation(fields: [memoId], references: [id], onDelete: Restrict)
+  memoVersionId String
+  memoVersion   MemoVersion @relation(fields: [memoVersionId], references: [id], onDelete: Restrict)
+  kind          String      @default("OFFICIAL")
+  storageKey    String
+  contentHash   String
+  jobKey        String      @unique
+  createdAt     DateTime    @default(now())
+
+  @@unique([memoId, memoVersionId, kind])
+}
+
+model BackgroundJob {
+  id             String    @id @default(uuid())
+  type           String
+  status         String    @default("PENDING")
+  idempotencyKey String    @unique
+  memoId         String?
+  memo           Memo?     @relation(fields: [memoId], references: [id], onDelete: SetNull)
+  payload        String
+  attemptCount   Int       @default(0)
+  maxAttempts    Int       @default(5)
+  availableAt    DateTime  @default(now())
+  lockedAt       DateTime?
+  completedAt    DateTime?
+  lastErrorCode  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, availableAt])
+}
+
+model Notification {
+  id             String    @id @default(uuid())
+  userId         String
+  memoId         String?
+  memo           Memo?     @relation(fields: [memoId], references: [id], onDelete: SetNull)
+  type           String
+  payload        String
+  idempotencyKey String    @unique
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model EmailDelivery {
+  id             String    @id @default(uuid())
+  memoId         String?
+  memo           Memo?     @relation(fields: [memoId], references: [id], onDelete: SetNull)
+  recipient      String
+  template       String
+  payload        String
+  status         String    @default("PENDING")
+  idempotencyKey String    @unique
+  attemptCount   Int       @default(0)
+  sentAt         DateTime?
+  lastErrorCode  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, createdAt])
 }
 
 model MemoSignature {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   memoId    String
-  memo      Memo     @relation(fields: [memoId], references: [id], onDelete: Cascade)
-  role      String   
+  memo      Memo    @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  role      String
   name      String?
   position  String?
-  sortOrder Int      @default(0)
+  sortOrder Int     @default(0)
 
   @@index([memoId])
 }
 
+model MemoAttachment {
+  id             String   @id @default(uuid())
+  memoId         String
+  memo           Memo     @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  fileName       String
+  storedFileName String
+  mimeType       String
+  fileSize       Int
+  uploadedById   String
+  createdAt      DateTime @default(now())
+
+  @@index([memoId, createdAt])
+}
+
 model SignatureTemplate {
-  id        String                  @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
   name      String
-  createdAt DateTime                @default(now())
-  updatedAt DateTime                @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     SignatureTemplateItem[]
+  user  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items SignatureTemplateItem[]
 
   @@unique([userId, name])
   @@index([userId])
 }
 
 model SignatureTemplateItem {
-  id         String            @id @default(cuid())
+  id         String  @id @default(cuid())
   templateId String
   role       String
   name       String
   position   String?
   sortOrder  Int
 
-  template   SignatureTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template SignatureTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([templateId, sortOrder])
   @@index([templateId])
+}
+
+model ApprovalSignature {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      String
+  data      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isDefault])
 }

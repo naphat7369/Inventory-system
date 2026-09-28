@@ -13,6 +13,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const { id } = await params;
 
+    const currentUser = await prisma.user.findUnique({ where: { id: String(session.id) } });
+    if (!currentUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
     // Use transaction to ensure safe number generation
     const memo = await prisma.$transaction(async (tx) => {
       const existing = await tx.memo.findUnique({
@@ -26,6 +29,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       if (existing.status !== 'DRAFT') {
         throw new Error('Only DRAFT memos can be finalized');
+      }
+      if (existing.memoTypeId || existing.branchId) {
+        throw new Error('E-Approve memos must use the submit approval endpoint');
+      }
+      if (currentUser.role !== 'ADMIN' && (existing.createdById !== currentUser.id || existing.departmentId !== currentUser.departmentId)) {
+        throw new Error('Forbidden');
       }
 
       // 1. Calculate Buddhist Year from documentDate
@@ -62,6 +71,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         where: { id },
         data: {
           status: 'FINAL',
+          approvalStatus: 'APPROVED',
+          pdfStatus: 'NOT_REQUESTED',
           sequence: nextSequence,
           buddhistYear: buddhistYear,
           documentNo: documentNo,

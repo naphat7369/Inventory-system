@@ -14,6 +14,12 @@ interface UserItem {
   departmentId?: string | null;
   phone?: string | null;
   role: string;
+  branch?: string | null;
+  branchId?: string | null;
+  isAllBranches?: boolean;
+  isActive?: boolean;
+  position?: string | null;
+  email?: string | null;
   createdAt: Date | string;
 }
 
@@ -21,15 +27,18 @@ interface DepartmentItem {
   id: string;
   name: string;
   code: string;
+  branchId?: string | null;
 }
+interface BranchItem { id: string; name: string; code: string; }
 
 interface UsersClientProps {
   users: UserItem[];
   departments?: DepartmentItem[];
+  branches?: BranchItem[];
   currentUserId: string;
 }
 
-export function UsersClient({ users, departments = [], currentUserId }: UsersClientProps) {
+export function UsersClient({ users, departments = [], branches = [], currentUserId }: UsersClientProps) {
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
 
@@ -62,6 +71,11 @@ export function UsersClient({ users, departments = [], currentUserId }: UsersCli
             <form action={async (formData) => { await createUser(formData); }} className="space-y-4">
 
               <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">สาขา (Branch)</label>
+                <select name="branchId" className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm"><option value="">-- ไม่ระบุสาขา --</option><option value="__ALL__">ทุกสาขา (สำนักงานใหญ่ / ผู้บริหารส่วนกลาง)</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}</select>
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Username <span className="text-rose-500">*</span>
                 </label>
@@ -74,6 +88,7 @@ export function UsersClient({ users, departments = [], currentUserId }: UsersCli
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3"><input name="position" placeholder="ตำแหน่ง" className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm"/><input name="email" type="email" placeholder="Email" className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm"/></div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Password <span className="text-rose-500">*</span>
@@ -137,7 +152,7 @@ export function UsersClient({ users, departments = [], currentUserId }: UsersCli
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-semibold"
                 >
                   <option value="STAFF">STAFF (ยืมอุปกรณ์ & ดูสถานะตนเอง)</option>
-                  <option value="ADMIN">ADMIN (อนุมัติ, จัดการสต็อก & สิทธิ์ทั้งหมด)</option>
+                  <option value="ADMIN">ADMIN (จัดการระบบ สต็อก และสิทธิ์ทั้งหมด)</option>
                 </select>
               </div>
 
@@ -159,7 +174,7 @@ export function UsersClient({ users, departments = [], currentUserId }: UsersCli
                 <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   <tr>
                     <th className="p-4">ผู้ใช้งาน (User & Profile)</th>
-                    <th className="p-4">แผนก / หน่วยงาน</th>
+                    <th className="p-4">สาขา / แผนก</th>
                     <th className="p-4">สิทธิ์</th>
                     <th className="p-4 text-right">จัดการ</th>
                   </tr>
@@ -188,7 +203,7 @@ export function UsersClient({ users, departments = [], currentUserId }: UsersCli
 
                       <td className="p-4">
                         <span className="inline-flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
-                          {u.department || 'ไม่ระบุแผนก'}
+                          {u.isAllBranches ? 'ทุกสาขา' : (u.branch || 'ไม่ระบุสาขา')} · {u.department || 'ไม่ระบุแผนก'}
                         </span>
                       </td>
 
@@ -243,6 +258,7 @@ export function UsersClient({ users, departments = [], currentUserId }: UsersCli
         onClose={() => setEditingUser(null)}
         user={editingUser}
         departments={departments}
+        branches={branches}
         onSuccess={handleRefresh}
       />
     </div>

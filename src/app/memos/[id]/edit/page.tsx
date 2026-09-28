@@ -4,6 +4,7 @@ import { MemoForm } from '../../MemoForm';
 import { FileText } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { getAttachmentLimits } from '@/lib/memo-attachments';
 
 export default async function EditMemoPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -22,19 +23,25 @@ export default async function EditMemoPage({ params }: { params: Promise<{ id: s
 
   const { id } = await params;
   
-  const [memo, departments] = await Promise.all([
+  const [memo, departments, memoTypes, attachmentLimits] = await Promise.all([
     prisma.memo.findUnique({
       where: { id },
       include: {
         signatures: {
           orderBy: { sortOrder: 'asc' }
-        }
+        },
+        attachments: { orderBy: { createdAt: 'asc' } },
       }
     }),
     prisma.department.findMany({
       where: { isActive: true },
       orderBy: { name: 'asc' }
-    })
+    }),
+    prisma.memoType.findMany({
+      where: { isActive: true }, orderBy: { name: 'asc' },
+      select: { id: true, name: true, code: true, branchId: true },
+    }),
+    getAttachmentLimits(prisma),
   ]);
 
   if (!memo || memo.deletedAt !== null) {
@@ -70,6 +77,8 @@ export default async function EditMemoPage({ params }: { params: Promise<{ id: s
         isEdit={true} 
         userDepartmentId={currentUser.departmentId}
         isAdmin={isAdmin}
+        memoTypes={memoTypes}
+        attachmentLimits={attachmentLimits}
       />
     </div>
   );

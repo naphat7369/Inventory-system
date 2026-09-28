@@ -139,7 +139,7 @@ export function StaffBorrowPortal({
       {/* Header Banner */}
       <div className="p-6 bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-900/20 backdrop-blur-xs rounded-full text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-indigo-950/35 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-sm">
             <UserIcon className="w-3.5 h-3.5" />
             <span>สำหรับพนักงาน (Staff Portal)</span>
           </div>

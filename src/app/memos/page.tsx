@@ -13,7 +13,9 @@ function formatThaiDate(date: Date | string) {
 }
 
 export default async function MemosPage({ searchParams }: { searchParams: Promise<{ search?: string, status?: string, departmentId?: string, page?: string }> }) {
-  const { search = '', status = '', departmentId = '', page = '1' } = await searchParams;
+  const params = await searchParams;
+  const { search = '', status = '', page = '1' } = params;
+  const hasDepartmentParam = params.departmentId !== undefined;
   const session = await getSession();
 
   const currentUser = session?.id ? await prisma.user.findUnique({
@@ -22,6 +24,12 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
 
   const isAdmin = currentUser?.role === 'ADMIN';
   const userDeptId = currentUser?.departmentId;
+  const departments = await prisma.department.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' }
+  });
+  const itDepartment = departments.find((department) => department.code.trim().toLocaleUpperCase('en-US') === 'IT');
+  const departmentId = isAdmin && !hasDepartmentParam ? (itDepartment?.id ?? '') : (params.departmentId ?? '');
 
   // Filter out soft-deleted memos
   const whereClause: Prisma.MemoWhereInput = {
@@ -41,7 +49,8 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
   }
   
   if (status) {
-    andConditions.push({ status });
+    const approvalStatuses = ['SUBMITTED', 'IN_REVIEW', 'APPROVED', 'REVISION_REQUESTED'];
+    andConditions.push(approvalStatuses.includes(status) ? { approvalStatus: status } : { status });
   }
 
   // Role-based Department restriction
@@ -49,7 +58,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
     if (!userDeptId) {
       andConditions.push({ departmentId: 'unauthorized-no-dept' }); // Force empty results
     } else {
-      andConditions.push({ departmentId: userDeptId });
+      andConditions.push({ createdById: currentUser?.id });
     }
   } else if (departmentId) {
     // Only admins can filter by other departments
@@ -71,15 +80,11 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
     where: whereClause,
     include: {
       department: true,
+      memoType: true,
     },
     orderBy: { updatedAt: 'desc' },
     skip,
     take: PAGE_SIZE,
-  });
-
-  const departments = await prisma.department.findMany({
-    where: { isActive: true },
-    orderBy: { name: 'asc' }
   });
 
   return (
@@ -130,6 +135,10 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
               <option value="">All Statuses</option>
               <option value="DRAFT">Draft</option>
               <option value="FINAL">Final</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="IN_REVIEW">In Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REVISION_REQUESTED">Revision Requested</option>
               <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
@@ -151,7 +160,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
           <button type="submit" className="w-full md:w-auto bg-gray-800 dark:bg-slate-800 text-white px-6 py-2 rounded-lg hover:bg-gray-900 dark:hover:bg-slate-700 transition-colors font-medium">
             Filter
           </button>
-          {(search || status || departmentId) && (
+          {(search || status || hasDepartmentParam) && (
             <Link href="/memos" className="w-full md:w-auto text-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 font-medium px-2 py-2">
               Clear
             </Link>
@@ -174,7 +183,8 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
             </thead>
             <tbody>
               {memos.map(memo => {
-                const canDelete = isAdmin || (Boolean(userDeptId) && userDeptId === memo.departmentId);
+                const isOwner = memo.createdById === currentUser?.id;
+                const canSendEmail = Boolean(isAdmin || isOwner) && memo.status !== 'CANCELLED' && memo.pdfStatus === 'READY';
                 return (
                   <tr key={memo.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                     <td className="p-4 font-medium">{memo.documentNo || '-'}</td>
@@ -185,20 +195,20 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
                     <td className="p-4 font-medium">{memo.subject}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                        memo.status === 'FINAL' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        (memo.approvalStatus === 'APPROVED' || memo.status === 'FINAL') ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                         memo.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                       }`}>
-                        {memo.status}
+                        {memo.memoTypeId ? memo.approvalStatus : memo.status}
                       </span>
                     </td>
                     <td className="p-4">
                       <MemoRowActions 
                         memoId={memo.id}
                         documentNo={memo.documentNo}
-                        status={memo.status}
                         subject={memo.subject}
-                        canDelete={canDelete}
+                        canSendEmail={canSendEmail}
+                        officialPdfReady={memo.pdfStatus === 'READY'}
                       />
                     </td>
                   </tr>

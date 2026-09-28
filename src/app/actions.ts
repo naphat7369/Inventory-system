@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSession, deleteSession, getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { serializeAuditValue } from '@/lib/audit';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -38,15 +39,23 @@ export async function createAuditLog(
   action: string, 
   entity: string, 
   entityId: string, 
-  data?: { oldValue?: any, newValue?: any, details?: string, userId?: any }
+  data?: { oldValue?: any, newValue?: any, details?: string, userId?: any, module?: string }
 ) {
+  const inferredModule = data?.module ?? (
+    entity === 'LICENSE' ? 'LICENSE'
+      : entity === 'REPAIR' ? 'REPAIR'
+        : entity === 'BORROW' || entity === 'BORROW_LOG' ? 'BORROW'
+          : ['ASSET', 'CATEGORY', 'PROPERTY'].includes(entity) ? 'INVENTORY'
+            : 'SYSTEM'
+  );
   return tx.auditLog.create({
     data: {
+      module: inferredModule,
       action,
       entity,
       entityId,
-      oldValue: data?.oldValue ? JSON.stringify(data.oldValue) : null,
-      newValue: data?.newValue ? JSON.stringify(data.newValue) : null,
+      oldValue: serializeAuditValue(data?.oldValue),
+      newValue: serializeAuditValue(data?.newValue),
       details: data?.details,
       userId: data?.userId ? String(data.userId) : null
     }
@@ -444,6 +453,13 @@ export async function getUsers() {
       },
       phone: true,
       role: true,
+      email: true,
+      position: true,
+      isActive: true,
+      isApprover: true,
+      isAllBranches: true,
+      branchId: true,
+      branch: { select: { id: true, name: true, code: true } },
       createdAt: true,
     },
     orderBy: { createdAt: 'desc' },
@@ -457,6 +473,13 @@ export async function getUsers() {
     departmentId: u.departmentId,
     phone: u.phone,
     role: u.role,
+    email: u.email,
+    position: u.position,
+    isActive: u.isActive,
+    isApprover: u.isApprover,
+    isAllBranches: u.isAllBranches,
+    branchId: u.branchId,
+    branch: u.branch?.name || null,
     createdAt: u.createdAt,
   }));
 }
@@ -471,6 +494,11 @@ export async function createUser(formData: FormData) {
   const rawDept = (formData.get('departmentId') as string)?.trim() || (formData.get('department') as string)?.trim() || null;
   const phone = (formData.get('phone') as string)?.trim() || null;
   const role = (formData.get('role') as string) || 'STAFF';
+  const branchScope = (formData.get('branchId') as string)?.trim() || '';
+  const isAllBranches = branchScope === '__ALL__';
+  const branchId = isAllBranches ? null : branchScope || null;
+  const position = (formData.get('position') as string)?.trim() || null;
+  const email = (formData.get('email') as string)?.trim() || null;
 
   if (!username || !password) {
     return { error: 'กรุณากรอก Username และ Password' };
@@ -504,9 +532,13 @@ export async function createUser(formData: FormData) {
       username,
       passwordHash,
       fullName,
-      departmentId,
+      departmentId: isAllBranches ? null : departmentId,
       phone,
       role,
+      branchId,
+      isAllBranches,
+      position,
+      email,
     },
   });
 
@@ -524,6 +556,11 @@ export async function updateUser(
     department?: string | null;
     phone?: string | null;
     role?: string;
+    branchId?: string | null;
+    isAllBranches?: boolean;
+    isActive?: boolean;
+    position?: string | null;
+    email?: string | null;
   }
 ) {
   const session = await getSession();
@@ -560,6 +597,17 @@ export async function updateUser(
   }
   if (data.phone !== undefined) updateData.phone = data.phone ? data.phone.trim() : null;
   if (data.role) updateData.role = data.role;
+  if (data.branchId !== undefined) updateData.branchId = data.branchId || null;
+  if (data.isAllBranches !== undefined) {
+    updateData.isAllBranches = data.isAllBranches;
+    if (data.isAllBranches) {
+      updateData.branchId = null;
+      updateData.departmentId = null;
+    }
+  }
+  if (data.isActive !== undefined) updateData.isActive = data.isActive;
+  if (data.position !== undefined) updateData.position = data.position?.trim() || null;
+  if (data.email !== undefined) updateData.email = data.email?.trim() || null;
 
   if (data.password && data.password.trim() !== '') {
     updateData.passwordHash = await bcrypt.hash(data.password.trim(), 10);
@@ -1710,7 +1758,3 @@ export async function getExpiringRenewalsCount() {
     expiringSoonCount,
   };
 }
-
-
-
-

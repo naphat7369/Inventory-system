@@ -3,10 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently -k -n web,worker -c blue,magenta \"npm:dev:web\" \"npm:worker\"",
+    "dev:web": "next dev",
+    "worker": "node scripts/eapprove-worker.mjs",
+    "worker:once": "node scripts/eapprove-worker.mjs --once",
     "build": "prisma generate && next build",
     "start": "next start",
+    "start:web": "next start",
+    "start:all": "concurrently -k -n web,worker -c blue,magenta \"npm:start:web\" \"npm:worker\"",
     "lint": "eslint",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -14,29 +20,37 @@
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
+    "concurrently": "^10.0.5",
     "exceljs": "^4.4.0",
     "html5-qrcode": "^2.3.8",
     "jose": "^6.2.3",
     "lucide-react": "^1.24.0",
-    "next": "16.2.10",
+    "next": "16.3.6",
     "next-themes": "^0.4.6",
+    "nodemailer": "^10.0.11",
+    "puppeteer-core": "^25.12.0",
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-to-print": "^3.3.0",
     "recharts": "^3.10.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.3.6",
     "prisma": "^6.2.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   }
 }

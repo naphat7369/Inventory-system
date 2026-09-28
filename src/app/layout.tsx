@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { getSession } from "@/lib/auth";
 import { ThemeProvider } from "@/app/components/ThemeProvider";
 import { ExtensionCleaner } from "@/app/components/ExtensionCleaner";
+import prisma from "@/lib/prisma";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
@@ -27,6 +28,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
+  const approvalProfile = session?.id ? await prisma.user.findUnique({
+    where: { id: String(session.id) },
+    select: { isApprover: true, _count: { select: { approvalSteps: { where: { status: 'PENDING' } } } } },
+  }) : null;
+  const sidebarUser = session ? {
+    ...session,
+    isApprover: approvalProfile?.isApprover ?? false,
+    pendingApprovalCount: approvalProfile?._count.approvalSteps ?? 0,
+  } : null;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -34,7 +44,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ExtensionCleaner />
           <div className="flex flex-col md:flex-row min-h-screen w-full print:block print:min-h-0 print:w-auto print:m-0 print:p-0">
-            {session && <Sidebar user={session} />}
+            {sidebarUser && <Sidebar user={sidebarUser} />}
             <main className="flex-1 w-full overflow-x-hidden overflow-y-auto print:overflow-visible print:w-auto print:m-0 print:p-0">
               {children}
             </main>

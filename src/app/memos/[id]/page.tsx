@@ -5,6 +5,26 @@ import { MemoDetailActions } from '../MemoDetailActions';
 import { MemoDocumentPagination } from './MemoDocumentPagination';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
 import Link from 'next/link';
+import { ApprovalWorkflowPanel } from './ApprovalWorkflowPanel';
+import { CheckCircle2, Clock3, CircleDashed, Download, FileText, Paperclip, RotateCcw, SkipForward } from 'lucide-react';
+
+type StoredSignatureSnapshot = {
+  signatureType: 'TYPED' | 'DRAWN' | 'UPLOADED';
+  signatureData: string;
+  confirmedAt?: string;
+};
+
+function readStoredSignatureSnapshot(value: string | null): StoredSignatureSnapshot | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<StoredSignatureSnapshot>;
+    if (!['TYPED', 'DRAWN', 'UPLOADED'].includes(parsed.signatureType ?? '')) return null;
+    if (typeof parsed.signatureData !== 'string' || !parsed.signatureData) return null;
+    return parsed as StoredSignatureSnapshot;
+  } catch {
+    return null;
+  }
+}
 
 export default async function MemoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -14,7 +34,10 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
 
   const currentUser = await prisma.user.findUnique({
     where: { id: session.id as string },
-    include: { department: true }
+    include: {
+      department: true,
+      approvalSignatures: { orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }] },
+    }
   });
 
   if (!currentUser) {
@@ -27,9 +50,20 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
     where: { id },
     include: {
       department: true,
+      memoType: true,
       signatures: {
         orderBy: { sortOrder: 'asc' }
-      }
+      },
+      attachments: { orderBy: { createdAt: 'asc' } },
+      pdfArtifacts: { where: { kind: 'OFFICIAL' }, orderBy: { createdAt: 'desc' }, take: 1 },
+      approvalRounds: {
+        orderBy: { roundNumber: 'desc' },
+        take: 1,
+        include: {
+          steps: { orderBy: { sortOrder: 'asc' } },
+          memoVersion: { select: { contentSnapshot: true } },
+        },
+      },
     }
   });
 
@@ -39,8 +73,11 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
 
   const isAdmin = currentUser.role === 'ADMIN';
   const isSameDept = Boolean(currentUser.departmentId) && currentUser.departmentId === memo.departmentId;
+  const latestRound = memo.approvalRounds[0] ?? null;
+  const isApprovalParticipant = latestRound?.steps.some((step) => step.approverId === currentUser.id) ?? false;
+  const isOwner = memo.createdById === currentUser.id;
 
-  if (!isAdmin && !isSameDept) {
+  if (!isAdmin && !isSameDept && !isApprovalParticipant && !isOwner) {
     redirect('/memos');
   }
 
@@ -53,10 +90,67 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
   const displayLogoUrl = memo.logoUrl || DEFAULT_S_HOTEL_LOGO_URL;
   const displaySubHeader = (memo.subHeader || `${memo.department?.name || ''} DEPARTMENT`).trim().toLocaleUpperCase('en-US');
 
-  const signatures = memo.signatures || [];
+  let presenterSnapshot: StoredSignatureSnapshot | null = null;
+  try {
+    const versionContent = JSON.parse(latestRound?.memoVersion.contentSnapshot ?? '{}') as { presenterSignatureSnapshot?: unknown };
+    if (versionContent.presenterSignatureSnapshot) {
+      presenterSnapshot = readStoredSignatureSnapshot(JSON.stringify(versionContent.presenterSignatureSnapshot));
+    }
+  } catch {
+    presenterSnapshot = null;
+  }
+  // Compatibility for a memo submitted before presenter signature snapshots were introduced.
+  if (!presenterSnapshot && memo.createdById) {
+    const currentPresenterSignature = await prisma.approvalSignature.findFirst({
+      where: { userId: memo.createdById },
+      orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+    });
+    if (currentPresenterSignature) {
+      presenterSnapshot = {
+        signatureType: currentPresenterSignature.type as StoredSignatureSnapshot['signatureType'],
+        signatureData: currentPresenterSignature.data,
+      };
+    }
+  }
 
-  const canDelete = isAdmin || isSameDept;
-  const canEdit = isAdmin || isSameDept;
+  const approvedSteps = (latestRound?.steps ?? [])
+    .filter((step) => step.status === 'APPROVED')
+    .map((step) => ({
+      approverName: step.approverNameSnapshot.trim().toLocaleLowerCase('th-TH'),
+      snapshot: readStoredSignatureSnapshot(step.signatureSnapshot),
+      actedAt: step.actedAt,
+    }))
+    .filter((step) => step.snapshot !== null);
+  const usedApprovedSteps = new Set<number>();
+  const signatures = memo.signatures.map((signature) => {
+    const isPresenter = signature.sortOrder === 0 || signature.role.trim().includes('นำเสนอ');
+    if (isPresenter && presenterSnapshot) {
+      return {
+        ...signature,
+        approvalSignatureType: presenterSnapshot.signatureType,
+        approvalSignatureData: presenterSnapshot.signatureData,
+        approvedAt: presenterSnapshot.confirmedAt ?? null,
+      };
+    }
+    const normalizedName = signature.name?.trim().toLocaleLowerCase('th-TH') ?? '';
+    const matchingIndex = approvedSteps.findIndex((step, index) =>
+      !usedApprovedSteps.has(index) && normalizedName !== '' && step.approverName === normalizedName,
+    );
+    if (matchingIndex < 0) return signature;
+    usedApprovedSteps.add(matchingIndex);
+    const matched = approvedSteps[matchingIndex];
+    return {
+      ...signature,
+      approvalSignatureType: matched.snapshot?.signatureType,
+      approvalSignatureData: matched.snapshot?.signatureData,
+      approvedAt: matched.actedAt?.toISOString() ?? matched.snapshot?.confirmedAt ?? null,
+    };
+  });
+
+  const canDelete = isAdmin || isOwner;
+  const canEdit = (isAdmin || isOwner) && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
+  const isCurrentApprover = latestRound?.status === 'ACTIVE' && latestRound.steps.some((step) => step.status === 'PENDING' && step.approverId === currentUser.id);
+  const canSubmit = isOwner && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus) && Boolean(memo.memoTypeId);
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 p-4 md:p-8 print:p-0 print:bg-white print:min-h-0 print:m-0">
@@ -81,16 +175,53 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           canDelete={canDelete}
           canEdit={canEdit}
           signatures={signatures}
+          isEApprove={Boolean(memo.memoTypeId)}
+          canSendEmail={isAdmin || isOwner}
+          officialPdfReady={memo.pdfStatus === 'READY' && memo.pdfArtifacts.length > 0}
         />
 
+        <ApprovalWorkflowPanel
+          memoId={memo.id}
+          approvalStatus={memo.approvalStatus}
+          pdfStatus={memo.pdfStatus}
+          canSubmit={canSubmit}
+          isCurrentApprover={Boolean(isCurrentApprover)}
+          memoTypeName={memo.memoType?.name ?? null}
+          approvalSignatures={currentUser.approvalSignatures.map((signature) => ({
+            id: signature.id,
+            name: signature.name,
+            type: signature.type,
+            data: signature.data,
+            isDefault: signature.isDefault,
+          }))}
+        />
+
+        {memo.attachments.length > 0 && (
+          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 font-bold"><Paperclip className="h-4 w-4 text-blue-600"/>เอกสารแนบเพิ่มเติม</h2><p className="mt-1 text-xs text-slate-500">ไฟล์ประกอบ Memo จำนวน {memo.attachments.length} รายการ</p></div></div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">{memo.attachments.map((attachment) => <a key={attachment.id} href={`/api/memos/${memo.id}/attachments/${attachment.id}`} className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-700 dark:hover:bg-blue-950/20"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800"><FileText className="h-4 w-4"/></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{attachment.fileName}</span><span className="text-xs text-slate-500">{attachment.fileSize >= 1024 * 1024 ? `${(attachment.fileSize / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(attachment.fileSize / 1024))} KB`}</span></span><Download className="h-4 w-4 shrink-0 text-blue-600"/></a>)}</div>
+          </section>
+        )}
+
+        {latestRound && (
+          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Approval Timeline</h2><p className="text-xs text-slate-500">รอบที่ {latestRound.roundNumber} · Snapshot ผู้อนุมัติของเอกสารฉบับนี้</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{latestRound.status}</span></div>
+            <div className="mt-5 space-y-3">{latestRound.steps.map((step, index) => <div key={step.id} className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-start gap-3"><div className={`grid h-9 w-9 place-items-center rounded-full ${step.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : step.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : step.status === 'REVISION_REQUESTED' ? 'bg-violet-100 text-violet-700' : step.status === 'SKIPPED_SELF' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>{step.status === 'APPROVED' ? <CheckCircle2 className="h-4 w-4"/> : step.status === 'PENDING' ? <Clock3 className="h-4 w-4"/> : step.status === 'REVISION_REQUESTED' ? <RotateCcw className="h-4 w-4"/> : step.status === 'SKIPPED_SELF' ? <SkipForward className="h-4 w-4"/> : <CircleDashed className="h-4 w-4"/>}</div><div className="pb-3"><div className="font-bold">{index + 1}. {step.approverNameSnapshot}</div><div className="text-xs text-slate-500">{step.approverPositionSnapshot ?? 'ไม่ระบุตำแหน่ง'} · {step.source}</div>{step.decisionReason && <div className="mt-2 rounded-lg bg-violet-50 p-2 text-sm text-violet-800 dark:bg-violet-950/30 dark:text-violet-200">เหตุผล: {step.decisionReason}</div>}</div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{step.status}</span></div>)}</div>
+          </section>
+        )}
+
         {/* Status Badge - Hidden in Print */}
-        {memo.status !== 'FINAL' && (
+        {['DRAFT', 'CANCELLED', 'REVISION_REQUESTED'].includes(memo.status) && (
           <div className={`mb-6 p-4 rounded-lg font-semibold text-sm text-center print:hidden shadow-sm ${
-            memo.status === 'DRAFT' 
+            memo.status === 'DRAFT'
               ? 'bg-amber-50 text-amber-900 border border-amber-300' 
-              : 'bg-rose-50 text-rose-900 border border-rose-300'
+              : memo.status === 'REVISION_REQUESTED'
+                ? 'bg-violet-50 text-violet-900 border border-violet-300'
+                : 'bg-rose-50 text-rose-900 border border-rose-300'
           }`}>
-            นี่คือเอกสาร {memo.status === 'DRAFT' ? 'แบบร่าง (Draft)' : 'ยกเลิก (Cancelled)'} {memo.status === 'DRAFT' && '— ตรวจสอบความถูกต้องและกด "ออกเลขเอกสาร" เมื่อพร้อมพิมพ์'}
+            {memo.status === 'DRAFT' && 'นี่คือเอกสารแบบร่าง — ตรวจสอบความถูกต้องและส่งเข้าสู่ระบบอนุมัติเมื่อพร้อม'}
+            {memo.status === 'REVISION_REQUESTED' && 'ผู้อนุมัติส่งเอกสารกลับให้แก้ไข กรุณาตรวจเหตุผลใน Approval Timeline แล้วส่งอนุมัติใหม่'}
+            {memo.status === 'CANCELLED' && 'เอกสารนี้ถูกยกเลิกแล้ว'}
           </div>
         )}
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RichTextEditor } from '@/components/RichTextEditor';
-import { Plus, Trash2, ArrowUp, ArrowDown, Save, Eye, Lock, Bookmark, BookmarkPlus, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, Save, Eye, Lock, Bookmark, BookmarkPlus, Loader2, Paperclip, UploadCloud, FileText, Download, X } from 'lucide-react';
 import Link from 'next/link';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
 import { SignatureTemplateManager, SignatureTemplate } from './components/SignatureTemplateManager';
@@ -23,6 +23,14 @@ export type DepartmentItem = {
   code: string;
   logoUrl?: string | null;
   logoAssetId?: string | null;
+  branchId?: string | null;
+};
+
+export type MemoTypeItem = {
+  id: string;
+  name: string;
+  code: string;
+  branchId: string | null;
 };
 
 export type MemoInitialData = {
@@ -40,7 +48,17 @@ export type MemoInitialData = {
   content?: string;
   remark?: string | null;
   status?: string;
+  approvalStatus?: string;
+  memoTypeId?: string | null;
   signatures?: Signature[];
+  attachments?: MemoAttachmentItem[];
+};
+
+export type MemoAttachmentItem = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
 };
 
 export type MemoFormProps = {
@@ -49,6 +67,8 @@ export type MemoFormProps = {
   isEdit?: boolean;
   userDepartmentId?: string | null;
   isAdmin?: boolean;
+  memoTypes?: MemoTypeItem[];
+  attachmentLimits?: { maxFileMb: number; maxTotalMb: number };
 };
 
 const DEFAULT_SIGNATURES: Signature[] = [
@@ -59,10 +79,13 @@ const DEFAULT_SIGNATURES: Signature[] = [
   { role: 'อนุมัติโดย', name: '', position: '', sortOrder: 4 },
 ];
 
-export function MemoForm({ departments, initialData, isEdit, userDepartmentId, isAdmin = false }: MemoFormProps) {
+export function MemoForm({ departments, initialData, isEdit, userDepartmentId, isAdmin = false, memoTypes = [], attachmentLimits = { maxFileMb: 20, maxTotalMb: 100 } }: MemoFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [isLoadingApprovalSignatures, setIsLoadingApprovalSignatures] = useState(false);
+  const [approvalSignatureError, setApprovalSignatureError] = useState('');
+  const [approvalSignatureSource, setApprovalSignatureSource] = useState<string | null>(null);
 
   // Template States
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
@@ -78,6 +101,8 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
 
   const [departmentId, setDepartmentId] = useState(defaultDeptId);
   const selectedDepartment = departments.find(d => d.id === departmentId);
+  const [memoTypeId, setMemoTypeId] = useState(initialData?.memoTypeId || '');
+  const availableMemoTypes = memoTypes.filter((type) => !type.branchId || type.branchId === selectedDepartment?.branchId);
 
   const [subHeader, setSubHeader] = useState(
     initialData?.subHeader || 
@@ -96,6 +121,8 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const [carbonCopy, setCarbonCopy] = useState(initialData?.carbonCopy || '');
   const [content, setContent] = useState(initialData?.content || '');
   const [remark, setRemark] = useState(initialData?.remark || '');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<MemoAttachmentItem[]>(initialData?.attachments ?? []);
   
   const [signatures, setSignatures] = useState<Signature[]>(
     initialData?.signatures && initialData.signatures.length > 0 ? initialData.signatures : DEFAULT_SIGNATURES
@@ -143,10 +170,46 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     if (!isDirty) setIsDirty(true);
   };
 
+  const applyApprovalSignatures = async (typeId: string, deptId: string) => {
+    if (!typeId || !deptId) return;
+    setIsLoadingApprovalSignatures(true);
+    setApprovalSignatureError('');
+    try {
+      const params = new URLSearchParams({ memoTypeId: typeId, departmentId: deptId });
+      const response = await fetch(`/api/e-approve/signature-preview?${params.toString()}`);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || 'ไม่สามารถสร้างรายการลายเซ็นจาก Approval Chain ได้');
+      setSignatures((body.signatures as Signature[]).map((signature, index) => ({ ...signature, sortOrder: index })));
+      setSelectedTemplateId('');
+      setApprovalSignatureSource(`${body.memoType.name} · ${body.branch.name}`);
+      handleChange();
+    } catch (error) {
+      setApprovalSignatureError(error instanceof Error ? error.message : 'ไม่สามารถสร้างรายการลายเซ็นจาก Approval Chain ได้');
+      setApprovalSignatureSource(null);
+    } finally {
+      setIsLoadingApprovalSignatures(false);
+    }
+  };
+
+  const handleMemoTypeChange = (typeId: string) => {
+    setMemoTypeId(typeId);
+    setApprovalSignatureError('');
+    setApprovalSignatureSource(null);
+    handleChange();
+    if (typeId) void applyApprovalSignatures(typeId, departmentId);
+  };
+
   const handleDepartmentChange = (newDeptId: string) => {
     setDepartmentId(newDeptId);
     handleChange();
     const dept = departments.find(d => d.id === newDeptId);
+    const selectedType = memoTypes.find((type) => type.id === memoTypeId);
+    if (selectedType?.branchId && selectedType.branchId !== dept?.branchId) {
+      setMemoTypeId('');
+      setApprovalSignatureSource(null);
+    } else if (memoTypeId) {
+      void applyApprovalSignatures(memoTypeId, newDeptId);
+    }
     if (dept && !isEdit) {
       const newSubHeader = dept.nameEn || `${dept.name} DEPARTMENT`.toLocaleUpperCase('en-US');
       setSubHeader(newSubHeader);
@@ -201,6 +264,8 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     }));
 
     setSignatures(copiedSignatures);
+    setApprovalSignatureSource(null);
+    setApprovalSignatureError('');
     setIsTemplateManagerOpen(false);
     setSelectedTemplateId(template.id);
     handleChange();
@@ -298,6 +363,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     try {
       const payload = {
         departmentId,
+        memoTypeId: memoTypeId || null,
         subHeader: subHeader.trim().toLocaleUpperCase('en-US'),
         documentDate,
         recipient,
@@ -325,6 +391,19 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       }
 
       const savedData = await res.json();
+      if (pendingFiles.length > 0) {
+        const uploadData = new FormData();
+        pendingFiles.forEach((file) => uploadData.append('files', file));
+        const uploadResponse = await fetch(`/api/memos/${savedData.id}/attachments`, { method: 'POST', body: uploadData });
+        const uploadBody = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok) {
+          setIsDirty(false);
+          alert(`บันทึก Memo แล้ว แต่แนบไฟล์ไม่สำเร็จ: ${uploadBody.error ?? 'เกิดข้อผิดพลาด'}`);
+          router.push(`/memos/${savedData.id}/edit`);
+          return;
+        }
+        setPendingFiles([]);
+      }
       setIsDirty(false);
       
       if (isPreview) {
@@ -338,6 +417,44 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       setLoading(false);
     }
   };
+
+  const selectAttachments = (files: FileList | null) => {
+    if (!files) return;
+    const incoming = Array.from(files);
+    const maxFileBytes = attachmentLimits.maxFileMb * 1024 * 1024;
+    const invalid = incoming.find((file) => file.size > maxFileBytes);
+    if (invalid) {
+      alert(`ไฟล์ “${invalid.name}” ต้องไม่เกิน ${attachmentLimits.maxFileMb} MB`);
+      return;
+    }
+    const next = [...pendingFiles];
+    incoming.forEach((file) => {
+      if (!next.some((item) => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified)) next.push(file);
+    });
+    if (existingAttachments.length + next.length > 20) {
+      alert('แนบไฟล์ได้สูงสุด 20 ไฟล์ต่อ Memo');
+      return;
+    }
+    const totalBytes = existingAttachments.reduce((sum, item) => sum + item.fileSize, 0) + next.reduce((sum, item) => sum + item.size, 0);
+    if (totalBytes > attachmentLimits.maxTotalMb * 1024 * 1024) {
+      alert(`ไฟล์แนบรวมต้องไม่เกิน ${attachmentLimits.maxTotalMb} MB`);
+      return;
+    }
+    setPendingFiles(next);
+    handleChange();
+  };
+
+  const deleteExistingAttachment = async (attachment: MemoAttachmentItem) => {
+    if (!initialData?.id || !window.confirm(`ลบไฟล์ “${attachment.fileName}” ใช่หรือไม่?`)) return;
+    const response = await fetch(`/api/memos/${initialData.id}/attachments/${attachment.id}`, { method: 'DELETE' });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) return alert(body.error ?? 'ลบไฟล์ไม่สำเร็จ');
+    setExistingAttachments((items) => items.filter((item) => item.id !== attachment.id));
+  };
+
+  const formatFileSize = (bytes: number) => bytes >= 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
   return (
     <form className="max-w-5xl mx-auto flex flex-col gap-8 pb-16" onChange={handleChange}>
@@ -438,6 +555,26 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
               className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 uppercase disabled:opacity-60 text-sm font-medium"
             />
             <p className="text-[11px] text-gray-500 mt-1">จะถูกแปลงเป็นตัวพิมพ์ใหญ่ (UPPERCASE) อัตโนมัติเสมอ</p>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              ประเภท Memo สำหรับ E‑Approve <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={memoTypeId}
+              onChange={(event) => handleMemoTypeChange(event.target.value)}
+              required
+              disabled={isFinal || isCancelled}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60 text-sm"
+            >
+              <option value="">-- เลือกประเภท Memo --</option>
+              {availableMemoTypes.map((type) => <option value={type.id} key={type.id}>{type.name} ({type.code})</option>)}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">ระบบจะแสดงเฉพาะประเภทที่ใช้ได้กับสาขาของแผนกนี้ และใช้กฎ Required Approvers จากประเภทที่เลือก</p>
+            {isLoadingApprovalSignatures && <p className="mt-2 flex items-center gap-2 text-xs font-semibold text-blue-600"><Loader2 className="h-4 w-4 animate-spin"/>กำลังนำ Approval Chain ไปสร้างรายการลายเซ็น...</p>}
+            {approvalSignatureSource && !isLoadingApprovalSignatures && <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">✓ นำรายชื่อผู้ลงนามจาก {approvalSignatureSource} มาใส่ด้านท้ายเอกสารแล้ว</p>}
+            {approvalSignatureError && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{approvalSignatureError}</p>}
           </div>
         </div>
       </div>
@@ -546,6 +683,22 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
         />
       </div>
 
+      {/* Supporting Documents */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3 border-b pb-4">
+          <div><h2 className="flex items-center gap-2 text-xl font-bold"><Paperclip className="h-5 w-5 text-blue-600"/>เอกสารแนบเพิ่มเติม</h2><p className="mt-1 text-xs text-gray-500">รองรับ PDF, Word, Excel, PNG และ JPG · ไม่เกิน {attachmentLimits.maxFileMb} MB ต่อไฟล์ / รวม {attachmentLimits.maxTotalMb} MB</p></div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{existingAttachments.length + pendingFiles.length}/20 ไฟล์</span>
+        </div>
+        {!isCancelled && !isFinal && <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/50 px-5 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
+          <UploadCloud className="h-8 w-8 text-blue-600"/><span className="mt-2 text-sm font-bold text-blue-700 dark:text-blue-300">เลือกเอกสารจากเครื่อง</span><span className="mt-1 text-xs text-slate-500">เลือกได้หลายไฟล์พร้อมกัน</span>
+          <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" className="sr-only" onChange={(event) => { selectAttachments(event.target.files); event.target.value = ''; }}/>
+        </label>}
+        {(existingAttachments.length > 0 || pendingFiles.length > 0) && <div className="mt-4 space-y-2">
+          {existingAttachments.map((attachment) => <div key={attachment.id} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800"><FileText className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{attachment.fileName}</p><p className="text-xs text-slate-500">{formatFileSize(attachment.fileSize)} · บันทึกแล้ว</p></div>{initialData?.id && <a href={`/api/memos/${initialData.id}/attachments/${attachment.id}`} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" title="ดาวน์โหลด"><Download className="h-4 w-4"/></a>}{!isCancelled && !isFinal && <button type="button" onClick={() => void deleteExistingAttachment(attachment)} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" title="ลบ"><Trash2 className="h-4 w-4"/></button>}</div>)}
+          {pendingFiles.map((file, index) => <div key={`${file.name}-${file.size}-${file.lastModified}`} className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/20"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950"><FileText className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{file.name}</p><p className="text-xs text-blue-600">{formatFileSize(file.size)} · พร้อมอัปโหลดเมื่อบันทึก</p></div><button type="button" onClick={() => setPendingFiles((items) => items.filter((_, itemIndex) => itemIndex !== index))} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" title="นำออก"><X className="h-4 w-4"/></button></div>)}
+        </div>}
+      </div>
+
       {/* Signatures Form */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
         <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 border-b pb-4 gap-4">
@@ -554,8 +707,8 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
               Signatures (รายชื่อผู้เซ็น)
             </h2>
             <p className="text-xs text-gray-500 mt-1">ระบบจะจัดตำแหน่งให้อยู่กึ่งกลางสวยงามตามจำนวนผู้เซ็นโดยอัตโนมัติ</p>
-          </div>
-          
+        </div>
+
           {!isCancelled && !isFinal && (
             <div className="flex flex-col items-end gap-2">
               {/* Template Selector Section */}
@@ -603,6 +756,13 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             </div>
           )}
         </div>
+
+        {approvalSignatureSource && (
+          <div className="mb-5 flex flex-col gap-2 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30 sm:flex-row sm:items-center sm:justify-between">
+            <div><div className="font-bold text-blue-800 dark:text-blue-200">ชุดลายเซ็นจาก E‑Approve</div><div className="text-xs text-blue-600 dark:text-blue-300">{approvalSignatureSource} · เรียงตาม Approval Chain และตัดผู้อนุมัติซ้ำแล้ว</div></div>
+            <span className="w-fit rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">{signatures.length} รายชื่อ</span>
+          </div>
+        )}
         
         <div className="space-y-4">
           {signatures.map((sig, index) => (
@@ -690,7 +850,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <button
               type="button"
               onClick={(e) => handleSubmit(e, false)}
-              disabled={loading || !departmentId || !subject || !content}
+              disabled={loading || !departmentId || !memoTypeId || !subject || !content}
               className="px-6 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg disabled:opacity-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
             >
               <Save size={18} /> {isEdit ? 'Save Changes' : 'Save Draft'}
@@ -698,7 +858,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <button
               type="button"
               onClick={(e) => handleSubmit(e, true)}
-              disabled={loading || !departmentId || !subject || !content}
+              disabled={loading || !departmentId || !memoTypeId || !subject || !content}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
             >
               <Eye size={18} /> Save & Preview

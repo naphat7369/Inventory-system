@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     const { 
       departmentId, documentDate, recipient, sender, 
       subject, reference, carbonCopy, content, signatures,
-      subHeader, remark 
+      subHeader, remark, memoTypeId
     } = data;
 
     if (!documentDate || !recipient || !sender || !subject || !content) {
@@ -143,6 +143,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Department not found or inactive' }, { status: 400 });
     }
 
+    if (memoTypeId) {
+      const memoType = await prisma.memoType.findFirst({ where: { id: memoTypeId, isActive: true } });
+      if (!memoType || (memoType.branchId && memoType.branchId !== department.branchId)) {
+        return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
+      }
+    }
+
     // Fixed S HOTEL Logo rule: versioned constant for all new memos
     const finalLogoUrl = DEFAULT_S_HOTEL_LOGO_URL;
     const finalLogoAssetId = null;
@@ -154,6 +161,8 @@ export async function POST(request: Request) {
     const memo = await prisma.memo.create({
       data: {
         departmentId: finalDepartmentId,
+        memoTypeId: memoTypeId || null,
+        branchId: memoTypeId ? department.branchId : null,
         documentDate: new Date(documentDate),
         recipient,
         sender,

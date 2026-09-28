@@ -9,16 +9,17 @@ export default async function UsersPage() {
   if (session?.role !== 'ADMIN') redirect('/assets');
 
   const users = await getUsers();
-  const departments = await prisma.department.findMany({
+  const [departments, branches] = await Promise.all([prisma.department.findMany({
     where: { isActive: true },
     orderBy: { name: 'asc' },
-    select: { id: true, name: true, code: true }
-  });
+    select: { id: true, name: true, code: true, branchId: true }
+  }), prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, code: true } })]);
 
   return (
     <UsersClient 
       users={users} 
       departments={departments}
+      branches={branches}
       currentUserId={session?.id ? String(session.id) : ''} 
     />
   );

@@ -180,7 +180,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           officialPdfReady={memo.pdfStatus === 'READY' && memo.pdfArtifacts.length > 0}
         />
 
-        <ApprovalWorkflowPanel
+        {memo.memoTypeId && <ApprovalWorkflowPanel
           memoId={memo.id}
           approvalStatus={memo.approvalStatus}
           pdfStatus={memo.pdfStatus}
@@ -194,7 +194,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
             data: signature.data,
             isDefault: signature.isDefault,
           }))}
-        />
+        />}
 
         {memo.attachments.length > 0 && (
           <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
@@ -219,7 +219,9 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
                 ? 'bg-violet-50 text-violet-900 border border-violet-300'
                 : 'bg-rose-50 text-rose-900 border border-rose-300'
           }`}>
-            {memo.status === 'DRAFT' && 'นี่คือเอกสารแบบร่าง — ตรวจสอบความถูกต้องและส่งเข้าสู่ระบบอนุมัติเมื่อพร้อม'}
+            {memo.status === 'DRAFT' && (memo.memoTypeId
+              ? 'นี่คือเอกสารแบบร่าง — ตรวจสอบความถูกต้องและส่งเข้าสู่ระบบอนุมัติเมื่อพร้อม'
+              : 'นี่คือเอกสารแบบร่างทั่วไป — กำหนดรายชื่อผู้เซ็นเองได้ และไม่เข้าสู่ขั้นตอน E‑Approve')}
             {memo.status === 'REVISION_REQUESTED' && 'ผู้อนุมัติส่งเอกสารกลับให้แก้ไข กรุณาตรวจเหตุผลใน Approval Timeline แล้วส่งอนุมัติใหม่'}
             {memo.status === 'CANCELLED' && 'เอกสารนี้ถูกยกเลิกแล้ว'}
           </div>

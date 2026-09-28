@@ -107,6 +107,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
       updateData.memoType = { connect: { id: memoType.id } };
       updateData.branch = { connect: { id: effectiveBranchId } };
+    } else if (data.memoTypeId === null) {
+      if (existing.memoTypeId && existing.approvalStatus !== 'DRAFT') {
+        return NextResponse.json({ error: 'Cannot remove E-Approve Memo Type after the memo has entered approval' }, { status: 409 });
+      }
+      updateData.memoType = { disconnect: true };
+      updateData.branch = { disconnect: true };
     }
 
     // If FINAL: STRICTLY LOCK Logo, subHeader, and departmentId

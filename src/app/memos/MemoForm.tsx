@@ -559,19 +559,22 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              ประเภท Memo สำหรับ E‑Approve <span className="text-red-500">*</span>
+              ประเภท Memo สำหรับ E‑Approve <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">ไม่บังคับ</span>
             </label>
             <select
               value={memoTypeId}
               onChange={(event) => handleMemoTypeChange(event.target.value)}
-              required
               disabled={isFinal || isCancelled}
               className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60 text-sm"
             >
-              <option value="">-- เลือกประเภท Memo --</option>
+              <option value="">ไม่ใช้ประเภท E‑Approve — กำหนดรายชื่อผู้เซ็นเอง</option>
               {availableMemoTypes.map((type) => <option value={type.id} key={type.id}>{type.name} ({type.code})</option>)}
             </select>
-            <p className="text-xs text-gray-500 mt-1">ระบบจะแสดงเฉพาะประเภทที่ใช้ได้กับสาขาของแผนกนี้ และใช้กฎ Required Approvers จากประเภทที่เลือก</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {memoTypeId
+                ? 'ระบบจะใช้กฎ Required Approvers ของประเภทที่เลือก และนำรายชื่อมาใส่ใน Signatures ให้อัตโนมัติ'
+                : 'กรณีไม่เลือก ระบบจะบันทึกเป็น Memo ปกติ และคุณสามารถเพิ่ม แก้ไข หรือลบรายชื่อผู้เซ็นในส่วน Signatures ได้เอง'}
+            </p>
             {isLoadingApprovalSignatures && <p className="mt-2 flex items-center gap-2 text-xs font-semibold text-blue-600"><Loader2 className="h-4 w-4 animate-spin"/>กำลังนำ Approval Chain ไปสร้างรายการลายเซ็น...</p>}
             {approvalSignatureSource && !isLoadingApprovalSignatures && <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">✓ นำรายชื่อผู้ลงนามจาก {approvalSignatureSource} มาใส่ด้านท้ายเอกสารแล้ว</p>}
             {approvalSignatureError && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{approvalSignatureError}</p>}
@@ -706,7 +709,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <h2 className="text-xl font-bold flex items-center gap-2">
               Signatures (รายชื่อผู้เซ็น)
             </h2>
-            <p className="text-xs text-gray-500 mt-1">ระบบจะจัดตำแหน่งให้อยู่กึ่งกลางสวยงามตามจำนวนผู้เซ็นโดยอัตโนมัติ</p>
+            <p className="text-xs text-gray-500 mt-1">เพิ่มและแก้ไขผู้เซ็นได้เอง หรือเลือก Memo Type / เทมเพลตเพื่อเติมรายชื่ออัตโนมัติ ระบบจะจัดตำแหน่งตามจำนวนผู้เซ็น</p>
         </div>
 
           {!isCancelled && !isFinal && (
@@ -850,7 +853,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <button
               type="button"
               onClick={(e) => handleSubmit(e, false)}
-              disabled={loading || !departmentId || !memoTypeId || !subject || !content}
+              disabled={loading || !departmentId || !subject || !content}
               className="px-6 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg disabled:opacity-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
             >
               <Save size={18} /> {isEdit ? 'Save Changes' : 'Save Draft'}
@@ -858,7 +861,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <button
               type="button"
               onClick={(e) => handleSubmit(e, true)}
-              disabled={loading || !departmentId || !memoTypeId || !subject || !content}
+              disabled={loading || !departmentId || !subject || !content}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
             >
               <Eye size={18} /> Save & Preview

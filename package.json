@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "concurrently -k -n web,worker -c blue,magenta \"npm:dev:web\" \"npm:worker\"",
     "dev:web": "next dev",
-    "worker": "node scripts/eapprove-worker.mjs",
-    "worker:once": "node scripts/eapprove-worker.mjs --once",
+    "worker": "node --env-file=.env scripts/eapprove-worker.mjs",
+    "worker:once": "node --env-file=.env scripts/eapprove-worker.mjs --once",
+    "smtp:test": "node --env-file=.env scripts/test-smtp.mjs",
     "build": "prisma generate && next build",
     "start": "next start",
     "start:web": "next start",

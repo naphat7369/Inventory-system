@@ -7,6 +7,7 @@ import { Plus, Trash2, ArrowUp, ArrowDown, Save, Eye, Lock, Bookmark, BookmarkPl
 import Link from 'next/link';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
 import { SignatureTemplateManager, SignatureTemplate } from './components/SignatureTemplateManager';
+import { SearchableSelect, type SearchableSelectOption } from './components/SearchableSelect';
 
 export type Signature = {
   id?: string;
@@ -31,6 +32,16 @@ export type MemoTypeItem = {
   name: string;
   code: string;
   branchId: string | null;
+};
+
+export type MemoUserItem = {
+  id: string;
+  username: string;
+  fullName: string | null;
+  position: string | null;
+  branchId: string | null;
+  isAllBranches?: boolean;
+  branch?: { name: string; code: string } | null;
 };
 
 export type MemoInitialData = {
@@ -68,6 +79,8 @@ export type MemoFormProps = {
   userDepartmentId?: string | null;
   isAdmin?: boolean;
   memoTypes?: MemoTypeItem[];
+  currentUser: MemoUserItem;
+  approvers?: MemoUserItem[];
   attachmentLimits?: { maxFileMb: number; maxTotalMb: number };
 };
 
@@ -79,7 +92,12 @@ const DEFAULT_SIGNATURES: Signature[] = [
   { role: 'อนุมัติโดย', name: '', position: '', sortOrder: 4 },
 ];
 
-export function MemoForm({ departments, initialData, isEdit, userDepartmentId, isAdmin = false, memoTypes = [], attachmentLimits = { maxFileMb: 20, maxTotalMb: 100 } }: MemoFormProps) {
+const SIGNATURE_ROLES = ['นำเสนอโดย', 'รับทราบโดย', 'อนุมัติโดย'];
+const userDisplayName = (user: MemoUserItem) => user.fullName?.trim() || user.username;
+const departmentHeader = (department?: DepartmentItem) =>
+  (department?.nameEn?.trim() || department?.name?.trim() || '').toLocaleUpperCase('en-US');
+
+export function MemoForm({ departments, initialData, isEdit, userDepartmentId, isAdmin = false, memoTypes = [], currentUser, approvers = [], attachmentLimits = { maxFileMb: 20, maxTotalMb: 100 } }: MemoFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -103,10 +121,14 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const selectedDepartment = departments.find(d => d.id === departmentId);
   const [memoTypeId, setMemoTypeId] = useState(initialData?.memoTypeId || '');
   const availableMemoTypes = memoTypes.filter((type) => !type.branchId || type.branchId === selectedDepartment?.branchId);
+  const approverOptions: SearchableSelectOption[] = approvers.map((approver) => ({
+    value: userDisplayName(approver),
+    label: `${userDisplayName(approver)}${approver.position ? ` — ${approver.position}` : ''}${approver.isAllBranches ? ' (ทุกสาขา)' : approver.branch ? ` (${approver.branch.code})` : ''}`,
+    searchText: `${approver.username} ${approver.position ?? ''} ${approver.branch?.name ?? ''} ${approver.branch?.code ?? ''}`,
+  }));
 
   const [subHeader, setSubHeader] = useState(
-    initialData?.subHeader || 
-    (selectedDepartment?.nameEn || (selectedDepartment ? `${selectedDepartment.name} DEPARTMENT`.toLocaleUpperCase('en-US') : ''))
+    initialData?.subHeader || departmentHeader(selectedDepartment)
   );
 
   const [documentDate, setDocumentDate] = useState(
@@ -115,7 +137,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       : new Date().toISOString().split('T')[0]
   );
   const [recipient, setRecipient] = useState(initialData?.recipient || '');
-  const [sender, setSender] = useState(initialData?.sender || '');
+  const [sender] = useState(initialData?.sender || userDisplayName(currentUser));
   const [subject, setSubject] = useState(initialData?.subject || '');
   const [reference, setReference] = useState(initialData?.reference || '');
   const [carbonCopy, setCarbonCopy] = useState(initialData?.carbonCopy || '');
@@ -125,7 +147,11 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const [existingAttachments, setExistingAttachments] = useState<MemoAttachmentItem[]>(initialData?.attachments ?? []);
   
   const [signatures, setSignatures] = useState<Signature[]>(
-    initialData?.signatures && initialData.signatures.length > 0 ? initialData.signatures : DEFAULT_SIGNATURES
+    initialData?.signatures && initialData.signatures.length > 0
+      ? initialData.signatures
+      : DEFAULT_SIGNATURES.map((signature, index) => index === 0
+        ? { ...signature, name: userDisplayName(currentUser), position: currentUser.position }
+        : signature)
   );
 
   const isFinal = isEdit && initialData?.status === 'FINAL';
@@ -210,21 +236,30 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     } else if (memoTypeId) {
       void applyApprovalSignatures(memoTypeId, newDeptId);
     }
-    if (dept && !isEdit) {
-      const newSubHeader = dept.nameEn || `${dept.name} DEPARTMENT`.toLocaleUpperCase('en-US');
-      setSubHeader(newSubHeader);
-    }
+    if (dept) setSubHeader(departmentHeader(dept));
   };
 
-  const handleSignatureChange = (index: number, field: keyof Signature, value: string) => {
-    const newSigs = [...signatures];
-    newSigs[index] = { ...newSigs[index], [field]: value };
-    setSignatures(newSigs);
+  const handleSignatureRoleChange = (index: number, role: string) => {
+    const next = [...signatures];
+    next[index] = role === 'นำเสนอโดย'
+      ? { ...next[index], role, name: userDisplayName(currentUser), position: currentUser.position }
+      : { ...next[index], role, name: '', position: '' };
+    setSignatures(next);
+    handleChange();
+  };
+
+  const handleSignatureUserChange = (index: number, selectedName: string) => {
+    const selectedUser = selectedName === userDisplayName(currentUser)
+      ? currentUser
+      : approvers.find((approver) => userDisplayName(approver) === selectedName);
+    const next = [...signatures];
+    next[index] = { ...next[index], name: selectedName, position: selectedUser?.position ?? '' };
+    setSignatures(next);
     handleChange();
   };
 
   const addSignature = () => {
-    setSignatures([...signatures, { role: 'ลงชื่อ', name: '', position: '', sortOrder: signatures.length }]);
+    setSignatures([...signatures, { role: 'อนุมัติโดย', name: '', position: '', sortOrder: signatures.length }]);
     handleChange();
   };
 
@@ -545,16 +580,13 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <input
               type="text"
               value={subHeader}
-              onChange={e => {
-                setSubHeader(e.target.value.toLocaleUpperCase('en-US'));
-                handleChange();
-              }}
-              placeholder="เช่น ACCOUNT DEPARTMENT, FOOD & BEVERAGE DEPARTMENT"
+              readOnly
+              placeholder="ระบบจะดึงชื่อจาก Department"
               required
               disabled={isFinal || isCancelled}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 uppercase disabled:opacity-60 text-sm font-medium"
+              className="w-full cursor-not-allowed px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 uppercase disabled:opacity-60 text-sm font-medium"
             />
-            <p className="text-[11px] text-gray-500 mt-1">จะถูกแปลงเป็นตัวพิมพ์ใหญ่ (UPPERCASE) อัตโนมัติเสมอ</p>
+            <p className="text-[11px] text-gray-500 mt-1">ดึงจากชื่อภาษาอังกฤษของ Department อัตโนมัติ และแสดงเป็นตัวพิมพ์ใหญ่</p>
           </div>
 
           <div className="md:col-span-2">
@@ -605,14 +637,19 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               To (เรียน) <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <SearchableSelect
               value={recipient}
-              onChange={e => { setRecipient(e.target.value); handleChange(); }}
-              placeholder="เช่น ดร.สรัญ ลิ้มสวัสดิ์วงศ์ Managing Director"
+              onChange={(value) => { setRecipient(value); handleChange(); }}
+              options={[
+                ...(recipient && !approvers.some((approver) => userDisplayName(approver) === recipient)
+                  ? [{ value: recipient, label: `${recipient} (ข้อมูลเดิม)`, searchText: recipient }]
+                  : []),
+                ...approverOptions,
+              ]}
+              placeholder="ค้นหาชื่อ ตำแหน่ง หรือสาขา..."
+              ariaLabel="ค้นหาและเลือกผู้รับหรือผู้อนุมัติ"
               required
               disabled={isCancelled}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60 text-sm"
             />
           </div>
 
@@ -623,12 +660,12 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <input
               type="text"
               value={sender}
-              onChange={e => { setSender(e.target.value); handleChange(); }}
-              placeholder="เช่น นภัทร วรรณหม้อ ( IT Officer)"
+              readOnly
               required
               disabled={isCancelled}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60 text-sm"
+              className="w-full cursor-not-allowed px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 disabled:opacity-60 text-sm"
             />
+            <p className="mt-1 text-[11px] text-gray-500">ดึงจากชื่อผู้ใช้งานที่สร้าง Memo โดยอัตโนมัติ</p>
           </div>
           
           <div>
@@ -782,23 +819,34 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
               <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Role (เช่น นำเสนอโดย, อนุมัติโดย)</label>
-                  <input
-                    type="text"
+                  <select
                     value={sig.role}
-                    onChange={e => handleSignatureChange(index, 'role', e.target.value)}
+                    onChange={e => handleSignatureRoleChange(index, e.target.value)}
                     required
                     disabled={isCancelled}
                     className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60"
-                  />
+                  >
+                    {!SIGNATURE_ROLES.includes(sig.role) && sig.role && <option value={sig.role}>{sig.role} (ข้อมูลเดิม)</option>}
+                    {SIGNATURE_ROLES.map((role) => <option value={role} key={role}>{role}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Name (ชื่อ-นามสกุล)</label>
-                  <input
-                    type="text"
+                  <SearchableSelect
                     value={sig.name || ''}
-                    onChange={e => handleSignatureChange(index, 'name', e.target.value)}
+                    onChange={(value) => handleSignatureUserChange(index, value)}
+                    options={sig.role === 'นำเสนอโดย'
+                      ? [{ value: userDisplayName(currentUser), label: `${userDisplayName(currentUser)}${currentUser.position ? ` — ${currentUser.position}` : ''}`, searchText: currentUser.username }]
+                      : [
+                          ...(sig.name && !approvers.some((approver) => userDisplayName(approver) === sig.name)
+                            ? [{ value: sig.name, label: `${sig.name} (ข้อมูลเดิม)`, searchText: sig.name }]
+                            : []),
+                          ...approverOptions,
+                        ]}
+                    placeholder="ค้นหาและเลือกผู้เซ็น..."
+                    ariaLabel={`ค้นหาและเลือกผู้เซ็นลำดับ ${index + 1}`}
+                    compact
                     disabled={isCancelled}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60"
                   />
                 </div>
                 <div>
@@ -806,9 +854,9 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
                   <input
                     type="text"
                     value={sig.position || ''}
-                    onChange={e => handleSignatureChange(index, 'position', e.target.value)}
+                    readOnly
                     disabled={isCancelled}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60"
+                    className="w-full cursor-not-allowed px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md bg-slate-100 dark:bg-slate-800 disabled:opacity-60"
                   />
                 </div>
               </div>

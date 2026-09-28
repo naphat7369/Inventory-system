@@ -84,7 +84,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       updatedById: currentUser.id,
       documentDate: data.documentDate ? new Date(data.documentDate) : undefined,
       recipient: data.recipient,
-      sender: data.sender,
+      sender: existing.sender,
       subject: data.subject,
       reference: data.reference,
       carbonCopy: data.carbonCopy,

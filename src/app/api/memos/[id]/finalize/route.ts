@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@/lib/auth';
+import { queueOfficialPdfForFinalMemo } from '@/lib/memo-official-pdf';
 
 const prisma = new PrismaClient();
 
@@ -83,7 +84,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return updatedMemo;
     });
 
-    return NextResponse.json(memo);
+    const pdf = await prisma.$transaction((tx) => queueOfficialPdfForFinalMemo(tx, memo.id, String(session.id)));
+    return NextResponse.json({ ...memo, pdfStatus: pdf.status });
   } catch (error: unknown) {
     console.error('Error finalizing memo:', error);
     const err = error as { code?: string; message?: string };

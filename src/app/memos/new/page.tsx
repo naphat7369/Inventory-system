@@ -51,11 +51,16 @@ export default async function NewMemoPage() {
   }
 
   // Active departments only
-  const [departments, memoTypes, attachmentLimits] = await Promise.all([
+  const [departments, memoTypes, approvers, attachmentLimits] = await Promise.all([
     prisma.department.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
     prisma.memoType.findMany({
       where: { isActive: true }, orderBy: { name: 'asc' },
       select: { id: true, name: true, code: true, branchId: true },
+    }),
+    prisma.user.findMany({
+      where: { isActive: true, isApprover: true },
+      orderBy: [{ fullName: 'asc' }, { username: 'asc' }],
+      select: { id: true, username: true, fullName: true, position: true, branchId: true, isAllBranches: true, branch: { select: { name: true, code: true } } },
     }),
     getAttachmentLimits(prisma),
   ]);
@@ -76,6 +81,8 @@ export default async function NewMemoPage() {
         userDepartmentId={currentUser.departmentId}
         isAdmin={isAdmin}
         memoTypes={memoTypes}
+        currentUser={{ id: currentUser.id, username: currentUser.username, fullName: currentUser.fullName, position: currentUser.position, branchId: currentUser.branchId }}
+        approvers={approvers}
         attachmentLimits={attachmentLimits}
       />
     </div>

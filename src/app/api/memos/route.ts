@@ -105,12 +105,12 @@ export async function POST(request: Request) {
 
     const data = await request.json();
     const { 
-      departmentId, documentDate, recipient, sender, 
+      departmentId, documentDate, recipient,
       subject, reference, carbonCopy, content, signatures,
       subHeader, remark, memoTypeId
     } = data;
 
-    if (!documentDate || !recipient || !sender || !subject || !content) {
+    if (!documentDate || !recipient || !subject || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
         branchId: memoTypeId ? finalBranchId : null,
         documentDate: new Date(documentDate),
         recipient,
-        sender,
+        sender: currentUser.fullName?.trim() || currentUser.username,
         subject,
         subHeader: finalSubHeader,
         logoUrl: finalLogoUrl,

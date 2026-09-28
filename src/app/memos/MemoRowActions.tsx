@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, Download, Eye, Loader2, Mail, Pencil, Printer, X } from 'lucide-react';
+import { CheckCircle2, Download, Eye, Loader2, Mail, Pencil, Printer, Trash2, X } from 'lucide-react';
+import { DeleteMemoModal } from './DeleteMemoModal';
 
 interface MemoRowActionsProps {
   memoId: string;
   documentNo?: string | null;
   subject: string;
+  status: string;
+  canDelete: boolean;
+  canRequestPdf: boolean;
+  pdfStatus: string;
   canSendEmail: boolean;
   officialPdfReady: boolean;
 }
@@ -20,26 +26,34 @@ export function MemoRowActions({
   memoId,
   documentNo,
   subject,
+  status,
+  canDelete,
+  canRequestPdf,
+  pdfStatus,
   canSendEmail,
   officialPdfReady,
 }: MemoRowActionsProps) {
+  const router = useRouter();
   const [emailOpen, setEmailOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [recipient, setRecipient] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [emailSuccess, setEmailSuccess] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [requestingPdf, setRequestingPdf] = useState(false);
   const pdfFrameRef = useRef<HTMLIFrameElement>(null);
   const emailRequestKeyRef = useRef('');
 
   useEffect(() => {
-    if (!emailOpen && !pdfOpen) return;
+    if (!emailOpen && !pdfOpen && !deleteOpen) return;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setEmailOpen(false);
         setPdfOpen(false);
+        setDeleteOpen(false);
         setError('');
       }
     };
@@ -49,7 +63,13 @@ export function MemoRowActions({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', closeOnEscape);
     };
-  }, [emailOpen, pdfOpen]);
+  }, [emailOpen, pdfOpen, deleteOpen]);
+
+  useEffect(() => {
+    if (!canRequestPdf || !['PENDING', 'GENERATING'].includes(pdfStatus)) return;
+    const timer = window.setInterval(() => router.refresh(), 2500);
+    return () => window.clearInterval(timer);
+  }, [canRequestPdf, pdfStatus, router]);
 
   const sendEmail = async () => {
     const normalizedRecipient = recipient.trim();
@@ -85,6 +105,21 @@ export function MemoRowActions({
     }
   };
 
+  const requestPdf = async () => {
+    setRequestingPdf(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/memos/${memoId}/request-pdf`, { method: 'POST' });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || 'ไม่สามารถสร้าง Official PDF ได้');
+      router.refresh();
+    } catch (requestError) {
+      window.alert(requestError instanceof Error ? requestError.message : 'ไม่สามารถสร้าง Official PDF ได้');
+    } finally {
+      setRequestingPdf(false);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center gap-0.5" role="group" aria-label={`การจัดการ Memo ${documentNo || subject}`}>
@@ -95,6 +130,14 @@ export function MemoRowActions({
         {officialPdfReady ? (
           <button type="button" onClick={() => setPdfOpen(true)} className={actionClass} title="Preview Official PDF" aria-label="Preview Official PDF">
             <Eye size={18} strokeWidth={1.9} />
+          </button>
+        ) : canRequestPdf && !['PENDING', 'GENERATING'].includes(pdfStatus) ? (
+          <button type="button" onClick={() => void requestPdf()} disabled={requestingPdf} className={actionClass} title="สร้าง Official PDF เพื่อพรีวิว" aria-label="สร้าง Official PDF เพื่อพรีวิว">
+            {requestingPdf ? <Loader2 size={17} className="animate-spin" /> : <Eye size={18} strokeWidth={1.9} />}
+          </button>
+        ) : canRequestPdf && ['PENDING', 'GENERATING'].includes(pdfStatus) ? (
+          <button type="button" disabled className={disabledActionClass} title="กำลังสร้าง Official PDF" aria-label="กำลังสร้าง Official PDF">
+            <Loader2 size={17} className="animate-spin" />
           </button>
         ) : (
           <button type="button" disabled className={disabledActionClass} title="Official PDF ยังไม่พร้อม" aria-label="Official PDF ยังไม่พร้อม">
@@ -111,7 +154,32 @@ export function MemoRowActions({
             <Mail size={18} strokeWidth={1.9} />
           </button>
         )}
+
+        {canDelete && (
+          <button type="button" onClick={() => setDeleteOpen(true)} className={`${actionClass} hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 dark:hover:text-rose-300`} title="ลบ Memo" aria-label="ลบ Memo">
+            <Trash2 size={17} strokeWidth={1.9} />
+          </button>
+        )}
+        {!canDelete && (
+          <button type="button" disabled className={disabledActionClass} title="เอกสารที่ออกเลขแล้วไม่สามารถลบได้" aria-label="ไม่สามารถลบ Memo ที่ออกเลขแล้ว">
+            <Trash2 size={17} strokeWidth={1.9} />
+          </button>
+        )}
       </div>
+
+      {deleteOpen && typeof document !== 'undefined' && createPortal(
+        <DeleteMemoModal
+          isOpen={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onSuccess={() => { setDeleteOpen(false); router.refresh(); }}
+          onError={(message) => window.alert(message)}
+          memoId={memoId}
+          documentNo={documentNo}
+          status={status}
+          subject={subject}
+        />,
+        document.body,
+      )}
 
       {pdfOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-2 backdrop-blur-sm sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setPdfOpen(false); }}>

@@ -184,6 +184,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
             <tbody>
               {memos.map(memo => {
                 const isOwner = memo.createdById === currentUser?.id;
+                const canDelete = Boolean(isAdmin || isOwner) && !memo.documentNo && memo.status !== 'FINAL';
                 const canSendEmail = Boolean(isAdmin || isOwner) && memo.status !== 'CANCELLED' && memo.pdfStatus === 'READY';
                 return (
                   <tr key={memo.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
@@ -207,6 +208,10 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
                         memoId={memo.id}
                         documentNo={memo.documentNo}
                         subject={memo.subject}
+                        status={memo.status}
+                        canDelete={canDelete}
+                        canRequestPdf={Boolean(isAdmin || isOwner) && Boolean(memo.documentNo) && memo.status === 'FINAL' && !memo.memoTypeId}
+                        pdfStatus={memo.pdfStatus}
                         canSendEmail={canSendEmail}
                         officialPdfReady={memo.pdfStatus === 'READY'}
                       />

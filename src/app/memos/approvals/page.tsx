@@ -29,32 +29,34 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
     where: { approverId: String(session.id) },
     select: { round: { select: { memo: { select: {
       departmentId: true,
-      department: { select: { id: true, name: true, branchId: true, branch: { select: { id: true, name: true, code: true } } } },
+      branchId: true,
+      branch: { select: { id: true, name: true, code: true } },
+      department: { select: { id: true, name: true } },
     } } } } },
   });
   const branchMap = new Map<string, { id: string; name: string; code: string }>();
   const departmentMap = new Map<string, { id: string; name: string; branchId: string | null }>();
   scopeRows.forEach(({ round }) => {
     const department = round.memo.department;
-    departmentMap.set(department.id, { id: department.id, name: department.name, branchId: department.branchId });
-    if (department.branch) branchMap.set(department.branch.id, department.branch);
+    const memoBranchId = round.memo.branchId;
+    departmentMap.set(`${memoBranchId ?? 'none'}:${department.id}`, { id: department.id, name: department.name, branchId: memoBranchId });
+    if (round.memo.branch) branchMap.set(round.memo.branch.id, round.memo.branch);
   });
   const branches = [...branchMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));
   const allDepartments = [...departmentMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));
   const branchId = requested.branchId && branchMap.has(requested.branchId) ? requested.branchId : '';
-  const departmentId = requested.departmentId && departmentMap.has(requested.departmentId)
-    && (!branchId || departmentMap.get(requested.departmentId)?.branchId === branchId) ? requested.departmentId : '';
+  const departmentId = requested.departmentId && allDepartments.some((item) => item.id === requested.departmentId && (!branchId || item.branchId === branchId)) ? requested.departmentId : '';
   const departments = branchId ? allDepartments.filter((item) => item.branchId === branchId) : allDepartments;
   const memoScope = {
     ...(departmentId ? { departmentId } : {}),
-    ...(branchId ? { department: { branchId } } : {}),
+    ...(branchId ? { branchId } : {}),
   };
 
   const [steps, pendingCount] = await Promise.all([
     prisma.memoApprovalStep.findMany({
       where: { approverId: String(session.id), ...(status ? { status } : {}), ...(branchId || departmentId ? { round: { memo: memoScope } } : {}) },
       include: {
-        round: { include: { memo: { include: { department: { include: { branch: true } }, memoType: true } } } },
+        round: { include: { memo: { include: { department: true, branch: true, memoType: true } } } },
       },
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     }),
@@ -91,7 +93,7 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {steps.map((step) => {
               const memo = step.round.memo;
-              return <Link href={`/memos/${memo.id}`} key={step.id} className="grid gap-3 p-5 transition hover:bg-blue-50/50 dark:hover:bg-blue-950/20 md:grid-cols-[minmax(0,1fr)_180px_160px_auto] md:items-center"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="truncate font-bold">{memo.subject}</span><StatusBadge status={step.status}/></div><div className="mt-1 text-xs text-slate-500">{memo.documentNo ?? 'ยังไม่ออกเลข'} · {memo.department.branch?.name ?? 'ไม่ระบุสาขา'} / {memo.department.name} · {memo.memoType?.name ?? 'ไม่ระบุประเภท'}</div></div><div className="text-sm"><span className="text-xs text-slate-400">รอบ / ลำดับ</span><div className="font-semibold">รอบ {step.round.roundNumber} · ขั้นที่ {step.sortOrder + 1}</div></div><div className="text-sm"><span className="text-xs text-slate-400">ได้รับงาน</span><div>{formatBangkok(step.createdAt)}</div></div><span className="text-sm font-bold text-blue-600">เปิดเอกสาร →</span></Link>;
+              return <Link href={`/memos/${memo.id}`} key={step.id} className="grid gap-3 p-5 transition hover:bg-blue-50/50 dark:hover:bg-blue-950/20 md:grid-cols-[minmax(0,1fr)_180px_160px_auto] md:items-center"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="truncate font-bold">{memo.subject}</span><StatusBadge status={step.status}/></div><div className="mt-1 text-xs text-slate-500">{memo.documentNo ?? 'ยังไม่ออกเลข'} · {memo.branch?.name ?? 'ไม่ระบุสาขา'} / {memo.department.name} · {memo.memoType?.name ?? 'ไม่ระบุประเภท'}</div></div><div className="text-sm"><span className="text-xs text-slate-400">รอบ / ลำดับ</span><div className="font-semibold">รอบ {step.round.roundNumber} · ขั้นที่ {step.sortOrder + 1}</div></div><div className="text-sm"><span className="text-xs text-slate-400">ได้รับงาน</span><div>{formatBangkok(step.createdAt)}</div></div><span className="text-sm font-bold text-blue-600">เปิดเอกสาร →</span></Link>;
             })}
             {!steps.length && <div className="p-14 text-center"><Inbox className="mx-auto h-11 w-11 text-slate-300"/><h2 className="mt-3 font-bold">ไม่มีรายการในกล่องนี้</h2><p className="mt-1 text-sm text-slate-500">เมื่อมีเอกสารถึงคิวของคุณ ระบบจะแสดงที่นี่</p></div>}
           </div>

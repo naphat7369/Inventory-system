@@ -30,9 +30,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (data.logoAssetId !== undefined) updateData.logoAssetId = data.logoAssetId;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-    const department = await prisma.department.update({
-      where: { id },
-      data: updateData,
+    const department = await prisma.$transaction(async (tx) => {
+      const updated = await tx.department.update({ where: { id }, data: updateData });
+      if (data.isActive === false) {
+        await tx.branchDepartment.updateMany({ where: { departmentId: id }, data: { isActive: false } });
+      } else if (data.isActive === true) {
+        const branches = await tx.branch.findMany({ where: { isActive: true }, select: { id: true } });
+        await Promise.all(branches.map((branch) => tx.branchDepartment.upsert({
+          where: { branchId_departmentId: { branchId: branch.id, departmentId: id } },
+          create: { branchId: branch.id, departmentId: id, isActive: true },
+          update: { isActive: true },
+        })));
+        await tx.branchDepartment.updateMany({ where: { departmentId: id }, data: { isActive: true } });
+      }
+      return updated;
     });
 
     return NextResponse.json(department);

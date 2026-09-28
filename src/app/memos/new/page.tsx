@@ -72,7 +72,7 @@ export default async function NewMemoPage() {
       </div>
       
       <MemoForm 
-        departments={departments} 
+        departments={departments.map((department) => ({ ...department, branchId: currentUser.branchId ?? department.branchId }))}
         userDepartmentId={currentUser.departmentId}
         isAdmin={isAdmin}
         memoTypes={memoTypes}

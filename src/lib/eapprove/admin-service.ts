@@ -10,9 +10,17 @@ async function audit(prisma: PrismaClient, actorId: string, action: string, enti
 
 export async function createBranch(prisma: PrismaClient, actorId: string, input: { name: string; code: string }) {
   await requireAdmin(prisma, actorId);
-  const branch = await prisma.branch.create({ data: { name: input.name, code: input.code.toUpperCase() } });
-  await audit(prisma, actorId, 'CREATED', 'BRANCH', branch.id, null, branch);
-  return branch;
+  return prisma.$transaction(async (tx) => {
+    const branch = await tx.branch.create({ data: { name: input.name, code: input.code.toUpperCase() } });
+    const departments = await tx.department.findMany({ where: { isActive: true }, select: { id: true } });
+    if (departments.length > 0) {
+      await tx.branchDepartment.createMany({
+        data: departments.map((department) => ({ branchId: branch.id, departmentId: department.id })),
+      });
+    }
+    await tx.auditLog.create({ data: { module: 'E_APPROVE', userId: actorId, action: 'CREATED', entity: 'BRANCH', entityId: branch.id, oldValue: null, newValue: serializeAuditValue(branch) } });
+    return branch;
+  });
 }
 
 export async function updateBranch(prisma: PrismaClient, actorId: string, branchId: string, input: { name?: string; code?: string; isActive?: boolean; generalManagerId?: string | null }) {
@@ -39,7 +47,8 @@ export async function updateUserApprovalConfig(prisma: PrismaClient, actorId: st
   if (branchId && !(await prisma.branch.findFirst({ where: { id: branchId, isActive: true } }))) throw new EApproveError('BRANCH_NOT_FOUND', 'ไม่พบสาขาที่เปิดใช้งาน');
   if (departmentId) {
     const department = await prisma.department.findFirst({ where: { id: departmentId, isActive: true } });
-    if (!department || (branchId && department.branchId !== branchId)) throw new EApproveError('DEPARTMENT_WRONG_BRANCH', 'แผนกไม่อยู่ในสาขาที่เลือก');
+    const branchDepartment = branchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId, departmentId } } }) : null;
+    if (!department || (branchId && !branchDepartment?.isActive)) throw new EApproveError('DEPARTMENT_WRONG_BRANCH', 'แผนกไม่อยู่ในสาขาที่เลือก');
   }
   const normalizedInput = input.isAllBranches
     ? { ...input, branchId: null, departmentId: null }
@@ -59,9 +68,15 @@ export async function updateDepartmentApprovalConfig(prisma: PrismaClient, actor
     const hod = await prisma.user.findUnique({ where: { id: input.hodId } });
     if (!hod?.isActive || !hod.isApprover || (!hod.isAllBranches && hod.branchId !== input.branchId)) throw new EApproveError('INVALID_HOD', 'HOD ต้องเป็น Active Approver ในสาขานี้');
   }
-  const department = await prisma.department.update({ where: { id: departmentId }, data: input });
-  await audit(prisma, actorId, 'UPDATED_APPROVAL_CONFIG', 'DEPARTMENT', department.id, existing, department);
-  return department;
+  const previous = await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: input.branchId, departmentId } } });
+  const config = await prisma.branchDepartment.upsert({
+    where: { branchId_departmentId: { branchId: input.branchId, departmentId } },
+    create: { branchId: input.branchId, departmentId, hodId: input.hodId, isActive: true },
+    update: { hodId: input.hodId, isActive: true },
+    include: { department: true },
+  });
+  await audit(prisma, actorId, 'UPDATED_APPROVAL_CONFIG', 'BRANCH_DEPARTMENT', config.id, previous, config);
+  return config;
 }
 
 export async function createMemoType(prisma: PrismaClient, actorId: string, input: { name: string; code: string; description?: string | null; branchId?: string | null; sendPdfToIt: boolean }) {

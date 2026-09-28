@@ -72,7 +72,7 @@ export default async function EditMemoPage({ params }: { params: Promise<{ id: s
       </div>
       
       <MemoForm 
-        departments={departments} 
+        departments={departments.map((department) => ({ ...department, branchId: memo.branchId ?? currentUser.branchId ?? department.branchId }))}
         initialData={memo} 
         isEdit={true} 
         userDepartmentId={currentUser.departmentId}

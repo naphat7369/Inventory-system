@@ -143,9 +143,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Department not found or inactive' }, { status: 400 });
     }
 
+    let finalBranchId: string | null = null;
     if (memoTypeId) {
       const memoType = await prisma.memoType.findFirst({ where: { id: memoTypeId, isActive: true } });
-      if (!memoType || (memoType.branchId && memoType.branchId !== department.branchId)) {
+      finalBranchId = currentUser.branchId ?? memoType?.branchId ?? department.branchId;
+      const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } } }) : null;
+      if (!memoType || !finalBranchId || !branchDepartment?.isActive || (memoType.branchId && memoType.branchId !== finalBranchId)) {
         return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
       }
     }
@@ -162,7 +165,7 @@ export async function POST(request: Request) {
       data: {
         departmentId: finalDepartmentId,
         memoTypeId: memoTypeId || null,
-        branchId: memoTypeId ? department.branchId : null,
+        branchId: memoTypeId ? finalBranchId : null,
         documentDate: new Date(documentDate),
         recipient,
         sender,

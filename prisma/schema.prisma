@@ -142,34 +142,35 @@ model BorrowLog {
 }
 
 model User {
-  id                    String                     @id @default(uuid())
-  username              String                     @unique
-  passwordHash          String
-  fullName              String? // ชื่อ - นามสกุล
-  departmentId          String?
-  department            Department?                @relation(fields: [departmentId], references: [id])
-  phone                 String? // เบอร์โทรศัพท์ / ช่องทางติดต่อ
-  role                  String                     @default("STAFF") // ADMIN or STAFF
-  email                 String?
-  position              String?
-  isActive              Boolean                    @default(true)
-  isApprover            Boolean                    @default(false)
-  isAllBranches         Boolean                    @default(false)
-  branchId              String?
-  branch                Branch?                    @relation("BranchUsers", fields: [branchId], references: [id], onDelete: SetNull)
-  headedDepartments     Department[]               @relation("DepartmentHod")
-  managedBranches       Branch[]                   @relation("BranchGm")
-  requiredApprovalRules MemoTypeRequiredApprover[]
-  approvalSteps         MemoApprovalStep[]
-  delegationsGiven      ApprovalDelegation[]       @relation("Delegator")
-  delegationsReceived   ApprovalDelegation[]       @relation("Delegate")
-  borrowLogs            BorrowLog[]
-  licenseAssignments    LicenseAssignment[]
-  deletedMemos          Memo[]                     @relation("DeletedMemos")
-  signatureTemplates    SignatureTemplate[]
-  approvalSignatures    ApprovalSignature[]
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
+  id                      String                     @id @default(uuid())
+  username                String                     @unique
+  passwordHash            String
+  fullName                String? // ชื่อ - นามสกุล
+  departmentId            String?
+  department              Department?                @relation(fields: [departmentId], references: [id])
+  phone                   String? // เบอร์โทรศัพท์ / ช่องทางติดต่อ
+  role                    String                     @default("STAFF") // ADMIN or STAFF
+  email                   String?
+  position                String?
+  isActive                Boolean                    @default(true)
+  isApprover              Boolean                    @default(false)
+  isAllBranches           Boolean                    @default(false)
+  branchId                String?
+  branch                  Branch?                    @relation("BranchUsers", fields: [branchId], references: [id], onDelete: SetNull)
+  headedDepartments       Department[]               @relation("DepartmentHod")
+  headedBranchDepartments BranchDepartment[]         @relation("BranchDepartmentHod")
+  managedBranches         Branch[]                   @relation("BranchGm")
+  requiredApprovalRules   MemoTypeRequiredApprover[]
+  approvalSteps           MemoApprovalStep[]
+  delegationsGiven        ApprovalDelegation[]       @relation("Delegator")
+  delegationsReceived     ApprovalDelegation[]       @relation("Delegate")
+  borrowLogs              BorrowLog[]
+  licenseAssignments      LicenseAssignment[]
+  deletedMemos            Memo[]                     @relation("DeletedMemos")
+  signatureTemplates      SignatureTemplate[]
+  approvalSignatures      ApprovalSignature[]
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
 
   @@index([branchId, isActive, isApprover])
   @@index([isAllBranches, isActive, isApprover])
@@ -228,18 +229,19 @@ model LicenseAssignment {
 }
 
 model Branch {
-  id               String       @id @default(uuid())
-  name             String
-  code             String       @unique
-  isActive         Boolean      @default(true)
-  generalManagerId String?
-  generalManager   User?        @relation("BranchGm", fields: [generalManagerId], references: [id], onDelete: SetNull)
-  users            User[]       @relation("BranchUsers")
-  departments      Department[]
-  memoTypes        MemoType[]
-  memos            Memo[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id                String             @id @default(uuid())
+  name              String
+  code              String             @unique
+  isActive          Boolean            @default(true)
+  generalManagerId  String?
+  generalManager    User?              @relation("BranchGm", fields: [generalManagerId], references: [id], onDelete: SetNull)
+  users             User[]             @relation("BranchUsers")
+  departments       Department[]
+  departmentConfigs BranchDepartment[]
+  memoTypes         MemoType[]
+  memos             Memo[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([generalManagerId])
 }
@@ -347,12 +349,30 @@ model Department {
   hodId             String?
   hod               User?                  @relation("DepartmentHod", fields: [hodId], references: [id], onDelete: SetNull)
   approvalTemplates ApprovalTemplate[]
+  branchConfigs     BranchDepartment[]
   documentSequences MemoDocumentSequence[]
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
 
   @@index([logoAssetId])
   @@index([branchId])
+  @@index([hodId])
+}
+
+model BranchDepartment {
+  id           String     @id @default(uuid())
+  branchId     String
+  branch       Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  hodId        String?
+  hod          User?      @relation("BranchDepartmentHod", fields: [hodId], references: [id], onDelete: SetNull)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([branchId, departmentId])
+  @@index([departmentId, isActive])
   @@index([hodId])
 }
 

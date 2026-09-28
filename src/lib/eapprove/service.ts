@@ -42,6 +42,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
       where: { id: input.memoId },
       include: {
         department: { include: { hod: true, branch: { include: { generalManager: true } } } },
+        branch: { include: { generalManager: true } },
         memoType: { include: { requiredApprovers: { orderBy: { sortOrder: 'asc' }, include: { approver: true } } } },
         signatures: { orderBy: { sortOrder: 'asc' } },
         attachments: { orderBy: { createdAt: 'asc' } },
@@ -54,8 +55,13 @@ export async function submitMemo(prisma: PrismaClient, input: {
     try { assertMemoTransition(memo.approvalStatus, 'SUBMITTED'); }
     catch { throw new EApproveError('INVALID_MEMO_STATE', 'สถานะปัจจุบันไม่สามารถส่งอนุมัติได้', 409); }
     if (!memo.memoType?.isActive) throw new EApproveError('MEMO_TYPE_REQUIRED', 'กรุณาเลือก Memo Type ที่เปิดใช้งาน');
-    const branch = memo.department.branch;
+    const branch = memo.branch ?? memo.department.branch;
     if (!branch?.isActive) throw new EApproveError('BRANCH_REQUIRED', 'แผนกยังไม่ได้กำหนดสาขาที่เปิดใช้งาน');
+    const branchDepartment = await tx.branchDepartment.findUnique({
+      where: { branchId_departmentId: { branchId: branch.id, departmentId: memo.departmentId } },
+      include: { hod: true },
+    });
+    if (!branchDepartment?.isActive) throw new EApproveError('DEPARTMENT_WRONG_BRANCH', 'แผนกนี้ไม่ได้เปิดใช้งานในสาขาของ Memo');
     if (memo.memoType.branchId && memo.memoType.branchId !== branch.id) {
       throw new EApproveError('MEMO_TYPE_WRONG_BRANCH', 'Memo Type นี้ไม่สามารถใช้กับสาขาของผู้สร้างได้');
     }
@@ -95,8 +101,8 @@ export async function submitMemo(prisma: PrismaClient, input: {
       chain = buildApprovalChain({
         creatorId: input.actorId,
         branchId: branch.id,
-        hod: memo.department.hod,
-        gmFallback: memo.department.hod ? null : branch.generalManager,
+        hod: branchDepartment.hod,
+        gmFallback: branchDepartment.hod ? null : branch.generalManager,
         template: template?.items.map((item) => mapped(item.approverId, 'TEMPLATE', template.id)),
         userAdded: (input.userAddedApproverIds ?? []).map((id) => mapped(id, 'USER_ADDED')),
         required: memo.memoType.requiredApprovers.map((item) => ({ approver: item.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: item.id })),

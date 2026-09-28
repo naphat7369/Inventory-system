@@ -100,11 +100,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         prisma.department.findUnique({ where: { id: effectiveDepartmentId } }),
         prisma.memoType.findFirst({ where: { id: data.memoTypeId, isActive: true } }),
       ]);
-      if (!department || !memoType || (memoType.branchId && memoType.branchId !== department.branchId)) {
+      const effectiveBranchId = existing.branchId ?? currentUser.branchId ?? memoType?.branchId ?? department?.branchId ?? null;
+      const branchDepartment = department && effectiveBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: department.id } } }) : null;
+      if (!department || !memoType || !effectiveBranchId || !branchDepartment?.isActive || (memoType.branchId && memoType.branchId !== effectiveBranchId)) {
         return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
       }
       updateData.memoType = { connect: { id: memoType.id } };
-      updateData.branch = department.branchId ? { connect: { id: department.branchId } } : { disconnect: true };
+      updateData.branch = { connect: { id: effectiveBranchId } };
     }
 
     // If FINAL: STRICTLY LOCK Logo, subHeader, and departmentId

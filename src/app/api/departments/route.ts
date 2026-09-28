@@ -52,15 +52,24 @@ export async function POST(request: Request) {
 
     const formattedNameEn = (nameEn || `${name.trim()} DEPARTMENT`).trim().toLocaleUpperCase('en-US');
 
-    const department = await prisma.department.create({
-      data: {
-        name,
-        nameEn: formattedNameEn,
-        code: code.toUpperCase(),
-        logoUrl: logoUrl || '/assets/branding/s-hotel-default-v1.png',
-        logoAssetId: logoAssetId || null,
-        isActive: true,
-      },
+    const department = await prisma.$transaction(async (tx) => {
+      const branches = await tx.branch.findMany({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      return tx.department.create({
+        data: {
+          name: name.trim(),
+          nameEn: formattedNameEn,
+          code: code.trim().toUpperCase(),
+          logoUrl: logoUrl || '/assets/branding/s-hotel-default-v1.png',
+          logoAssetId: logoAssetId || null,
+          isActive: true,
+          branchConfigs: {
+            create: branches.map((branch) => ({ branchId: branch.id })),
+          },
+        },
+      });
     });
 
     return NextResponse.json(department);

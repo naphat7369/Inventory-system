@@ -18,6 +18,9 @@ Required production values:
 
 - `DATABASE_URL`: SQLite file on a persistent volume
 - `JWT_SECRET`: a long random secret shared by the web and worker processes
+- `SESSION_IDLE_TIMEOUT_MINUTES`: inactivity timeout in minutes (default `30`, allowed range `5`–`480`)
+
+Refreshing the browser does not end the session. Closing the website tab/window ends its tab session, so opening the website again requires a new login. The authentication cookie is also a browser-session cookie and is not persisted after the browser session ends.
 - `NEXTAUTH_URL`: public HTTPS URL; this enables secure authentication cookies
 - `EAPPROVE_APP_URL`: URL the worker can use to reach the web application
 - `CHROME_PATH`: Chrome/Chromium executable path

@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { login, initAdmin } from '@/app/actions';
 import { Package } from 'lucide-react';
 
 export default function LoginPage() {
+  const [sessionEndReason, setSessionEndReason] = useState<'expired' | 'closed' | null>(null);
   const [state, formAction, isPending] = useActionState(async (prevState: any, formData: FormData) => {
     return await login(formData);
   }, null);
@@ -12,6 +13,9 @@ export default function LoginPage() {
   useEffect(() => {
     // Initialize default admin on first load if no users exist
     initAdmin();
+    window.sessionStorage.setItem('inventory-session:active-tab', 'active');
+    const reason = new URLSearchParams(window.location.search).get('reason');
+    setSessionEndReason(reason === 'session-closed' ? 'closed' : reason === 'session-expired' ? 'expired' : null);
   }, []);
 
   return (
@@ -21,7 +25,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-gray-900 rounded-xl flex items-center justify-center mb-4 text-white">
             <Package size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Inventory System</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">E-Approve System</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-center text-sm">
             Sign in to access your assets.
           </p>
@@ -30,6 +34,14 @@ export default function LoginPage() {
         {state?.error && (
           <div className="bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 border border-red-100 dark:border-red-900/40 p-4 rounded-lg mb-6 text-sm font-medium">
             {state.error}
+          </div>
+        )}
+
+        {sessionEndReason && !state?.error && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+            {sessionEndReason === 'closed'
+              ? 'เซสชันสิ้นสุดแล้ว กรุณาเข้าสู่ระบบอีกครั้ง'
+              : 'Session หมดอายุเนื่องจากไม่มีการใช้งาน กรุณาเข้าสู่ระบบอีกครั้ง'}
           </div>
         )}
 

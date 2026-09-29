@@ -1,45 +1,22 @@
-import { jwtVerify, SignJWT } from 'jose';
 import { cookies } from 'next/headers';
+import { SESSION_IDLE_TIMEOUT_SECONDS, signSessionToken, verifySessionToken, type SessionPayload } from './session-token';
 
-const secretKey = process.env.JWT_SECRET || 'super-secret-default-key-change-in-production';
-const encodedKey = new TextEncoder().encode(secretKey);
+export { SESSION_IDLE_TIMEOUT_SECONDS } from './session-token';
 
-export async function createSession(payload: {
-  id: string;
-  username: string;
-  role: string;
-  fullName?: string | null;
-  department?: string | null;
-  departmentId?: string | null;
-  phone?: string | null;
-}) {
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-  const session = await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(encodedKey);
+export async function createSession(payload: SessionPayload) {
+  const session = await signSessionToken(payload);
     
   (await cookies()).set('session', session, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production' && process.env.NEXTAUTH_URL?.startsWith('https://'),
-    expires: expiresAt,
     sameSite: 'lax',
     path: '/',
+    priority: 'high',
   });
 }
 
 export async function verifySession(session: string | undefined = '') {
-  try {
-    if (!session) return null;
-    const { payload } = await jwtVerify(session, encodedKey, {
-      algorithms: ['HS256'],
-    });
-    return payload;
-  } catch (error) {
-    console.error('Failed to verify session');
-    return null;
-  }
+  return verifySessionToken(session);
 }
 
 export async function getSession() {

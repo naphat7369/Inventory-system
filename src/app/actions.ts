@@ -408,7 +408,7 @@ export async function login(formData: FormData) {
     include: { department: true }
   });
 
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+  if (!user?.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
     return { error: 'Invalid username or password' };
   }
 

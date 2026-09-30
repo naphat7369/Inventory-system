@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       const approvalSignatures = chain
         .filter((step) => step.status !== 'SKIPPED_SELF')
         .map((step) => ({
-          role: step.source === 'HOD' || step.source === 'GM_FALLBACK' ? 'รับทราบโดย' : 'อนุมัติโดย',
+          role: step.source === 'HOD' || step.source === 'GM_FALLBACK' ? 'พิจารณาโดย' : 'อนุมัติโดย',
           name: step.approverName,
           position: step.approverPosition,
           approverId: step.approverId,

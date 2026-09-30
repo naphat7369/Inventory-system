@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cleanAndCropSignatureImage } from '@/lib/signature-image';
 
+const A4_WIDTH_PX = (210 / 25.4) * 96;
+
 // ========================================================
 // TYPES & CONTENT BLOCK DEFINITION
 // ========================================================
@@ -133,8 +135,12 @@ export function MemoDocumentPagination({
 }: MemoDocumentPaginationProps) {
   const [pages, setPages] = useState<PageData[]>([]);
   const [isPaginating, setIsPaginating] = useState<boolean>(true);
+  const [previewScale, setPreviewScale] = useState(1);
+  const [scaledPreviewHeight, setScaledPreviewHeight] = useState<number | null>(null);
 
   // References for measurement
+  const previewViewportRef = useRef<HTMLDivElement>(null);
+  const previewPageStackRef = useRef<HTMLDivElement>(null);
   const measureContainerRef = useRef<HTMLDivElement>(null);
   const dummy261mmRef = useRef<HTMLDivElement>(null);
   const page1HeaderRef = useRef<HTMLDivElement>(null);
@@ -142,6 +148,30 @@ export function MemoDocumentPagination({
   const closingTextRef = useRef<HTMLDivElement>(null);
   const signatureGroupRef = useRef<HTMLDivElement>(null);
   const footerNoteRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const viewport = previewViewportRef.current;
+    if (!viewport) return;
+
+    const updatePreviewScale = () => {
+      const availableWidth = Math.max(0, viewport.clientWidth);
+      const nextScale = Math.min(1, availableWidth / A4_WIDTH_PX);
+      const validScale = Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1;
+      const naturalHeight = previewPageStackRef.current?.scrollHeight ?? 0;
+      setPreviewScale((current) => Math.abs(current - validScale) > 0.001 ? validScale : current);
+      setScaledPreviewHeight(naturalHeight > 0 && validScale < 1 ? naturalHeight * validScale : null);
+    };
+
+    updatePreviewScale();
+    const observer = new ResizeObserver(updatePreviewScale);
+    observer.observe(viewport);
+    if (previewPageStackRef.current) observer.observe(previewPageStackRef.current);
+    window.addEventListener('orientationchange', updatePreviewScale);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', updatePreviewScale);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -481,8 +511,24 @@ export function MemoDocumentPagination({
       </div>
 
       {/* Rendered A4 Page Sheets */}
-      <div className="w-full flex flex-col items-center print:block">
-        {pages.map((page) => (
+      <div
+        ref={previewViewportRef}
+        className="memo-preview-viewport relative w-full min-w-0 print:block"
+        style={scaledPreviewHeight ? { height: `${scaledPreviewHeight}px` } : undefined}
+      >
+        <div
+          ref={previewPageStackRef}
+          className="memo-preview-page-stack mx-auto flex w-[210mm] flex-col items-center print:block"
+          style={previewScale < 1 ? {
+            position: 'absolute',
+            top: 0,
+            left: '50%',
+            marginLeft: `${-(A4_WIDTH_PX * previewScale) / 2}px`,
+            transform: `scale(${previewScale})`,
+            transformOrigin: 'top left',
+          } : undefined}
+        >
+          {pages.map((page) => (
           <div
             key={page.pageNumber}
             className="memo-page-sheet memo-document memo-paper bg-white shadow-xl print:shadow-none flex flex-col justify-start"
@@ -637,7 +683,8 @@ export function MemoDocumentPagination({
               </div>
             )}
           </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* ========================================================
@@ -727,6 +774,11 @@ export function MemoDocumentPagination({
 
         /* Screen Presentation for A4 Sheets */
         @media screen {
+          .memo-preview-viewport {
+            overflow: visible;
+            touch-action: pan-y pinch-zoom;
+          }
+
           .memo-page-sheet {
             margin-bottom: 24px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
@@ -986,6 +1038,18 @@ export function MemoDocumentPagination({
             padding: 0 !important;
           }
 
+          .memo-preview-page-stack {
+            width: 210mm !important;
+            position: static !important;
+            left: auto !important;
+            margin-left: 0 !important;
+            transform: none !important;
+          }
+
+          .memo-preview-viewport {
+            height: auto !important;
+          }
+
           .memo-measurement-container {
             display: none !important;
           }
@@ -1140,9 +1204,10 @@ function renderSignatures(signatures: MemoSignatureItem[]) {
 }
 
 function SignatureBox({ sig, width = "w-48" }: { sig: MemoSignatureItem; width?: string }) {
+  const displayRole = sig.role.trim() === 'รับทราบโดย' ? 'พิจารณาโดย' : sig.role;
   return (
     <div className={`memo-signature-item ${width} text-center flex flex-col items-center`}>
-      <div className="font-semibold text-[14pt] text-black mb-0.5">{sig.role}</div>
+      <div className="font-semibold text-[14pt] text-black mb-0.5">{displayRole}</div>
       <div className="h-14 w-full flex items-center justify-center overflow-hidden" aria-label={sig.approvalSignatureData ? `ลายเซ็นอนุมัติของ ${sig.name ?? ''}` : undefined}>
         {sig.approvalSignatureData && sig.approvalSignatureType === 'TYPED' && (
           <span className="memo-approval-signature-text max-w-[88%] truncate px-1 font-serif text-[14pt] italic leading-none text-[#1e3a8a]">

@@ -19,8 +19,8 @@ interface MemoRowActionsProps {
   officialPdfReady: boolean;
 }
 
-const actionClass = 'inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-700 transition-colors hover:bg-slate-100 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-300';
-const disabledActionClass = 'inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md text-slate-300 dark:text-slate-600';
+const actionClass = 'inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 transition-colors hover:bg-slate-100 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-300 sm:h-8 sm:w-8 sm:rounded-md';
+const disabledActionClass = 'inline-flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 sm:h-8 sm:w-8 sm:rounded-md';
 
 export function MemoRowActions({
   memoId,

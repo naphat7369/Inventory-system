@@ -14,6 +14,7 @@ export type SessionPayload = JWTPayload & {
   id: string;
   username: string;
   role: string;
+  isApprover?: boolean;
   fullName?: string | null;
   department?: string | null;
   departmentId?: string | null;

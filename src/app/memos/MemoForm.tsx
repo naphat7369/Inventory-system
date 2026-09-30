@@ -86,13 +86,14 @@ export type MemoFormProps = {
 
 const DEFAULT_SIGNATURES: Signature[] = [
   { role: 'นำเสนอโดย', name: '', position: '', sortOrder: 0 },
-  { role: 'รับทราบโดย', name: '', position: '', sortOrder: 1 },
-  { role: 'รับทราบโดย', name: '', position: '', sortOrder: 2 },
+  { role: 'พิจารณาโดย', name: '', position: '', sortOrder: 1 },
+  { role: 'พิจารณาโดย', name: '', position: '', sortOrder: 2 },
   { role: 'อนุมัติโดย', name: '', position: '', sortOrder: 3 },
   { role: 'อนุมัติโดย', name: '', position: '', sortOrder: 4 },
 ];
 
-const SIGNATURE_ROLES = ['นำเสนอโดย', 'รับทราบโดย', 'อนุมัติโดย'];
+const SIGNATURE_ROLES = ['นำเสนอโดย', 'พิจารณาโดย', 'อนุมัติโดย'];
+const normalizeSignatureRole = (role: string) => role.trim() === 'รับทราบโดย' ? 'พิจารณาโดย' : role;
 const userDisplayName = (user: MemoUserItem) => user.fullName?.trim() || user.username;
 const departmentHeader = (department?: DepartmentItem) =>
   (department?.nameEn?.trim() || department?.name?.trim() || '').toLocaleUpperCase('en-US');
@@ -148,7 +149,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   
   const [signatures, setSignatures] = useState<Signature[]>(
     initialData?.signatures && initialData.signatures.length > 0
-      ? initialData.signatures
+      ? initialData.signatures.map((signature) => ({ ...signature, role: normalizeSignatureRole(signature.role) }))
       : DEFAULT_SIGNATURES.map((signature, index) => index === 0
         ? { ...signature, name: userDisplayName(currentUser), position: currentUser.position }
         : signature)
@@ -205,7 +206,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       const response = await fetch(`/api/e-approve/signature-preview?${params.toString()}`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'ไม่สามารถสร้างรายการลายเซ็นจาก Approval Chain ได้');
-      setSignatures((body.signatures as Signature[]).map((signature, index) => ({ ...signature, sortOrder: index })));
+      setSignatures((body.signatures as Signature[]).map((signature, index) => ({ ...signature, role: normalizeSignatureRole(signature.role), sortOrder: index })));
       setSelectedTemplateId('');
       setApprovalSignatureSource(`${body.memoType.name} · ${body.branch.name}`);
       handleChange();
@@ -292,7 +293,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const executeApplyTemplate = (template: SignatureTemplate) => {
     const copiedSignatures = template.items.map((item, index) => ({
       id: crypto.randomUUID(),
-      role: item.role,
+      role: normalizeSignatureRole(item.role),
       name: item.name,
       position: item.position ?? "",
       sortOrder: index,

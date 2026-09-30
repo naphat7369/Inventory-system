@@ -63,13 +63,13 @@ async function main() {
             sortOrder: 1,
           },
           {
-            role: 'รับทราบโดย',
+            role: 'พิจารณาโดย',
             name: 'คุณอลงกรณ์ จิระดิษฐ์',
             position: 'IT Manager',
             sortOrder: 2,
           },
           {
-            role: 'รับทราบโดย',
+            role: 'พิจารณาโดย',
             name: 'คุณสิริรัช สร้อยสนธิ์',
             position: 'General Manager',
             sortOrder: 3,

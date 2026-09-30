@@ -22,6 +22,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
     }
 
+    if (session.role !== 'ADMIN' && existing.createdById !== session.id) {
+      return NextResponse.json({ error: 'Only the Memo owner or Admin can duplicate this document' }, { status: 403 });
+    }
+
     // Duplicate memo but set as DRAFT and reset documentNo
     const newMemo = await prisma.memo.create({
       data: {

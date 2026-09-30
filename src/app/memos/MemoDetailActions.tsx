@@ -16,6 +16,7 @@ interface MemoDetailActionsProps {
   isEApprove?: boolean;
   canSendEmail?: boolean;
   officialPdfReady?: boolean;
+  canReuseMemoActions?: boolean;
 }
 
 export function MemoDetailActions({ 
@@ -29,6 +30,7 @@ export function MemoDetailActions({
   isEApprove = false,
   canSendEmail = false,
   officialPdfReady = false,
+  canReuseMemoActions = false,
 }: MemoDetailActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -409,15 +411,17 @@ export function MemoDetailActions({
           </button>
         )}
 
-        <button 
-          onClick={handleDuplicate} 
-          disabled={loading} 
-          className="flex items-center gap-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
-        >
-          <Copy size={18} /> ทำสำเนา
-        </button>
+        {canReuseMemoActions && (
+          <button
+            onClick={handleDuplicate}
+            disabled={loading}
+            className="flex items-center gap-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+          >
+            <Copy size={18} /> ทำสำเนา
+          </button>
+        )}
 
-        {signatures && signatures.length > 0 && (
+        {canReuseMemoActions && signatures && signatures.length > 0 && (
           <button 
             onClick={handleSaveAsTemplate} 
             disabled={loading} 

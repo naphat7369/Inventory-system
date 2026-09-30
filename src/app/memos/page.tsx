@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import Link from 'next/link';
-import { FileText, Plus, Search, Filter, Building } from 'lucide-react';
+import { FileText, Plus, Search, Filter } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { Pagination } from '@/components/Pagination';
 import { MemoRowActions } from './MemoRowActions';
@@ -94,14 +94,6 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
           <FileText className="text-blue-600" /> Memos
         </h1>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          {isAdmin && (
-            <Link 
-              href="/settings/departments" 
-              className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-slate-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-            >
-              <Building size={18} /> จัดการแผนก (Departments)
-            </Link>
-          )}
           {Boolean(session?.role) && (
             <Link 
               href="/memos/new" 
@@ -169,7 +161,50 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">  
-        <div className="overflow-x-auto w-full">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 md:hidden">
+          {memos.map((memo) => {
+            const isOwner = memo.createdById === currentUser?.id;
+            const canDelete = Boolean(isAdmin || isOwner) && !memo.documentNo && memo.status !== 'FINAL';
+            const canSendEmail = Boolean(isAdmin || isOwner) && memo.status !== 'CANCELLED' && memo.pdfStatus === 'READY';
+            const displayStatus = memo.memoTypeId ? memo.approvalStatus : memo.status;
+            return (
+              <article key={memo.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-slate-900 dark:text-slate-100">{memo.subject}</p>
+                    <p className="mt-1 text-xs text-slate-500">{memo.documentNo || 'ยังไม่ออกเลขเอกสาร'}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                    (memo.approvalStatus === 'APPROVED' || memo.status === 'FINAL') ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                    memo.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>{displayStatus}</span>
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
+                  <div><dt className="text-xs text-slate-400">วันที่</dt><dd className="mt-0.5 font-medium" suppressHydrationWarning>{formatThaiDate(memo.documentDate)}</dd></div>
+                  <div><dt className="text-xs text-slate-400">แผนก</dt><dd className="mt-0.5 truncate font-medium">{memo.department.name}</dd></div>
+                </dl>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-slate-500">Actions</span>
+                  <MemoRowActions
+                    memoId={memo.id}
+                    documentNo={memo.documentNo}
+                    subject={memo.subject}
+                    status={memo.status}
+                    canDelete={canDelete}
+                    canRequestPdf={Boolean(isAdmin || isOwner) && Boolean(memo.documentNo) && memo.status === 'FINAL' && !memo.memoTypeId}
+                    pdfStatus={memo.pdfStatus}
+                    canSendEmail={canSendEmail}
+                    officialPdfReady={memo.pdfStatus === 'READY'}
+                  />
+                </div>
+              </article>
+            );
+          })}
+          {memos.length === 0 && <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">No memos found.</div>}
+        </div>
+
+        <div className="hidden w-full overflow-x-auto md:block">
           <table className="w-full text-left whitespace-nowrap">
             <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
               <tr>

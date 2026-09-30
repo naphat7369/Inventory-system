@@ -16,6 +16,7 @@ export async function POST() {
     id: user.id,
     username: user.username,
     role: user.role,
+    isApprover: user.isApprover,
     fullName: user.fullName,
     department: user.department?.name ?? null,
     departmentId: user.departmentId,

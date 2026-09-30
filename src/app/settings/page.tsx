@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { createCustomField, deleteCustomField } from '@/app/actions';
-import { Settings, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, Building2, Settings, Trash2, Workflow } from 'lucide-react';
 
 export default async function SettingsPage() {
   const categories = await prisma.category.findMany();
@@ -10,15 +11,60 @@ export default async function SettingsPage() {
   });
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto w-full">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Settings className="text-gray-600 dark:text-gray-400" /> Settings (Custom Fields)
+          <Settings className="text-gray-600 dark:text-gray-400" /> Settings
         </h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          จัดการโครงสร้างองค์กร ระบบอนุมัติ และข้อมูลกำหนดเองจากศูนย์กลาง
+        </p>
       </div>
 
+      <section className="mb-8 grid gap-4 md:grid-cols-2">
+        <Link
+          href="/settings/departments"
+          className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-500"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
+                <Building2 size={22} />
+              </span>
+              <div>
+                <h2 className="font-bold text-slate-900 dark:text-slate-100">จัดการแผนก (Departments)</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                  เพิ่ม แก้ไข และกำหนดข้อมูลแผนกที่ใช้ในระบบ
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="mt-2 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600" size={19} />
+          </div>
+        </Link>
+
+        <Link
+          href="/settings/e-approve"
+          className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-500"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+                <Workflow size={22} />
+              </span>
+              <div>
+                <h2 className="font-bold text-slate-900 dark:text-slate-100">E‑Approve</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                  ตั้งค่าสาขา HOD/GM ผู้อนุมัติ ประเภท Memo และลำดับการอนุมัติ
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="mt-2 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-indigo-600" size={19} />
+          </div>
+        </Link>
+      </section>
+
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">Add Custom Field (Dynamic Column)</h2>
+        <h2 className="text-lg font-semibold mb-4">Custom Fields (Dynamic Columns)</h2>
         <form action={createCustomField} className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <input

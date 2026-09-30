@@ -4,8 +4,8 @@ import { getSession } from '@/lib/auth';
 import { MemoDetailActions } from '../MemoDetailActions';
 import { MemoDocumentPagination } from './MemoDocumentPagination';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
-import Link from 'next/link';
 import { ApprovalWorkflowPanel } from './ApprovalWorkflowPanel';
+import { MemoBackButton } from './MemoBackButton';
 import { CheckCircle2, Clock3, CircleDashed, Download, FileText, Paperclip, RotateCcw, SkipForward } from 'lucide-react';
 
 type StoredSignatureSnapshot = {
@@ -24,6 +24,16 @@ function readStoredSignatureSnapshot(value: string | null): StoredSignatureSnaps
   } catch {
     return null;
   }
+}
+
+function formatBangkokShort(value: Date) {
+  const date = new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok',
+  }).format(value);
+  const time = new Intl.DateTimeFormat('th-TH', {
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Bangkok',
+  }).format(value);
+  return `${date} · ${time} น.`;
 }
 
 export default async function MemoDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -151,6 +161,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
   const canEdit = (isAdmin || isOwner) && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
   const isCurrentApprover = latestRound?.status === 'ACTIVE' && latestRound.steps.some((step) => step.status === 'PENDING' && step.approverId === currentUser.id);
   const canSubmit = isOwner && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus) && Boolean(memo.memoTypeId);
+  const backFallbackHref = isApprovalParticipant && !isOwner ? '/memos/approvals' : '/memos';
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 p-4 md:p-8 print:p-0 print:bg-white print:min-h-0 print:m-0">
@@ -158,9 +169,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
         
         {/* Navigation - Hidden in Print */}
         <div className="mb-4 print:hidden flex justify-between items-center">
-          <Link href="/memos" className="text-blue-600 hover:underline font-medium text-sm flex items-center gap-1.5">
-            &larr; กลับหน้ารายการ
-          </Link>
+          <MemoBackButton fallbackHref={backFallbackHref} />
           <div className="text-xs text-slate-500 font-medium">
             สถานะ: <span className="font-bold text-slate-800 dark:text-slate-200">{memo.status}</span>
           </div>
@@ -178,6 +187,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           isEApprove={Boolean(memo.memoTypeId)}
           canSendEmail={isAdmin || isOwner}
           officialPdfReady={memo.pdfStatus === 'READY' && memo.pdfArtifacts.length > 0}
+          canReuseMemoActions={isAdmin || isOwner}
         />
 
         {memo.memoTypeId && <ApprovalWorkflowPanel
@@ -206,7 +216,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
         {latestRound && (
           <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Approval Timeline</h2><p className="text-xs text-slate-500">รอบที่ {latestRound.roundNumber} · Snapshot ผู้อนุมัติของเอกสารฉบับนี้</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{latestRound.status}</span></div>
-            <div className="mt-5 space-y-3">{latestRound.steps.map((step, index) => <div key={step.id} className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-start gap-3"><div className={`grid h-9 w-9 place-items-center rounded-full ${step.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : step.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : step.status === 'REVISION_REQUESTED' ? 'bg-violet-100 text-violet-700' : step.status === 'SKIPPED_SELF' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>{step.status === 'APPROVED' ? <CheckCircle2 className="h-4 w-4"/> : step.status === 'PENDING' ? <Clock3 className="h-4 w-4"/> : step.status === 'REVISION_REQUESTED' ? <RotateCcw className="h-4 w-4"/> : step.status === 'SKIPPED_SELF' ? <SkipForward className="h-4 w-4"/> : <CircleDashed className="h-4 w-4"/>}</div><div className="pb-3"><div className="font-bold">{index + 1}. {step.approverNameSnapshot}</div><div className="text-xs text-slate-500">{step.approverPositionSnapshot ?? 'ไม่ระบุตำแหน่ง'} · {step.source}</div>{step.decisionReason && <div className="mt-2 rounded-lg bg-violet-50 p-2 text-sm text-violet-800 dark:bg-violet-950/30 dark:text-violet-200">เหตุผล: {step.decisionReason}</div>}</div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{step.status}</span></div>)}</div>
+            <div className="mt-5 space-y-3">{latestRound.steps.map((step, index) => <div key={step.id} className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-start gap-3"><div className={`grid h-9 w-9 place-items-center rounded-full ${step.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : step.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : step.status === 'REVISION_REQUESTED' ? 'bg-violet-100 text-violet-700' : step.status === 'SKIPPED_SELF' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>{step.status === 'APPROVED' ? <CheckCircle2 className="h-4 w-4"/> : step.status === 'PENDING' ? <Clock3 className="h-4 w-4"/> : step.status === 'REVISION_REQUESTED' ? <RotateCcw className="h-4 w-4"/> : step.status === 'SKIPPED_SELF' ? <SkipForward className="h-4 w-4"/> : <CircleDashed className="h-4 w-4"/>}</div><div className="pb-3"><div className="font-bold">{index + 1}. {step.approverNameSnapshot}</div><div className="text-xs text-slate-500">{step.approverPositionSnapshot ?? 'ไม่ระบุตำแหน่ง'} · {step.source}</div>{step.actedAt && <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-slate-400"><Clock3 className="h-3 w-3"/><span>{formatBangkokShort(step.actedAt)}</span></div>}{step.decisionReason && <div className="mt-2 rounded-lg bg-violet-50 p-2 text-sm text-violet-800 dark:bg-violet-950/30 dark:text-violet-200">เหตุผล: {step.decisionReason}</div>}</div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{step.status}</span></div>)}</div>
           </section>
         )}
 
@@ -228,7 +238,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
         )}
 
         {/* Responsive A4 Paper Container with Auto-Pagination */}
-        <div className="overflow-x-auto w-full pb-8 print:pb-0 print:overflow-visible flex justify-center print:block print:w-auto print:m-0 print:p-0">
+        <div className="w-full min-w-0 overflow-visible pb-8 print:pb-0 print:block print:w-auto print:m-0 print:p-0">
           <MemoDocumentPagination
             memo={memo}
             thaiDateStr={thaiDateStr}

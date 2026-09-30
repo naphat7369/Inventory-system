@@ -416,17 +416,15 @@ export async function login(formData: FormData) {
     id: user.id,
     username: user.username,
     role: user.role,
+    isApprover: user.isApprover,
     fullName: user.fullName,
     department: user.department?.name || null,
     departmentId: user.departmentId,
     phone: user.phone,
   });
 
-  if (user.role === 'STAFF') {
-    redirect('/borrows');
-  } else {
-    redirect('/assets');
-  }
+  if (user.role === 'ADMIN') redirect('/assets');
+  redirect(user.isApprover ? '/memos/approvals' : '/memos');
 }
 
 export async function logout() {

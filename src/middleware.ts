@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
 
     // STAFF can use the borrow portal and Memo/E-Approve pages exposed in their sidebar.
     if (session.role !== 'ADMIN' && !path.startsWith('/borrows') && !path.startsWith('/memos')) {
-      return NextResponse.redirect(new URL('/borrows', request.url));
+      return NextResponse.redirect(new URL(session.isApprover ? '/memos/approvals' : '/memos', request.url));
     }
   }
 

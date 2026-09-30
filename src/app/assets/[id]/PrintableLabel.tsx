@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { Printer } from 'lucide-react';
@@ -8,6 +8,11 @@ import { updateAssetStatus } from '@/app/actions';
 
 export default function PrintableLabel({ asset, role }: { asset: any, role?: string }) {
   const componentRef = useRef(null);
+  const [browserOrigin, setBrowserOrigin] = useState('');
+
+  useEffect(() => {
+    setBrowserOrigin(window.location.origin);
+  }, []);
   
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
@@ -53,7 +58,9 @@ export default function PrintableLabel({ asset, role }: { asset: any, role?: str
         {/* Printable Area */}
         <div ref={componentRef} className="print:p-0 flex flex-col gap-8">
           {itemsToPrint.map((item, index) => {
-            const itemQrUrl = typeof window !== 'undefined' ? `${window.location.origin}/assets/${item.id}` : '';
+            // The first client render must match SSR. Replace the stable asset ID
+            // with the browser URL only after hydration has completed.
+            const itemQrUrl = browserOrigin ? `${browserOrigin}/assets/${item.id}` : item.assetId;
             return (
               <div 
                 key={item.id}
@@ -83,7 +90,7 @@ export default function PrintableLabel({ asset, role }: { asset: any, role?: str
                     <p className="text-sm"><span className="text-gray-500 dark:text-gray-400">IP:</span> {item.ipAddress || '-'}</p>
                   </div>
                   <div className="bg-white dark:bg-slate-900 p-2 border border-gray-200 dark:border-slate-700 rounded-lg shrink-0">
-                    <QRCodeSVG value={itemQrUrl || item.assetId} size={96} />
+                    <QRCodeSVG value={itemQrUrl} size={96} />
                   </div>
                 </div>
               </div>

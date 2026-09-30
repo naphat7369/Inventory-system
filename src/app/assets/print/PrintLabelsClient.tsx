@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -50,6 +50,12 @@ export function PrintLabelsClient({
   initialSelectedIds,
   baseUrl,
 }: PrintLabelsClientProps) {
+  const [qrBaseUrl, setQrBaseUrl] = useState(() => baseUrl?.replace(/\/$/, '') ?? '');
+
+  useEffect(() => {
+    setQrBaseUrl(window.location.origin);
+  }, []);
+
   // Selection state (Set of asset IDs that will be printed)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
     if (initialSelectedIds && initialSelectedIds.length > 0) {
@@ -350,12 +356,7 @@ export function PrintLabelsClient({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:grid print:grid-cols-2 print:gap-4 print:w-full">
             {filteredAssets.map((asset) => {
               const isSelected = selectedIds.has(asset.id);
-              const qrUrl =
-                typeof window !== 'undefined'
-                  ? `${window.location.origin}/assets/${asset.id}`
-                  : baseUrl
-                  ? `${baseUrl}/assets/${asset.id}`
-                  : `http://localhost:3000/assets/${asset.id}`;
+              const qrUrl = qrBaseUrl ? `${qrBaseUrl}/assets/${asset.id}` : asset.assetId;
 
               return (
                 <div

@@ -390,7 +390,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent, isPreview: boolean = false) => {
+  const handleSubmit = async (e: React.FormEvent, _isPreview: boolean = false) => {
     e.preventDefault();
     if (isCancelled) return;
     
@@ -442,11 +442,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       }
       setIsDirty(false);
       
-      if (isPreview) {
-        router.push(`/memos/${savedData.id}`);
-      } else {
-        router.push('/memos');
-      }
+      router.push(`/memos/${savedData.id}`);
     } catch (error: unknown) {
       alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการบันทึกเอกสาร');
     } finally {

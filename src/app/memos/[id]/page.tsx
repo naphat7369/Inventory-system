@@ -6,7 +6,8 @@ import { MemoDocumentPagination } from './MemoDocumentPagination';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
 import { ApprovalWorkflowPanel } from './ApprovalWorkflowPanel';
 import { MemoBackButton } from './MemoBackButton';
-import { CheckCircle2, Clock3, CircleDashed, Download, FileText, Paperclip, RotateCcw, SkipForward } from 'lucide-react';
+import { AttachmentDocumentPreview } from './AttachmentDocumentPreview';
+import { CheckCircle2, Clock3, CircleDashed, RotateCcw, SkipForward } from 'lucide-react';
 
 type StoredSignatureSnapshot = {
   signatureType: 'TYPED' | 'DRAWN' | 'UPLOADED';
@@ -206,13 +207,6 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           }))}
         />}
 
-        {memo.attachments.length > 0 && (
-          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 font-bold"><Paperclip className="h-4 w-4 text-blue-600"/>เอกสารแนบเพิ่มเติม</h2><p className="mt-1 text-xs text-slate-500">ไฟล์ประกอบ Memo จำนวน {memo.attachments.length} รายการ</p></div></div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">{memo.attachments.map((attachment) => <a key={attachment.id} href={`/api/memos/${memo.id}/attachments/${attachment.id}`} className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-700 dark:hover:bg-blue-950/20"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800"><FileText className="h-4 w-4"/></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{attachment.fileName}</span><span className="text-xs text-slate-500">{attachment.fileSize >= 1024 * 1024 ? `${(attachment.fileSize / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(attachment.fileSize / 1024))} KB`}</span></span><Download className="h-4 w-4 shrink-0 text-blue-600"/></a>)}</div>
-          </section>
-        )}
-
         {latestRound && (
           <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Approval Timeline</h2><p className="text-xs text-slate-500">รอบที่ {latestRound.roundNumber} · Snapshot ผู้อนุมัติของเอกสารฉบับนี้</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{latestRound.status}</span></div>
@@ -247,6 +241,12 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
             signatures={signatures}
           />
         </div>
+
+        {memo.attachments.length > 0 && <AttachmentDocumentPreview memoId={memo.id} attachments={memo.attachments.map((attachment) => ({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+        }))} />}
       </div>
     </div>
   );

@@ -428,13 +428,25 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
 
       const savedData = await res.json();
       if (pendingFiles.length > 0) {
-        const uploadData = new FormData();
-        pendingFiles.forEach((file) => uploadData.append('files', file));
-        const uploadResponse = await fetch(`/api/memos/${savedData.id}/attachments`, { method: 'POST', body: uploadData });
-        const uploadBody = await uploadResponse.json().catch(() => ({}));
-        if (!uploadResponse.ok) {
+        try {
+          for (const file of pendingFiles) {
+            const uploadResponse = await fetch(`/api/memos/${savedData.id}/attachments`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': file.type || 'application/octet-stream',
+                'X-Upload-File-Name': encodeURIComponent(file.name),
+              },
+              body: file,
+            });
+            const uploadBody = await uploadResponse.json().catch(() => ({}));
+            if (!uploadResponse.ok) throw new Error(uploadBody.error ?? `แนบไฟล์ “${file.name}” ไม่สำเร็จ`);
+          }
+        } catch (uploadError) {
           setIsDirty(false);
-          alert(`บันทึก Memo แล้ว แต่แนบไฟล์ไม่สำเร็จ: ${uploadBody.error ?? 'เกิดข้อผิดพลาด'}`);
+          const detail = uploadError instanceof TypeError
+            ? 'การเชื่อมต่อถูกตัดระหว่างอัปโหลด กรุณาลองใหม่อีกครั้ง'
+            : uploadError instanceof Error ? uploadError.message : 'เกิดข้อผิดพลาด';
+          alert(`บันทึก Memo แล้ว แต่แนบไฟล์ไม่สำเร็จ: ${detail}`);
           router.push(`/memos/${savedData.id}/edit`);
           return;
         }

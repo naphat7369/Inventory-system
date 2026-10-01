@@ -18,17 +18,24 @@ export type Signature = {
   sortOrder: number;
 };
 
-const memoUploadOrigin = (process.env.NEXT_PUBLIC_MEMO_UPLOAD_ORIGIN ?? '').replace(/\/$/, '');
-
 function memoAttachmentUrl(memoId: string, suffix = '') {
-  return `${memoUploadOrigin}/api/memos/${memoId}/attachments${suffix}`;
+  return `/api/memos/${memoId}/attachments${suffix}`;
+}
+
+function createClientUuid() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 async function prepareMemoAttachmentConnection(memoId: string) {
   let lastError: unknown = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const response = await fetch(memoAttachmentUrl(memoId, `?prepare=${crypto.randomUUID()}`), {
+      const response = await fetch(memoAttachmentUrl(memoId, `?prepare=${createClientUuid()}`), {
         method: 'HEAD',
         cache: 'no-store',
         credentials: 'include',
@@ -46,7 +53,7 @@ async function prepareMemoAttachmentConnection(memoId: string) {
 async function uploadMemoAttachmentInChunks(memoId: string, file: File) {
   if (file.size < 1) throw new Error(`ไฟล์ “${file.name}” ไม่มีข้อมูล`);
   await prepareMemoAttachmentConnection(memoId);
-  const uploadId = crypto.randomUUID();
+  const uploadId = createClientUuid();
   const chunkCount = Math.ceil(file.size / MEMO_UPLOAD_CHUNK_BYTES);
 
   for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex += 1) {
@@ -504,7 +511,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
           }
         } catch (uploadError) {
           setIsDirty(false);
-          const detail = uploadError instanceof TypeError
+          const detail = uploadError instanceof TypeError && /fetch|network/i.test(uploadError.message)
             ? 'การเชื่อมต่อถูกตัดระหว่างอัปโหลด กรุณาลองใหม่อีกครั้ง'
             : uploadError instanceof Error ? uploadError.message : 'เกิดข้อผิดพลาด';
           alert(`บันทึก Memo แล้ว แต่แนบไฟล์ไม่สำเร็จ: ${detail}`);

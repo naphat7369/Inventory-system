@@ -11,8 +11,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "start:web": "next start",
-    "start:upload": "next start -p 3001",
-    "start:all": "concurrently -k -n web,upload,worker -c blue,cyan,magenta \"npm:start:web\" \"npm:start:upload\" \"npm:worker\"",
+    "start:all": "concurrently -k -n web,worker -c blue,magenta \"npm:start:web\" \"npm:worker\"",
     "lint": "eslint",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "postinstall": "prisma generate"

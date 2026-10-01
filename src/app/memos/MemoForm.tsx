@@ -18,8 +18,27 @@ export type Signature = {
   sortOrder: number;
 };
 
+async function prepareMemoAttachmentConnection(memoId: string) {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(`/api/memos/${memoId}/attachments?prepare=${crypto.randomUUID()}`, {
+        method: 'HEAD',
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`เตรียมการอัปโหลดไม่สำเร็จ (${response.status})`);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise((resolve) => window.setTimeout(resolve, 150));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('ไม่สามารถเตรียมการเชื่อมต่อสำหรับอัปโหลดได้');
+}
+
 async function uploadMemoAttachmentInChunks(memoId: string, file: File) {
   if (file.size < 1) throw new Error(`ไฟล์ “${file.name}” ไม่มีข้อมูล`);
+  await prepareMemoAttachmentConnection(memoId);
   const uploadId = crypto.randomUUID();
   const chunkCount = Math.ceil(file.size / MEMO_UPLOAD_CHUNK_BYTES);
 

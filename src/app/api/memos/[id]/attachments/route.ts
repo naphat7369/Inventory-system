@@ -17,6 +17,12 @@ const chunkResponseHeaders = {
   Connection: 'close',
 };
 
+export async function HEAD() {
+  const session = await getSession();
+  if (!session?.id) return new Response(null, { status: 401, headers: chunkResponseHeaders });
+  return new Response(null, { status: 204, headers: chunkResponseHeaders });
+}
+
 function decodeFileName(value: string) {
   try {
     return decodeURIComponent(value);

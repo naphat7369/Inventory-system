@@ -26,22 +26,21 @@ async function uploadMemoAttachmentInChunks(memoId: string, file: File) {
   for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex += 1) {
     const start = chunkIndex * MEMO_UPLOAD_CHUNK_BYTES;
     const chunk = file.slice(start, Math.min(start + MEMO_UPLOAD_CHUNK_BYTES, file.size));
-    const headers = {
-      'Content-Type': 'application/octet-stream',
-      'X-Upload-Id': uploadId,
-      'X-Upload-Chunk-Index': String(chunkIndex),
-      'X-Upload-Chunk-Count': String(chunkCount),
-      'X-Upload-File-Size': String(file.size),
-      'X-Upload-File-Name': encodeURIComponent(file.name),
-      'X-Upload-File-Type': file.type || 'application/octet-stream',
-    };
+    const uploadData = new FormData();
+    uploadData.append('uploadId', uploadId);
+    uploadData.append('chunkIndex', String(chunkIndex));
+    uploadData.append('chunkCount', String(chunkCount));
+    uploadData.append('fileSize', String(file.size));
+    uploadData.append('fileName', file.name);
+    uploadData.append('fileType', file.type || 'application/octet-stream');
+    uploadData.append('chunk', chunk, `${uploadId}-${chunkIndex}.part`);
     let response: Response | null = null;
     let lastNetworkError: unknown = null;
     const maxAttempts = chunkIndex < chunkCount - 1 ? 3 : 1;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
-        response = await fetch(`/api/memos/${memoId}/attachments`, { method: 'POST', headers, body: chunk });
+        response = await fetch(`/api/memos/${memoId}/attachments`, { method: 'POST', body: uploadData });
         break;
       } catch (error) {
         lastNetworkError = error;

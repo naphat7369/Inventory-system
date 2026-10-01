@@ -20,7 +20,7 @@ function decodeFileName(value: string) {
   }
 }
 
-async function readIncomingAttachments(request: Request): Promise<IncomingAttachment[]> {
+async function readIncomingAttachments(request: Request, parsedFormData?: FormData): Promise<IncomingAttachment[]> {
   const encodedFileName = request.headers.get('x-upload-file-name');
   if (encodedFileName) {
     const name = decodeFileName(encodedFileName);
@@ -34,7 +34,7 @@ async function readIncomingAttachments(request: Request): Promise<IncomingAttach
   }
 
   // Backward compatibility for clients that still submit multipart/form-data.
-  const formData = await request.formData();
+  const formData = parsedFormData ?? await request.formData();
   const files = formData.getAll('files').filter((item): item is File => item instanceof File && item.size > 0);
   return Promise.all(files.map(async (file) => ({
     name: file.name,
@@ -65,6 +65,11 @@ async function cleanupStaleUploadParts(directory: string) {
     }));
 }
 
+function formDataText(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === 'string' ? value : '';
+}
+
 async function handleChunkUpload(request: Request, options: {
   memoId: string;
   actorId: string;
@@ -72,14 +77,17 @@ async function handleChunkUpload(request: Request, options: {
   existingFileCount: number;
   maxFileBytes: number;
   maxTotalBytes: number;
-}) {
-  const uploadId = request.headers.get('x-upload-id') ?? '';
-  const encodedFileName = request.headers.get('x-upload-file-name') ?? '';
-  const fileName = decodeFileName(encodedFileName);
-  const mimeType = request.headers.get('x-upload-file-type') || 'application/octet-stream';
-  const chunkIndex = Number(request.headers.get('x-upload-chunk-index'));
-  const chunkCount = Number(request.headers.get('x-upload-chunk-count'));
-  const declaredFileSize = Number(request.headers.get('x-upload-file-size'));
+}, formData?: FormData) {
+  const uploadId = formData ? formDataText(formData, 'uploadId') : request.headers.get('x-upload-id') ?? '';
+  const fileName = formData
+    ? formDataText(formData, 'fileName')
+    : decodeFileName(request.headers.get('x-upload-file-name') ?? '');
+  const mimeType = formData
+    ? formDataText(formData, 'fileType') || 'application/octet-stream'
+    : request.headers.get('x-upload-file-type') || 'application/octet-stream';
+  const chunkIndex = Number(formData ? formDataText(formData, 'chunkIndex') : request.headers.get('x-upload-chunk-index'));
+  const chunkCount = Number(formData ? formDataText(formData, 'chunkCount') : request.headers.get('x-upload-chunk-count'));
+  const declaredFileSize = Number(formData ? formDataText(formData, 'fileSize') : request.headers.get('x-upload-file-size'));
 
   if (!/^[0-9a-f-]{36}$/i.test(uploadId)) return NextResponse.json({ error: 'Upload ID ไม่ถูกต้อง' }, { status: 400 });
   if (!fileName || fileName.length > 255) return NextResponse.json({ error: 'ชื่อไฟล์ไม่ถูกต้องหรือยาวเกิน 255 ตัวอักษร' }, { status: 400 });
@@ -97,7 +105,10 @@ async function handleChunkUpload(request: Request, options: {
     return NextResponse.json({ error: 'ขนาดไฟล์แนบรวมเกินขนาดสูงสุด' }, { status: 400 });
   }
 
-  const chunk = Buffer.from(await request.arrayBuffer());
+  const chunkPart = formData?.get('chunk');
+  const chunk = formData
+    ? chunkPart instanceof File ? Buffer.from(await chunkPart.arrayBuffer()) : Buffer.alloc(0)
+    : Buffer.from(await request.arrayBuffer());
   const expectedChunkSize = Math.min(MEMO_UPLOAD_CHUNK_BYTES, declaredFileSize - (chunkIndex * MEMO_UPLOAD_CHUNK_BYTES));
   if (chunk.length !== expectedChunkSize) return NextResponse.json({ error: 'ขนาดส่วนของไฟล์ไม่ถูกต้อง' }, { status: 400 });
 
@@ -176,7 +187,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const maxFileBytes = limits.maxFileMb * 1024 * 1024;
   const maxTotalBytes = limits.maxTotalMb * 1024 * 1024;
-  if (request.headers.has('x-upload-id')) {
+  let parsedFormData: FormData | undefined;
+  try {
+    if (request.headers.get('content-type')?.includes('multipart/form-data')) parsedFormData = await request.formData();
+  } catch (error) {
+    console.error('Unable to parse memo attachment multipart request:', error instanceof Error ? error.message : 'Unknown multipart error');
+    return NextResponse.json({ error: 'ไม่สามารถอ่านข้อมูลไฟล์แนบได้' }, { status: 400 });
+  }
+  if (request.headers.has('x-upload-id') || parsedFormData?.has('uploadId')) {
     try {
       return await handleChunkUpload(request, {
         memoId,
@@ -185,7 +203,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         existingFileCount: memo.attachments.length,
         maxFileBytes,
         maxTotalBytes,
-      });
+      }, parsedFormData);
     } catch (error) {
       console.error('Unable to process memo attachment chunk:', error instanceof Error ? error.message : 'Unknown chunk request error');
       return NextResponse.json({ error: 'ไม่สามารถรับส่วนของไฟล์แนบได้' }, { status: 400 });
@@ -194,7 +212,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   let files: IncomingAttachment[];
   try {
-    files = await readIncomingAttachments(request);
+    files = await readIncomingAttachments(request, parsedFormData);
   } catch (error) {
     console.error('Unable to read memo attachment request:', error instanceof Error ? error.message : 'Unknown request error');
     return NextResponse.json({ error: 'ไม่สามารถอ่านข้อมูลไฟล์แนบได้' }, { status: 400 });

@@ -12,6 +12,11 @@ type IncomingAttachment = {
   buffer: Buffer;
 };
 
+const chunkResponseHeaders = {
+  'Cache-Control': 'no-store',
+  Connection: 'close',
+};
+
 function decodeFileName(value: string) {
   try {
     return decodeURIComponent(value);
@@ -118,7 +123,10 @@ async function handleChunkUpload(request: Request, options: {
   await fs.writeFile(partPath, chunk);
 
   if (chunkIndex < chunkCount - 1) {
-    return NextResponse.json({ complete: false, receivedChunk: chunkIndex }, { status: 202 });
+    return NextResponse.json(
+      { complete: false, receivedChunk: chunkIndex },
+      { status: 202, headers: chunkResponseHeaders },
+    );
   }
 
   const { target: lockPath } = memoAttachmentPath(options.memoId, `.upload-${uploadId}.lock`);
@@ -159,7 +167,10 @@ async function handleChunkUpload(request: Request, options: {
       } });
       return tx.memoAttachment.findMany({ where: { memoId: options.memoId }, orderBy: { createdAt: 'asc' } });
     });
-    return NextResponse.json({ complete: true, attachments }, { status: 201 });
+    return NextResponse.json(
+      { complete: true, attachments },
+      { status: 201, headers: chunkResponseHeaders },
+    );
   } catch (error) {
     console.error('Unable to assemble memo attachment chunks:', error instanceof Error ? error.message : 'Unknown chunk error');
     if (finalPath) await fs.unlink(finalPath).catch(() => undefined);

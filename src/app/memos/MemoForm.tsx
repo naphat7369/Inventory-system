@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { MEMO_UPLOAD_CHUNK_BYTES } from '@/lib/memo-upload';
 import { RichTextEditor } from '@/components/RichTextEditor';
@@ -184,6 +184,9 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const [remark, setRemark] = useState(initialData?.remark || '');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<MemoAttachmentItem[]>(initialData?.attachments ?? []);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const [attachmentSelectionMessage, setAttachmentSelectionMessage] = useState('');
+  const [attachmentSelectionError, setAttachmentSelectionError] = useState('');
   
   const [signatures, setSignatures] = useState<Signature[]>(
     initialData?.signatures && initialData.signatures.length > 0
@@ -491,13 +494,17 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     }
   };
 
-  const selectAttachments = (files: FileList | null) => {
-    if (!files) return;
-    const incoming = Array.from(files);
+  const selectAttachments = (incoming: File[]) => {
+    setAttachmentSelectionMessage('');
+    setAttachmentSelectionError('');
+    if (incoming.length === 0) {
+      setAttachmentSelectionError('ไม่พบไฟล์ที่เลือก กรุณาเลือกไฟล์อีกครั้ง');
+      return;
+    }
     const maxFileBytes = attachmentLimits.maxFileMb * 1024 * 1024;
     const invalid = incoming.find((file) => file.size > maxFileBytes);
     if (invalid) {
-      alert(`ไฟล์ “${invalid.name}” ต้องไม่เกิน ${attachmentLimits.maxFileMb} MB`);
+      setAttachmentSelectionError(`ไฟล์ “${invalid.name}” ต้องไม่เกิน ${attachmentLimits.maxFileMb} MB`);
       return;
     }
     const next = [...pendingFiles];
@@ -505,16 +512,37 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       if (!next.some((item) => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified)) next.push(file);
     });
     if (existingAttachments.length + next.length > 20) {
-      alert('แนบไฟล์ได้สูงสุด 20 ไฟล์ต่อ Memo');
+      setAttachmentSelectionError('แนบไฟล์ได้สูงสุด 20 ไฟล์ต่อ Memo');
       return;
     }
     const totalBytes = existingAttachments.reduce((sum, item) => sum + item.fileSize, 0) + next.reduce((sum, item) => sum + item.size, 0);
     if (totalBytes > attachmentLimits.maxTotalMb * 1024 * 1024) {
-      alert(`ไฟล์แนบรวมต้องไม่เกิน ${attachmentLimits.maxTotalMb} MB`);
+      setAttachmentSelectionError(`ไฟล์แนบรวมต้องไม่เกิน ${attachmentLimits.maxTotalMb} MB`);
       return;
     }
     setPendingFiles(next);
+    const addedCount = next.length - pendingFiles.length;
+    setAttachmentSelectionMessage(addedCount > 0
+      ? `เลือกแล้ว ${addedCount} ไฟล์ · กดบันทึกเพื่ออัปโหลด`
+      : 'ไฟล์ที่เลือกมีอยู่ในรายการแล้ว');
     handleChange();
+  };
+
+  const handleAttachmentInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const incoming = Array.from(event.currentTarget.files ?? []);
+    event.currentTarget.value = '';
+    selectAttachments(incoming);
+  };
+
+  const removePendingAttachment = (index: number) => {
+    setPendingFiles((items) => {
+      const next = items.filter((_, itemIndex) => itemIndex !== index);
+      setAttachmentSelectionMessage(next.length > 0
+        ? `มี ${next.length} ไฟล์รออัปโหลด · กดบันทึกเพื่ออัปโหลด`
+        : 'นำไฟล์ที่รออัปโหลดออกแล้ว');
+      return next;
+    });
+    setAttachmentSelectionError('');
   };
 
   const deleteExistingAttachment = async (attachment: MemoAttachmentItem) => {
@@ -767,13 +795,18 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
           <div><h2 className="flex items-center gap-2 text-xl font-bold"><Paperclip className="h-5 w-5 text-blue-600"/>เอกสารแนบเพิ่มเติม</h2><p className="mt-1 text-xs text-gray-500">รองรับ PDF, Word, Excel, PNG และ JPG · ไม่เกิน {attachmentLimits.maxFileMb} MB ต่อไฟล์ / รวม {attachmentLimits.maxTotalMb} MB</p></div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{existingAttachments.length + pendingFiles.length}/20 ไฟล์</span>
         </div>
-        {!isCancelled && !isFinal && <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/50 px-5 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
-          <UploadCloud className="h-8 w-8 text-blue-600"/><span className="mt-2 text-sm font-bold text-blue-700 dark:text-blue-300">เลือกเอกสารจากเครื่อง</span><span className="mt-1 text-xs text-slate-500">เลือกได้หลายไฟล์พร้อมกัน</span>
-          <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" className="sr-only" onChange={(event) => { selectAttachments(event.target.files); event.target.value = ''; }}/>
-        </label>}
+        {!isCancelled && !isFinal && <>
+          <input ref={attachmentInputRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" className="sr-only" onChange={handleAttachmentInputChange}/>
+          <button type="button" onClick={() => attachmentInputRef.current?.click()} className="flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/50 px-5 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-900 dark:bg-blue-950/20">
+            <UploadCloud className="h-8 w-8 text-blue-600"/><span className="mt-2 text-sm font-bold text-blue-700 dark:text-blue-300">เลือกเอกสารจากเครื่อง</span><span className="mt-1 text-xs text-slate-500">เลือกได้หลายไฟล์พร้อมกัน</span>
+          </button>
+          {(attachmentSelectionMessage || attachmentSelectionError) && <p aria-live="polite" className={`mt-3 rounded-lg px-3 py-2 text-sm font-semibold ${attachmentSelectionError ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'}`}>
+            {attachmentSelectionError || attachmentSelectionMessage}
+          </p>}
+        </>}
         {(existingAttachments.length > 0 || pendingFiles.length > 0) && <div className="mt-4 space-y-2">
           {existingAttachments.map((attachment) => <div key={attachment.id} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800"><FileText className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{attachment.fileName}</p><p className="text-xs text-slate-500">{formatFileSize(attachment.fileSize)} · บันทึกแล้ว</p></div>{initialData?.id && <a href={`/api/memos/${initialData.id}/attachments/${attachment.id}`} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" title="ดาวน์โหลด"><Download className="h-4 w-4"/></a>}{!isCancelled && !isFinal && <button type="button" onClick={() => void deleteExistingAttachment(attachment)} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" title="ลบ"><Trash2 className="h-4 w-4"/></button>}</div>)}
-          {pendingFiles.map((file, index) => <div key={`${file.name}-${file.size}-${file.lastModified}`} className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/20"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950"><FileText className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{file.name}</p><p className="text-xs text-blue-600">{formatFileSize(file.size)} · พร้อมอัปโหลดเมื่อบันทึก</p></div><button type="button" onClick={() => setPendingFiles((items) => items.filter((_, itemIndex) => itemIndex !== index))} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" title="นำออก"><X className="h-4 w-4"/></button></div>)}
+          {pendingFiles.map((file, index) => <div key={`${file.name}-${file.size}-${file.lastModified}`} className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/20"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950"><FileText className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{file.name}</p><p className="text-xs text-blue-600">{formatFileSize(file.size)} · พร้อมอัปโหลดเมื่อบันทึก</p></div><button type="button" onClick={() => removePendingAttachment(index)} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" title="นำออก"><X className="h-4 w-4"/></button></div>)}
         </div>}
       </div>
 

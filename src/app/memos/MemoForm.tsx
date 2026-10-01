@@ -18,13 +18,20 @@ export type Signature = {
   sortOrder: number;
 };
 
+const memoUploadOrigin = (process.env.NEXT_PUBLIC_MEMO_UPLOAD_ORIGIN ?? '').replace(/\/$/, '');
+
+function memoAttachmentUrl(memoId: string, suffix = '') {
+  return `${memoUploadOrigin}/api/memos/${memoId}/attachments${suffix}`;
+}
+
 async function prepareMemoAttachmentConnection(memoId: string) {
   let lastError: unknown = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const response = await fetch(`/api/memos/${memoId}/attachments?prepare=${crypto.randomUUID()}`, {
+      const response = await fetch(memoAttachmentUrl(memoId, `?prepare=${crypto.randomUUID()}`), {
         method: 'HEAD',
         cache: 'no-store',
+        credentials: 'include',
       });
       if (!response.ok) throw new Error(`เตรียมการอัปโหลดไม่สำเร็จ (${response.status})`);
       return;
@@ -59,7 +66,11 @@ async function uploadMemoAttachmentInChunks(memoId: string, file: File) {
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
-        response = await fetch(`/api/memos/${memoId}/attachments`, { method: 'POST', body: uploadData });
+        response = await fetch(memoAttachmentUrl(memoId), {
+          method: 'POST',
+          credentials: 'include',
+          body: uploadData,
+        });
         break;
       } catch (error) {
         lastNetworkError = error;

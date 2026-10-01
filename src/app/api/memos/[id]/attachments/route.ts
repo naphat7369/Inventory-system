@@ -12,15 +12,32 @@ type IncomingAttachment = {
   buffer: Buffer;
 };
 
-const chunkResponseHeaders = {
-  'Cache-Control': 'no-store',
-  Connection: 'close',
-};
+function chunkResponseHeaders(request: Request) {
+  const headers: Record<string, string> = {
+    'Cache-Control': 'no-store',
+    Connection: 'close',
+  };
+  const origin = request.headers.get('origin');
+  if (origin) {
+    try {
+      const source = new URL(origin);
+      const target = new URL(request.url);
+      if (source.hostname === target.hostname && source.port === '3000') {
+        headers['Access-Control-Allow-Origin'] = origin;
+        headers['Access-Control-Allow-Credentials'] = 'true';
+        headers.Vary = 'Origin';
+      }
+    } catch {
+      // Invalid origins are intentionally not granted CORS access.
+    }
+  }
+  return headers;
+}
 
-export async function HEAD() {
+export async function HEAD(request: Request) {
   const session = await getSession();
-  if (!session?.id) return new Response(null, { status: 401, headers: chunkResponseHeaders });
-  return new Response(null, { status: 204, headers: chunkResponseHeaders });
+  if (!session?.id) return new Response(null, { status: 401, headers: chunkResponseHeaders(request) });
+  return new Response(null, { status: 204, headers: chunkResponseHeaders(request) });
 }
 
 function decodeFileName(value: string) {
@@ -131,7 +148,7 @@ async function handleChunkUpload(request: Request, options: {
   if (chunkIndex < chunkCount - 1) {
     return NextResponse.json(
       { complete: false, receivedChunk: chunkIndex },
-      { status: 202, headers: chunkResponseHeaders },
+      { status: 202, headers: chunkResponseHeaders(request) },
     );
   }
 
@@ -175,7 +192,7 @@ async function handleChunkUpload(request: Request, options: {
     });
     return NextResponse.json(
       { complete: true, attachments },
-      { status: 201, headers: chunkResponseHeaders },
+      { status: 201, headers: chunkResponseHeaders(request) },
     );
   } catch (error) {
     console.error('Unable to assemble memo attachment chunks:', error instanceof Error ? error.message : 'Unknown chunk error');

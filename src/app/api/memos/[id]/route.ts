@@ -5,6 +5,7 @@ import { promises as fs } from 'node:fs';
 import { memoAttachmentPath } from '@/lib/memo-attachments';
 
 const prisma = new PrismaClient();
+const uploadReadyHeaders = { 'Cache-Control': 'no-store', Connection: 'close' };
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -158,7 +159,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       include: { signatures: true }
     });
 
-    return NextResponse.json(memo);
+    return NextResponse.json(memo, { headers: uploadReadyHeaders });
   } catch (error) {
     console.error('Error updating memo:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

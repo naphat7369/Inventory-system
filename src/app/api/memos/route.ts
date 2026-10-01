@@ -192,7 +192,9 @@ export async function POST(request: Request) {
       include: { signatures: true }
     });
 
-    return NextResponse.json(memo);
+    return NextResponse.json(memo, {
+      headers: { 'Cache-Control': 'no-store', Connection: 'close' },
+    });
   } catch (error) {
     console.error('Error creating memo:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

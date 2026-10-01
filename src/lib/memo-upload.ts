@@ -1,0 +1,2 @@
+export const MEMO_UPLOAD_CHUNK_BYTES = 48 * 1024;
+

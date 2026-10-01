@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { MEMO_UPLOAD_CHUNK_BYTES } from '@/lib/memo-upload';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { Plus, Trash2, ArrowUp, ArrowDown, Save, Eye, Lock, Bookmark, BookmarkPlus, Loader2, Paperclip, UploadCloud, FileText, Download, X } from 'lucide-react';
 import Link from 'next/link';
@@ -16,6 +17,43 @@ export type Signature = {
   position?: string | null;
   sortOrder: number;
 };
+
+async function uploadMemoAttachmentInChunks(memoId: string, file: File) {
+  if (file.size < 1) throw new Error(`ไฟล์ “${file.name}” ไม่มีข้อมูล`);
+  const uploadId = crypto.randomUUID();
+  const chunkCount = Math.ceil(file.size / MEMO_UPLOAD_CHUNK_BYTES);
+
+  for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex += 1) {
+    const start = chunkIndex * MEMO_UPLOAD_CHUNK_BYTES;
+    const chunk = file.slice(start, Math.min(start + MEMO_UPLOAD_CHUNK_BYTES, file.size));
+    const headers = {
+      'Content-Type': 'application/octet-stream',
+      'X-Upload-Id': uploadId,
+      'X-Upload-Chunk-Index': String(chunkIndex),
+      'X-Upload-Chunk-Count': String(chunkCount),
+      'X-Upload-File-Size': String(file.size),
+      'X-Upload-File-Name': encodeURIComponent(file.name),
+      'X-Upload-File-Type': file.type || 'application/octet-stream',
+    };
+    let response: Response | null = null;
+    let lastNetworkError: unknown = null;
+    const maxAttempts = chunkIndex < chunkCount - 1 ? 3 : 1;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        response = await fetch(`/api/memos/${memoId}/attachments`, { method: 'POST', headers, body: chunk });
+        break;
+      } catch (error) {
+        lastNetworkError = error;
+        if (attempt < maxAttempts) await new Promise((resolve) => window.setTimeout(resolve, attempt * 300));
+      }
+    }
+
+    if (!response) throw lastNetworkError instanceof Error ? lastNetworkError : new Error('การเชื่อมต่อถูกตัดระหว่างอัปโหลด');
+    const body = await response.json().catch(() => ({})) as { error?: string };
+    if (!response.ok) throw new Error(body.error ?? `แนบไฟล์ “${file.name}” ไม่สำเร็จ`);
+  }
+}
 
 export type DepartmentItem = {
   id: string;
@@ -430,16 +468,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       if (pendingFiles.length > 0) {
         try {
           for (const file of pendingFiles) {
-            const uploadResponse = await fetch(`/api/memos/${savedData.id}/attachments`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': file.type || 'application/octet-stream',
-                'X-Upload-File-Name': encodeURIComponent(file.name),
-              },
-              body: file,
-            });
-            const uploadBody = await uploadResponse.json().catch(() => ({}));
-            if (!uploadResponse.ok) throw new Error(uploadBody.error ?? `แนบไฟล์ “${file.name}” ไม่สำเร็จ`);
+            await uploadMemoAttachmentInChunks(savedData.id, file);
           }
         } catch (uploadError) {
           setIsDirty(false);

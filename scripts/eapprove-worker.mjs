@@ -220,7 +220,10 @@ async function renderPdf(job, memoVersionId) {
     const page = await browser.newPage();
     const session = await createWorkerSession();
     await page.setCookie({ name: 'session', value: session, url: appUrl, httpOnly: true, sameSite: 'Lax' });
-    await page.goto(`${appUrl}/memos/${job.memoId}`, { waitUntil: 'networkidle0', timeout: 60_000 });
+    await page.evaluateOnNewDocument(() => {
+      window.sessionStorage.setItem('inventory-session:active-tab', 'active');
+    });
+    await page.goto(`${appUrl}/memos/${job.memoId}?pdf=1`, { waitUntil: 'networkidle0', timeout: 60_000 });
     await page.waitForFunction(
       () => document.fonts.status === 'loaded' && document.querySelectorAll('.memo-page-sheet').length > 0,
       { timeout: 60_000 },
@@ -294,6 +297,7 @@ async function runOne() {
       await processPdfJob(job);
       console.log(`[eapprove-worker] completed ${job.idempotencyKey}`);
     } catch (error) {
+      console.error('Full PDF Error:', error);
       const errorCode = safeErrorCode(error);
       console.error(`[eapprove-worker] failed ${job.idempotencyKey}: ${errorCode}`);
       if (job.memoId) {

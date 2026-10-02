@@ -221,10 +221,12 @@ export default function DepartmentsPage() {
                 required
                 value={name}
                 onChange={e => {
-                  setName(e.target.value);
-                  if (!nameEn) {
-                    setNameEn(`${e.target.value.trim()} DEPARTMENT`.toLocaleUpperCase('en-US'));
+                  const val = e.target.value;
+                  const oldExpected = name ? `${name.trim()} DEPARTMENT`.toLocaleUpperCase('en-US') : '';
+                  if (!nameEn || nameEn === oldExpected) {
+                    setNameEn(val ? `${val.trim()} DEPARTMENT`.toLocaleUpperCase('en-US') : '');
                   }
+                  setName(val);
                 }}
                 className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
               />
@@ -246,7 +248,7 @@ export default function DepartmentsPage() {
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                ชื่อหัวข้อภาษาอังกฤษ (ใต้ MEMORANDUM) *
+                ชื่อแผนก (ภาษาอังกฤษ) *
               </label>
               <input
                 type="text"
@@ -331,7 +333,7 @@ export default function DepartmentsPage() {
                   <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 w-24">Logo</th>
                   <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 w-24">Code</th>
                   <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">ชื่อแผนก</th>
-                  <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">Header ใต้ MEMORANDUM</th>
+                  <th className="p-4 font-semibold text-gray-600 dark:text-gray-400">ชื่อแผนก (ภาษาอังกฤษ)</th>
                   <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 w-24">Status</th>
                   <th className="p-4 font-semibold text-gray-600 dark:text-gray-400 w-32">Actions</th>
                 </tr>
@@ -369,7 +371,14 @@ export default function DepartmentsPage() {
                           <input
                             type="text"
                             value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const oldExpected = editName ? `${editName.trim()} DEPARTMENT`.toLocaleUpperCase('en-US') : '';
+                              if (!editNameEn || editNameEn === oldExpected) {
+                                setEditNameEn(val ? `${val.trim()} DEPARTMENT`.toLocaleUpperCase('en-US') : '');
+                              }
+                              setEditName(val);
+                            }}
                             className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         </td>

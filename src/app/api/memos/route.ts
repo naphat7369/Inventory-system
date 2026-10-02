@@ -151,10 +151,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
       }
     }
-    const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } } }) : null;
-    if (!finalBranchId || !branchDepartment?.isActive) {
-      return NextResponse.json({ error: 'Department is not configured for an active E-Approve branch' }, { status: 400 });
-    }
+    // const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } } }) : null;
+    // if (!finalBranchId || !branchDepartment?.isActive) {
+    //   return NextResponse.json({ error: 'Department is not configured for an active E-Approve branch' }, { status: 400 });
+    // }
 
     // Fixed S HOTEL Logo rule: versioned constant for all new memos
     const finalLogoUrl = DEFAULT_S_HOTEL_LOGO_URL;

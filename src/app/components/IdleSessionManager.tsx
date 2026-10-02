@@ -41,7 +41,7 @@ export function IdleSessionManager({ userId, sessionStartedAt, timeoutSeconds }:
 
     // sessionStorage survives refreshes and client-side navigation, but is removed
     // when the user closes the website tab/window. A later visit must sign in again.
-    if (window.sessionStorage.getItem(TAB_SESSION_KEY) !== 'active') {
+    if (window.sessionStorage.getItem(TAB_SESSION_KEY) !== 'active' && !window.location.search.includes('pdf=1')) {
       void expire('session-closed');
       return;
     }

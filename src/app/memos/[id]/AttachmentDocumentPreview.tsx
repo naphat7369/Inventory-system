@@ -139,7 +139,7 @@ function OfficeDocument({ url, fileName }: { url: string; fileName: string }) {
 
 export function AttachmentDocumentPreview({ memoId, attachments }: { memoId: string; attachments: Attachment[] }) {
   return (
-    <section className="mb-6 space-y-6 print:hidden">
+    <section className="mb-6 space-y-6">
       {attachments.map((attachment) => {
         const baseUrl = `/api/memos/${memoId}/attachments/${attachment.id}`;
         const extension = attachment.fileName.split('.').pop()?.toLowerCase() ?? '';

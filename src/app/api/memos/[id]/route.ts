@@ -103,13 +103,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         : Promise.resolve(null),
     ]);
     const effectiveBranchId = existing.branchId ?? currentUser.branchId ?? memoType?.branchId ?? department?.branchId ?? null;
-    const branchDepartment = department && effectiveBranchId
-      ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: department.id } } })
-      : null;
-    if (!department || !effectiveBranchId || !branchDepartment?.isActive) {
+    // const branchDepartment = department && effectiveBranchId
+    //   ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: department.id } } })
+    //   : null;
+    if (!department) {
       return NextResponse.json({ error: 'Department is not configured for an active E-Approve branch' }, { status: 400 });
     }
-    updateData.branch = { connect: { id: effectiveBranchId } };
+    if (effectiveBranchId) {
+      updateData.branch = { connect: { id: effectiveBranchId } };
+    }
 
     if (data.memoTypeId) {
       if (!memoType || (memoType.branchId && memoType.branchId !== effectiveBranchId)) {

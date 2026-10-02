@@ -51,7 +51,7 @@ export default async function NewMemoPage() {
   }
 
   // Active departments only
-  const [departments, memoTypes, approvers, attachmentLimits] = await Promise.all([
+  const [departments, memoTypes, approvers, attachmentLimits, branchDepartments] = await Promise.all([
     prisma.department.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
     prisma.memoType.findMany({
       where: { isActive: true }, orderBy: { name: 'asc' },
@@ -63,6 +63,7 @@ export default async function NewMemoPage() {
       select: { id: true, username: true, fullName: true, position: true, branchId: true, isAllBranches: true, branch: { select: { name: true, code: true } } },
     }),
     getAttachmentLimits(prisma),
+    prisma.branchDepartment.findMany({ where: { isActive: true } }),
   ]);
 
   return (
@@ -77,7 +78,15 @@ export default async function NewMemoPage() {
       </div>
       
       <MemoForm 
-        departments={departments.map((department) => ({ ...department, branchId: currentUser.branchId ?? department.branchId }))}
+        departments={departments.map((department) => {
+          const effectiveBranchId = currentUser.branchId ?? department.branchId;
+          const branchDept = branchDepartments.find(b => b.departmentId === department.id && b.branchId === effectiveBranchId);
+          return {
+            ...department,
+            branchId: effectiveBranchId,
+            hodId: branchDept?.hodId || department.hodId
+          };
+        })}
         userDepartmentId={currentUser.departmentId}
         isAdmin={isAdmin}
         memoTypes={memoTypes}

@@ -100,6 +100,7 @@ export type DepartmentItem = {
   logoUrl?: string | null;
   logoAssetId?: string | null;
   branchId?: string | null;
+  hodId?: string | null;
 };
 
 export type MemoTypeItem = {
@@ -202,6 +203,11 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     label: `${userDisplayName(approver)}${approver.position ? ` — ${approver.position}` : ''}${approver.isAllBranches ? ' (ทุกสาขา)' : approver.branch ? ` (${approver.branch.code})` : ''}`,
     searchText: `${approver.username} ${approver.position ?? ''} ${approver.branch?.name ?? ''} ${approver.branch?.code ?? ''}`,
   }));
+  const recipientOptions: SearchableSelectOption[] = approvers.map((approver) => ({
+    value: userDisplayName(approver),
+    label: `${userDisplayName(approver)}${approver.position ? ` — ${approver.position}` : ''}${approver.isAllBranches ? ' (ทุกสาขา)' : approver.branch ? ` (${approver.branch.code})` : ''}`,
+    searchText: `${approver.username} ${approver.position ?? ''} ${approver.branch?.name ?? ''} ${approver.branch?.code ?? ''}`,
+  }));
 
   const [subHeader, setSubHeader] = useState(
     initialData?.subHeader || departmentHeader(selectedDepartment)
@@ -224,14 +230,39 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const attachmentInputRef = useRef<HTMLInputElement>(null);
   const [attachmentSelectionMessage, setAttachmentSelectionMessage] = useState('');
   const [attachmentSelectionError, setAttachmentSelectionError] = useState('');
-  
+  const userDept = departments.find(d => d.id === defaultDeptId);
+  const hod = approvers.find(a => a.id === userDept?.hodId);
+
   const [signatures, setSignatures] = useState<Signature[]>(
     initialData?.signatures && initialData.signatures.length > 0
       ? initialData.signatures.map((signature) => ({ ...signature, role: normalizeSignatureRole(signature.role) }))
-      : DEFAULT_SIGNATURES.map((signature, index) => index === 0
-        ? { ...signature, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position }
-        : signature)
+      : DEFAULT_SIGNATURES.map((signature, index) => {
+          if (index === 0) {
+            return { ...signature, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position };
+          }
+          if (index === 1 && hod) {
+            return { ...signature, approverId: hod.id, name: userDisplayName(hod), position: hod.position };
+          }
+          return signature;
+        })
   );
+
+  // Auto-update HOD signature when department changes
+  useEffect(() => {
+    if (isEdit) return;
+    const currentDept = departments.find(d => d.id === departmentId);
+    const newHod = approvers.find(a => a.id === currentDept?.hodId);
+    
+    setSignatures(prev => {
+      const newSigs = [...prev];
+      if (newSigs[1] && newSigs[1].role === 'พิจารณาโดย' && (!newSigs[1].approverId || prev[1].approverId !== newHod?.id)) {
+        if (newHod) {
+          newSigs[1] = { ...newSigs[1], approverId: newHod.id, name: userDisplayName(newHod), position: newHod.position };
+        }
+      }
+      return newSigs;
+    });
+  }, [departmentId, departments, approvers, isEdit]);
 
   const isFinal = isEdit && initialData?.status === 'FINAL';
   const isCancelled = isEdit && initialData?.status === 'CANCELLED';
@@ -755,7 +786,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
                 ...(recipient && !approvers.some((approver) => userDisplayName(approver) === recipient)
                   ? [{ value: recipient, label: `${recipient} (ข้อมูลเดิม)`, searchText: recipient }]
                   : []),
-                ...approverOptions,
+                ...recipientOptions,
               ]}
               placeholder="ค้นหาชื่อ ตำแหน่ง หรือสาขา..."
               ariaLabel="ค้นหาและเลือกผู้รับหรือผู้อนุมัติ"

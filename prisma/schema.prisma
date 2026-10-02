@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -431,7 +431,7 @@ model Memo {
   logoUrl        String? // Fixed snapshot of logo URL at memo creation
   reference      String?
   carbonCopy     String?
-  content        String // SQLite does not support @db.Text, String is text by default
+  content        String
   remark         String? // หมายเหตุกั้นท้าย / หมายเหตุเพิ่มเติม
   status         String     @default("DRAFT") // DRAFT, FINAL, CANCELLED
   approvalStatus String     @default("DRAFT")

@@ -49,3 +49,7 @@ next-env.d.ts
 scratch*.ts
 /storage/
 /tmp/
+
+# Python migration tooling
+__pycache__/
+*.py[cod]

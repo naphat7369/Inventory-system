@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createClientUuid } from '@/lib/uuid';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, Download, Eye, Loader2, Mail, Pencil, Printer, Trash2, X } from 'lucide-react';
 import { DeleteMemoModal } from './DeleteMemoModal';
@@ -81,7 +82,7 @@ export function MemoRowActions({
     setError('');
     setEmailSuccess('');
     const memoUrl = `${window.location.origin}/memos/${memoId}`;
-    if (!emailRequestKeyRef.current) emailRequestKeyRef.current = crypto.randomUUID();
+    if (!emailRequestKeyRef.current) emailRequestKeyRef.current = createClientUuid();
     try {
       const response = await fetch(`/api/memos/${memoId}/send-email`, {
         method: 'POST',

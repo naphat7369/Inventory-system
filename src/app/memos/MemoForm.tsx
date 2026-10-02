@@ -23,14 +23,7 @@ function memoAttachmentUrl(memoId: string, suffix = '') {
   return `/api/memos/${memoId}/attachments${suffix}`;
 }
 
-function createClientUuid() {
-  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
+import { createClientUuid } from '@/lib/uuid';
 
 async function prepareMemoAttachmentConnection(memoId: string) {
   let lastError: unknown = null;
@@ -406,7 +399,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
 
   const executeApplyTemplate = (template: SignatureTemplate) => {
     const copiedSignatures = template.items.map((item, index) => ({
-      id: crypto.randomUUID(),
+      id: createClientUuid(),
       approverId: item.role === 'นำเสนอโดย'
         ? currentUser.id
         : approvers.find((approver) => userDisplayName(approver) === item.name)?.id ?? null,

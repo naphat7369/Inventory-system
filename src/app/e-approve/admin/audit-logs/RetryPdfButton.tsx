@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { createClientUuid } from '@/lib/uuid';
 
 export function RetryPdfButton({ memoId }: { memoId: string }) {
   const router = useRouter();
@@ -14,7 +15,7 @@ export function RetryPdfButton({ memoId }: { memoId: string }) {
     const response = await fetch(`/api/admin/memos/${memoId}/retry-pdf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idempotencyKey: `retry-pdf-${memoId}-${crypto.randomUUID()}` }),
+      body: JSON.stringify({ idempotencyKey: `retry-pdf-${memoId}-${createClientUuid()}` }),
     });
     const body = await response.json().catch(() => ({}));
     setLoading(false);

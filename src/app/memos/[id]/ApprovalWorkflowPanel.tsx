@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createClientUuid } from '@/lib/uuid';
 import { AlertTriangle, CheckCircle2, Clock3, FileCheck2, Loader2, PenLine, RotateCcw, Send, Star } from 'lucide-react';
 
 type Preview = {
@@ -48,7 +49,7 @@ export function ApprovalWorkflowPanel({ memoId, approvalStatus, pdfStatus, canSu
   };
   const perform = async (action: 'submit' | 'approve' | 'revision') => {
     setLoading(true); setError('');
-    const idempotencyKey = `${action}-${memoId}-${crypto.randomUUID()}`;
+    const idempotencyKey = `${action}-${memoId}-${createClientUuid()}`;
     const endpoint = action === 'revision' ? 'request-revision' : action;
     const payload = action === 'approve'
       ? { signatureId: selectedSignatureId, idempotencyKey }

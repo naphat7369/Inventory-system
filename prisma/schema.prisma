@@ -169,6 +169,7 @@ model User {
   deletedMemos            Memo[]                     @relation("DeletedMemos")
   signatureTemplates      SignatureTemplate[]
   approvalSignatures      ApprovalSignature[]
+  memoSignatures          MemoSignature[]            @relation("MemoSignatureApprover")
   createdAt               DateTime                   @default(now())
   updatedAt               DateTime                   @updatedAt
 
@@ -697,15 +698,18 @@ model EmailDelivery {
 }
 
 model MemoSignature {
-  id        String  @id @default(uuid())
-  memoId    String
-  memo      Memo    @relation(fields: [memoId], references: [id], onDelete: Cascade)
-  role      String
-  name      String?
-  position  String?
-  sortOrder Int     @default(0)
+  id         String  @id @default(uuid())
+  memoId     String
+  memo       Memo    @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  approverId String?
+  approver   User?   @relation("MemoSignatureApprover", fields: [approverId], references: [id], onDelete: SetNull)
+  role       String
+  name       String?
+  position   String?
+  sortOrder  Int     @default(0)
 
   @@index([memoId])
+  @@index([approverId])
 }
 
 model MemoAttachment {

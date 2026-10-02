@@ -93,27 +93,34 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       remark: data.remark !== undefined ? (data.remark?.trim() || null) : undefined,
     };
 
+    const effectiveDepartmentId = existing.status === 'DRAFT' && data.departmentId
+      ? data.departmentId
+      : existing.departmentId;
+    const [department, memoType] = await Promise.all([
+      prisma.department.findUnique({ where: { id: effectiveDepartmentId } }),
+      data.memoTypeId
+        ? prisma.memoType.findFirst({ where: { id: data.memoTypeId, isActive: true } })
+        : Promise.resolve(null),
+    ]);
+    const effectiveBranchId = existing.branchId ?? currentUser.branchId ?? memoType?.branchId ?? department?.branchId ?? null;
+    const branchDepartment = department && effectiveBranchId
+      ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: department.id } } })
+      : null;
+    if (!department || !effectiveBranchId || !branchDepartment?.isActive) {
+      return NextResponse.json({ error: 'Department is not configured for an active E-Approve branch' }, { status: 400 });
+    }
+    updateData.branch = { connect: { id: effectiveBranchId } };
+
     if (data.memoTypeId) {
-      const effectiveDepartmentId = existing.status === 'DRAFT' && data.departmentId
-        ? data.departmentId
-        : existing.departmentId;
-      const [department, memoType] = await Promise.all([
-        prisma.department.findUnique({ where: { id: effectiveDepartmentId } }),
-        prisma.memoType.findFirst({ where: { id: data.memoTypeId, isActive: true } }),
-      ]);
-      const effectiveBranchId = existing.branchId ?? currentUser.branchId ?? memoType?.branchId ?? department?.branchId ?? null;
-      const branchDepartment = department && effectiveBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: department.id } } }) : null;
-      if (!department || !memoType || !effectiveBranchId || !branchDepartment?.isActive || (memoType.branchId && memoType.branchId !== effectiveBranchId)) {
+      if (!memoType || (memoType.branchId && memoType.branchId !== effectiveBranchId)) {
         return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
       }
       updateData.memoType = { connect: { id: memoType.id } };
-      updateData.branch = { connect: { id: effectiveBranchId } };
     } else if (data.memoTypeId === null) {
       if (existing.memoTypeId && existing.approvalStatus !== 'DRAFT') {
         return NextResponse.json({ error: 'Cannot remove E-Approve Memo Type after the memo has entered approval' }, { status: 409 });
       }
       updateData.memoType = { disconnect: true };
-      updateData.branch = { disconnect: true };
     }
 
     // If FINAL: STRICTLY LOCK Logo, subHeader, and departmentId
@@ -144,7 +151,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (data.signatures) {
       updateData.signatures = {
         deleteMany: {},
-        create: data.signatures.map((sig: { role?: string; name?: string | null; position?: string | null }, index: number) => ({
+        create: data.signatures.map((sig: { approverId?: string | null; role?: string; name?: string | null; position?: string | null }, index: number) => ({
+          approverId: sig.approverId || null,
           role: sig.role || '',
           name: sig.name || null,
           position: sig.position || null,

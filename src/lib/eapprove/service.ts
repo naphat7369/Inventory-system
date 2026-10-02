@@ -44,7 +44,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
         department: { include: { hod: true, branch: { include: { generalManager: true } } } },
         branch: { include: { generalManager: true } },
         memoType: { include: { requiredApprovers: { orderBy: { sortOrder: 'asc' }, include: { approver: true } } } },
-        signatures: { orderBy: { sortOrder: 'asc' } },
+        signatures: { orderBy: { sortOrder: 'asc' }, include: { approver: true } },
         attachments: { orderBy: { createdAt: 'asc' } },
         approvalRounds: { orderBy: { roundNumber: 'desc' }, take: 1 },
         versions: { orderBy: { version: 'desc' }, take: 1 },
@@ -54,7 +54,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
     if (memo.createdById !== input.actorId) throw new EApproveError('FORBIDDEN', 'เฉพาะผู้สร้างเท่านั้นที่ส่ง Memo ได้', 403);
     try { assertMemoTransition(memo.approvalStatus, 'SUBMITTED'); }
     catch { throw new EApproveError('INVALID_MEMO_STATE', 'สถานะปัจจุบันไม่สามารถส่งอนุมัติได้', 409); }
-    if (!memo.memoType?.isActive) throw new EApproveError('MEMO_TYPE_REQUIRED', 'กรุณาเลือก Memo Type ที่เปิดใช้งาน');
+    if (memo.memoType && !memo.memoType.isActive) throw new EApproveError('MEMO_TYPE_INACTIVE', 'Memo Type ที่เลือกถูกปิดใช้งาน');
     const branch = memo.branch ?? memo.department.branch;
     if (!branch?.isActive) throw new EApproveError('BRANCH_REQUIRED', 'แผนกยังไม่ได้กำหนดสาขาที่เปิดใช้งาน');
     const branchDepartment = await tx.branchDepartment.findUnique({
@@ -62,7 +62,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
       include: { hod: true },
     });
     if (!branchDepartment?.isActive) throw new EApproveError('DEPARTMENT_WRONG_BRANCH', 'แผนกนี้ไม่ได้เปิดใช้งานในสาขาของ Memo');
-    if (memo.memoType.branchId && memo.memoType.branchId !== branch.id) {
+    if (memo.memoType?.branchId && memo.memoType.branchId !== branch.id) {
       throw new EApproveError('MEMO_TYPE_WRONG_BRANCH', 'Memo Type นี้ไม่สามารถใช้กับสาขาของผู้สร้างได้');
     }
     const presenterSignature = await tx.approvalSignature.findFirst({
@@ -96,6 +96,23 @@ export async function submitMemo(prisma: PrismaClient, input: {
       return { approver, source, referenceId };
     };
 
+    const unresolvedManualSigner = memo.signatures.find((signature) =>
+      signature.role !== 'นำเสนอโดย' && Boolean(signature.name?.trim()) && !signature.approver,
+    );
+    if (unresolvedManualSigner) {
+      throw new EApproveError(
+        'MANUAL_APPROVER_REQUIRED',
+        `กรุณาเลือกผู้อนุมัติ “${unresolvedManualSigner.name}” จาก Dropdown ใหม่ก่อนส่งอนุมัติ`,
+      );
+    }
+    const manualApprovers: CandidateWithSource[] = memo.signatures
+      .filter((signature) => signature.role !== 'นำเสนอโดย' && signature.approver)
+      .map((signature) => ({
+        approver: signature.approver!,
+        source: 'USER_ADDED' as const,
+        referenceId: signature.id,
+      }));
+
     let chain;
     try {
       chain = buildApprovalChain({
@@ -104,8 +121,11 @@ export async function submitMemo(prisma: PrismaClient, input: {
         hod: branchDepartment.hod,
         gmFallback: branchDepartment.hod ? null : branch.generalManager,
         template: template?.items.map((item) => mapped(item.approverId, 'TEMPLATE', template.id)),
-        userAdded: (input.userAddedApproverIds ?? []).map((id) => mapped(id, 'USER_ADDED')),
-        required: memo.memoType.requiredApprovers.map((item) => ({ approver: item.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: item.id })),
+        userAdded: [
+          ...manualApprovers,
+          ...(input.userAddedApproverIds ?? []).map((id) => mapped(id, 'USER_ADDED')),
+        ],
+        required: (memo.memoType?.requiredApprovers ?? []).map((item) => ({ approver: item.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: item.id })),
       });
     } catch (error) {
       if (error instanceof ApprovalRuleError) throw new EApproveError(error.code, error.message);

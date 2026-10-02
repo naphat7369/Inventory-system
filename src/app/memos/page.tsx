@@ -166,7 +166,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
             const isOwner = memo.createdById === currentUser?.id;
             const canDelete = Boolean(isAdmin || isOwner) && !memo.documentNo && memo.status !== 'FINAL';
             const canSendEmail = Boolean(isAdmin || isOwner) && memo.status !== 'CANCELLED' && memo.pdfStatus === 'READY';
-            const displayStatus = memo.memoTypeId ? memo.approvalStatus : memo.status;
+            const displayStatus = memo.status === 'CANCELLED' ? 'CANCELLED' : memo.approvalStatus;
             return (
               <article key={memo.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -235,7 +235,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
                         memo.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                       }`}>
-                        {memo.memoTypeId ? memo.approvalStatus : memo.status}
+                        {memo.status === 'CANCELLED' ? 'CANCELLED' : memo.approvalStatus}
                       </span>
                     </td>
                     <td className="p-4">

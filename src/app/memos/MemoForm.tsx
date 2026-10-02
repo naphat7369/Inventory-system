@@ -12,6 +12,7 @@ import { SearchableSelect, type SearchableSelectOption } from './components/Sear
 
 export type Signature = {
   id?: string;
+  approverId?: string | null;
   role: string;
   name?: string | null;
   position?: string | null;
@@ -197,7 +198,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const [memoTypeId, setMemoTypeId] = useState(initialData?.memoTypeId || '');
   const availableMemoTypes = memoTypes.filter((type) => !type.branchId || type.branchId === selectedDepartment?.branchId);
   const approverOptions: SearchableSelectOption[] = approvers.map((approver) => ({
-    value: userDisplayName(approver),
+    value: approver.id,
     label: `${userDisplayName(approver)}${approver.position ? ` — ${approver.position}` : ''}${approver.isAllBranches ? ' (ทุกสาขา)' : approver.branch ? ` (${approver.branch.code})` : ''}`,
     searchText: `${approver.username} ${approver.position ?? ''} ${approver.branch?.name ?? ''} ${approver.branch?.code ?? ''}`,
   }));
@@ -228,7 +229,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     initialData?.signatures && initialData.signatures.length > 0
       ? initialData.signatures.map((signature) => ({ ...signature, role: normalizeSignatureRole(signature.role) }))
       : DEFAULT_SIGNATURES.map((signature, index) => index === 0
-        ? { ...signature, name: userDisplayName(currentUser), position: currentUser.position }
+        ? { ...signature, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position }
         : signature)
   );
 
@@ -320,18 +321,23 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const handleSignatureRoleChange = (index: number, role: string) => {
     const next = [...signatures];
     next[index] = role === 'นำเสนอโดย'
-      ? { ...next[index], role, name: userDisplayName(currentUser), position: currentUser.position }
-      : { ...next[index], role, name: '', position: '' };
+      ? { ...next[index], role, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position }
+      : { ...next[index], role, approverId: null, name: '', position: '' };
     setSignatures(next);
     handleChange();
   };
 
-  const handleSignatureUserChange = (index: number, selectedName: string) => {
-    const selectedUser = selectedName === userDisplayName(currentUser)
+  const handleSignatureUserChange = (index: number, selectedId: string) => {
+    const selectedUser = selectedId === currentUser.id
       ? currentUser
-      : approvers.find((approver) => userDisplayName(approver) === selectedName);
+      : approvers.find((approver) => approver.id === selectedId);
     const next = [...signatures];
-    next[index] = { ...next[index], name: selectedName, position: selectedUser?.position ?? '' };
+    next[index] = {
+      ...next[index],
+      approverId: selectedUser?.id ?? null,
+      name: selectedUser ? userDisplayName(selectedUser) : '',
+      position: selectedUser?.position ?? '',
+    };
     setSignatures(next);
     handleChange();
   };
@@ -370,6 +376,9 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const executeApplyTemplate = (template: SignatureTemplate) => {
     const copiedSignatures = template.items.map((item, index) => ({
       id: crypto.randomUUID(),
+      approverId: item.role === 'นำเสนอโดย'
+        ? currentUser.id
+        : approvers.find((approver) => userDisplayName(approver) === item.name)?.id ?? null,
       role: normalizeSignatureRole(item.role),
       name: item.name,
       position: item.position ?? "",
@@ -707,7 +716,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             <p className="text-xs text-gray-500 mt-1">
               {memoTypeId
                 ? 'ระบบจะใช้กฎ Required Approvers ของประเภทที่เลือก และนำรายชื่อมาใส่ใน Signatures ให้อัตโนมัติ'
-                : 'กรณีไม่เลือก ระบบจะบันทึกเป็น Memo ปกติ และคุณสามารถเพิ่ม แก้ไข หรือลบรายชื่อผู้เซ็นในส่วน Signatures ได้เอง'}
+                : 'กรณีไม่เลือก ให้กำหนดผู้อนุมัติเองใน Signatures ตามลำดับ โดยเอกสารยังต้องผ่าน E‑Approve ก่อนออกเลข'}
             </p>
             {isLoadingApprovalSignatures && <p className="mt-2 flex items-center gap-2 text-xs font-semibold text-blue-600"><Loader2 className="h-4 w-4 animate-spin"/>กำลังนำ Approval Chain ไปสร้างรายการลายเซ็น...</p>}
             {approvalSignatureSource && !isLoadingApprovalSignatures && <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">✓ นำรายชื่อผู้ลงนามจาก {approvalSignatureSource} มาใส่ด้านท้ายเอกสารแล้ว</p>}
@@ -940,13 +949,13 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Name (ชื่อ-นามสกุล)</label>
                   <SearchableSelect
-                    value={sig.name || ''}
+                    value={sig.approverId || ''}
                     onChange={(value) => handleSignatureUserChange(index, value)}
                     options={sig.role === 'นำเสนอโดย'
-                      ? [{ value: userDisplayName(currentUser), label: `${userDisplayName(currentUser)}${currentUser.position ? ` — ${currentUser.position}` : ''}`, searchText: currentUser.username }]
+                      ? [{ value: currentUser.id, label: `${userDisplayName(currentUser)}${currentUser.position ? ` — ${currentUser.position}` : ''}`, searchText: currentUser.username }]
                       : [
-                          ...(sig.name && !approvers.some((approver) => userDisplayName(approver) === sig.name)
-                            ? [{ value: sig.name, label: `${sig.name} (ข้อมูลเดิม)`, searchText: sig.name }]
+                          ...(sig.name && !sig.approverId
+                            ? [{ value: `legacy:${sig.name}`, label: `${sig.name} (กรุณาเลือกใหม่)`, searchText: sig.name }]
                             : []),
                           ...approverOptions,
                         ]}

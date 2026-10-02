@@ -143,14 +143,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Department not found or inactive' }, { status: 400 });
     }
 
-    let finalBranchId: string | null = null;
+    let finalBranchId: string | null = currentUser.branchId ?? department.branchId ?? null;
     if (memoTypeId) {
       const memoType = await prisma.memoType.findFirst({ where: { id: memoTypeId, isActive: true } });
-      finalBranchId = currentUser.branchId ?? memoType?.branchId ?? department.branchId;
-      const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } } }) : null;
-      if (!memoType || !finalBranchId || !branchDepartment?.isActive || (memoType.branchId && memoType.branchId !== finalBranchId)) {
+      finalBranchId = currentUser.branchId ?? memoType?.branchId ?? department.branchId ?? null;
+      if (!memoType || (memoType.branchId && memoType.branchId !== finalBranchId)) {
         return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
       }
+    }
+    const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } } }) : null;
+    if (!finalBranchId || !branchDepartment?.isActive) {
+      return NextResponse.json({ error: 'Department is not configured for an active E-Approve branch' }, { status: 400 });
     }
 
     // Fixed S HOTEL Logo rule: versioned constant for all new memos
@@ -165,7 +168,7 @@ export async function POST(request: Request) {
       data: {
         departmentId: finalDepartmentId,
         memoTypeId: memoTypeId || null,
-        branchId: memoTypeId ? finalBranchId : null,
+        branchId: finalBranchId,
         documentDate: new Date(documentDate),
         recipient,
         sender: currentUser.fullName?.trim() || currentUser.username,
@@ -181,7 +184,8 @@ export async function POST(request: Request) {
         createdById: currentUser.id,
         updatedById: currentUser.id,
         signatures: {
-          create: signatures?.map((sig: { role?: string; name?: string | null; position?: string | null }, index: number) => ({
+          create: signatures?.map((sig: { approverId?: string | null; role?: string; name?: string | null; position?: string | null }, index: number) => ({
+            approverId: sig.approverId || null,
             role: sig.role || '',
             name: sig.name || null,
             position: sig.position || null,

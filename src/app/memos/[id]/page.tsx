@@ -161,7 +161,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
   const canDelete = isAdmin || isOwner;
   const canEdit = (isAdmin || isOwner) && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
   const isCurrentApprover = latestRound?.status === 'ACTIVE' && latestRound.steps.some((step) => step.status === 'PENDING' && step.approverId === currentUser.id);
-  const canSubmit = isOwner && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus) && Boolean(memo.memoTypeId);
+  const canSubmit = isOwner && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
   const backFallbackHref = isApprovalParticipant && !isOwner ? '/memos/approvals' : '/memos';
 
   return (
@@ -185,13 +185,13 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           canDelete={canDelete}
           canEdit={canEdit}
           signatures={signatures}
-          isEApprove={Boolean(memo.memoTypeId)}
+          isEApprove
           canSendEmail={isAdmin || isOwner}
           officialPdfReady={memo.pdfStatus === 'READY' && memo.pdfArtifacts.length > 0}
           canReuseMemoActions={isAdmin || isOwner}
         />
 
-        {memo.memoTypeId && <ApprovalWorkflowPanel
+        <ApprovalWorkflowPanel
           memoId={memo.id}
           approvalStatus={memo.approvalStatus}
           pdfStatus={memo.pdfStatus}
@@ -205,7 +205,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
             data: signature.data,
             isDefault: signature.isDefault,
           }))}
-        />}
+        />
 
         {latestRound && (
           <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
@@ -225,7 +225,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           }`}>
             {memo.status === 'DRAFT' && (memo.memoTypeId
               ? 'นี่คือเอกสารแบบร่าง — ตรวจสอบความถูกต้องและส่งเข้าสู่ระบบอนุมัติเมื่อพร้อม'
-              : 'นี่คือเอกสารแบบร่างทั่วไป — กำหนดรายชื่อผู้เซ็นเองได้ และไม่เข้าสู่ขั้นตอน E‑Approve')}
+              : 'นี่คือเอกสารแบบร่าง — กำหนดผู้อนุมัติเองใน Signatures แล้วส่งเข้าสู่ระบบอนุมัติเมื่อพร้อม')}
             {memo.status === 'REVISION_REQUESTED' && 'ผู้อนุมัติส่งเอกสารกลับให้แก้ไข กรุณาตรวจเหตุผลใน Approval Timeline แล้วส่งอนุมัติใหม่'}
             {memo.status === 'CANCELLED' && 'เอกสารนี้ถูกยกเลิกแล้ว'}
           </div>

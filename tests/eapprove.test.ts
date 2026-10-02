@@ -40,6 +40,21 @@ test('user-added approver duplicated in template keeps template position and aud
   assert.deepEqual(chain[1].sources.map((item) => item.source), ['TEMPLATE', 'USER_ADDED']);
 });
 
+test('memo without a type uses manually selected approvers in signature order', () => {
+  const hod = user('hod');
+  const reviewer = user('reviewer');
+  const approver = user('approver');
+  const chain = buildApprovalChain({
+    creatorId: 'creator', branchId: 'b1', hod,
+    userAdded: [
+      { approver: reviewer, source: 'USER_ADDED', referenceId: 'signature-1' },
+      { approver, source: 'USER_ADDED', referenceId: 'signature-2' },
+    ],
+  });
+  assert.deepEqual(chain.map((step) => step.approverId), ['hod', 'reviewer', 'approver']);
+  assert.deepEqual(chain.map((step) => step.status), ['PENDING', 'WAITING', 'WAITING']);
+});
+
 test('inactive approver is rejected and must be replaced', () => {
   assert.throws(() => buildApprovalChain({ creatorId: 'creator', branchId: 'b1', hod: user('hod', { isActive: false }) }),
     (error: unknown) => error instanceof ApprovalRuleError && error.code === 'APPROVER_INACTIVE');

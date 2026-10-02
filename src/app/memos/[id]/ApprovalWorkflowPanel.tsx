@@ -49,17 +49,22 @@ export function ApprovalWorkflowPanel({ memoId, approvalStatus, pdfStatus, canSu
   };
   const perform = async (action: 'submit' | 'approve' | 'revision') => {
     setLoading(true); setError('');
-    const idempotencyKey = `${action}-${memoId}-${createClientUuid()}`;
-    const endpoint = action === 'revision' ? 'request-revision' : action;
-    const payload = action === 'approve'
-      ? { signatureId: selectedSignatureId, idempotencyKey }
-      : action === 'revision' ? { reason, idempotencyKey }
-      : { userAddedApproverIds: [], idempotencyKey };
-    const response = await fetch(`/api/memos/${memoId}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    const body = await response.json().catch(() => ({}));
-    setLoading(false);
-    if (!response.ok) return setError(body.error ?? 'ดำเนินการไม่สำเร็จ');
-    setDialog(null); setPreview(null); setReason(''); router.refresh();
+    try {
+      const idempotencyKey = `${action}-${memoId}-${createClientUuid()}`;
+      const endpoint = action === 'revision' ? 'request-revision' : action;
+      const payload = action === 'approve'
+        ? { signatureId: selectedSignatureId, idempotencyKey }
+        : action === 'revision' ? { reason, idempotencyKey }
+        : { userAddedApproverIds: [], idempotencyKey };
+      const response = await fetch(`/api/memos/${memoId}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) { setError(body.error ?? 'ดำเนินการไม่สำเร็จ'); return; }
+      setDialog(null); setPreview(null); setReason(''); router.refresh();
+    } catch (err: any) {
+      setError(err?.message ?? 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองอีกครั้ง');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const statusTone = approvalStatus === 'APPROVED' ? 'emerald' : approvalStatus === 'REVISION_REQUESTED' ? 'violet' : approvalStatus === 'DRAFT' ? 'slate' : 'amber';

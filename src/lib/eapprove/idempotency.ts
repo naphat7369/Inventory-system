@@ -1,3 +1,7 @@
+import { createHash } from 'node:crypto';
+import { Prisma, type PrismaClient } from '@prisma/client';
+import { EApproveError } from './errors.ts';
+
 export function pdfJobKey(memoId: string, memoVersionId: string) {
   return `PDF:OFFICIAL:${memoId}:${memoVersionId}`;
 }
@@ -22,6 +26,8 @@ export class IdempotencyLedger<T> {
 }
 
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
+const MAX_RETRIES = 3;
 
 export async function runIdempotentTransaction<T>(
   prisma: PrismaClient,
@@ -49,20 +55,32 @@ export async function runIdempotentTransaction<T>(
       status: 'COMPLETED', responseJson: JSON.stringify(result), completedAt: new Date(),
     } });
     return result;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, {
+    isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+    timeout: 30000,
+  });
 
-  try {
-    return await execute();
-  } catch (error) {
-    const candidate = error as { code?: string };
-    if (candidate.code !== 'P2002') throw error;
-    const existing = await prisma.idempotencyRecord.findUnique({ where: { key: input.key } });
-    if (existing?.action === input.action && existing.actorId === input.actorId && existing.requestHash === requestHash && existing.status === 'COMPLETED' && existing.responseJson) {
-      return JSON.parse(existing.responseJson) as T;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await execute();
+    } catch (error: any) {
+      // PostgreSQL serialization failure (40001) or deadlock (40P01) — retry
+      if ((error?.code === 'P2034' || error?.meta?.code === '40001' || error?.meta?.code === '40P01') && attempt < MAX_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+        continue;
+      }
+      // Unique constraint violation — check for completed idempotent result
+      if (error?.code === 'P2002') {
+        const existing = await prisma.idempotencyRecord.findUnique({ where: { key: input.key } });
+        if (existing) {
+          if (existing.action === input.action && existing.actorId === input.actorId && existing.requestHash === requestHash && existing.status === 'COMPLETED' && existing.responseJson) {
+            return JSON.parse(existing.responseJson) as T;
+          }
+          throw new EApproveError('REQUEST_IN_PROGRESS', 'คำขอนี้กำลังถูกประมวลผล', 409);
+        }
+      }
+      throw error;
     }
-    throw new EApproveError('REQUEST_IN_PROGRESS', 'คำขอนี้กำลังถูกประมวลผล', 409);
   }
+  throw new EApproveError('RETRY_EXHAUSTED', 'ระบบไม่สามารถดำเนินการได้ในขณะนี้ กรุณาลองอีกครั้ง', 503);
 }
-import { createHash } from 'node:crypto';
-import { Prisma, type PrismaClient } from '@prisma/client';
-import { EApproveError } from './errors.ts';

@@ -14,9 +14,25 @@ function SignaturePreview({ signature, compact = false }: { signature: Pick<Sign
   return <div className={`grid place-items-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white ${compact ? 'h-24' : 'h-36'} dark:border-slate-700`}>
     {signature.type === 'TYPED'
       ? <span className="max-w-full truncate px-4 font-serif text-3xl italic text-slate-800">{signature.data}</span>
-      // eslint-disable-next-line @next/next/no-img-element
-      : <img src={signature.data} alt="ตัวอย่างลายเซ็น" className="max-h-full max-w-full object-contain p-3" />}
+      : signature.type === 'UPLOADED'
+        ? <CleanSignaturePreview source={signature.data} />
+        // eslint-disable-next-line @next/next/no-img-element
+        : <img src={signature.data} alt="ตัวอย่างลายเซ็น" className="max-h-full max-w-full object-contain p-3" />}
   </div>;
+}
+
+function CleanSignaturePreview({ source }: { source: string }) {
+  const [processedSource, setProcessedSource] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void cleanAndCropSignatureImage(source).then((result) => {
+      if (active) setProcessedSource(result);
+    });
+    return () => { active = false; };
+  }, [source]);
+  if (!processedSource) return <Loader2 className="h-5 w-5 animate-spin text-slate-400" />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={processedSource} alt="ตัวอย่างลายเซ็น" className="max-h-full max-w-full object-contain p-3" />;
 }
 
 export function ApprovalSignaturesClient({ initialSignatures }: { initialSignatures: Signature[] }) {

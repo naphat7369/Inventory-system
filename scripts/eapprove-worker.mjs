@@ -225,7 +225,13 @@ async function renderPdf(job, memoVersionId) {
     });
     await page.goto(`${appUrl}/memos/${job.memoId}?pdf=1`, { waitUntil: 'networkidle0', timeout: 60_000 });
     await page.waitForFunction(
-      () => document.fonts.status === 'loaded' && document.querySelectorAll('.memo-page-sheet').length > 0,
+      () => {
+        const signatureImages = [...document.querySelectorAll('.memo-approval-signature-image')];
+        return document.fonts.status === 'loaded'
+          && document.querySelectorAll('.memo-page-sheet').length > 0
+          && document.querySelectorAll('[data-signature-processing="true"]').length === 0
+          && signatureImages.every((image) => image.complete && image.naturalWidth > 0);
+      },
       { timeout: 60_000 },
     );
     await page.emulateMediaType('print');

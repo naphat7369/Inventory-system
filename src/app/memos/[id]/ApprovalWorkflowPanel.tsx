@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClientUuid } from '@/lib/uuid';
+import { cleanAndCropSignatureImage } from '@/lib/signature-image';
 import { AlertTriangle, CheckCircle2, Clock3, FileCheck2, Loader2, PenLine, RotateCcw, Send, Star } from 'lucide-react';
 
 type Preview = {
@@ -18,9 +19,25 @@ function SignaturePreview({ signature }: { signature: ApprovalSignature }) {
   return <div className="grid h-24 place-items-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-white dark:border-slate-700">
     {signature.type === 'TYPED'
       ? <span className="max-w-full truncate px-3 font-serif text-2xl italic text-slate-800">{signature.data}</span>
-      // eslint-disable-next-line @next/next/no-img-element
-      : <img src={signature.data} alt={`ลายเซ็น ${signature.name}`} className="max-h-full max-w-full object-contain p-2" />}
+      : signature.type === 'UPLOADED'
+        ? <CleanSignaturePreview source={signature.data} name={signature.name} />
+        // eslint-disable-next-line @next/next/no-img-element
+        : <img src={signature.data} alt={`ลายเซ็น ${signature.name}`} className="max-h-full max-w-full object-contain p-2" />}
   </div>;
+}
+
+function CleanSignaturePreview({ source, name }: { source: string; name: string }) {
+  const [processedSource, setProcessedSource] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void cleanAndCropSignatureImage(source).then((result) => {
+      if (active) setProcessedSource(result);
+    });
+    return () => { active = false; };
+  }, [source]);
+  if (!processedSource) return <Loader2 className="h-5 w-5 animate-spin text-slate-400" />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={processedSource} alt={`ลายเซ็น ${name}`} className="max-h-full max-w-full object-contain p-2" />;
 }
 
 export function ApprovalWorkflowPanel({ memoId, approvalStatus, pdfStatus, canSubmit, isCurrentApprover, memoTypeName, approvalSignatures }: {

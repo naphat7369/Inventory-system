@@ -1235,7 +1235,7 @@ function SignatureBox({ sig, width = "w-48" }: { sig: MemoSignatureItem; width?:
 }
 
 function CleanUploadedSignatureImage({ source, name }: { source: string; name: string }) {
-  const [processedSource, setProcessedSource] = useState(source);
+  const [processedSource, setProcessedSource] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -1245,12 +1245,15 @@ function CleanUploadedSignatureImage({ source, name }: { source: string; name: s
     return () => { active = false; };
   }, [source]);
 
-  return (
+  return processedSource ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={processedSource}
       alt={`ลายเซ็นของ ${name}`}
+      data-signature-processing="false"
       className="memo-approval-signature-image max-h-[52px] max-w-[95%] object-contain"
     />
+  ) : (
+    <span data-signature-processing="true" className="block h-[52px] w-[95%]" aria-label={`กำลังประมวลผลลายเซ็นของ ${name}`} />
   );
 }

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit, CheckCircle, Printer, Copy, XCircle, Trash2, CheckCircle2, AlertCircle, Loader2, BookmarkPlus, Mail, X, ShieldCheck } from 'lucide-react';
+import { Edit, CheckCircle, Printer, Copy, XCircle, Trash2, CheckCircle2, AlertCircle, Loader2, BookmarkPlus, ShieldCheck } from 'lucide-react';
 import { DeleteMemoModal } from './DeleteMemoModal';
+import { MemoEmailAction } from './MemoEmailAction';
 
 interface MemoDetailActionsProps {
   memoId: string;
@@ -12,11 +13,12 @@ interface MemoDetailActionsProps {
   subject?: string;
   canDelete?: boolean;
   canEdit?: boolean;
-  signatures?: any[];
+  signatures?: unknown[];
   isEApprove?: boolean;
   canSendEmail?: boolean;
   officialPdfReady?: boolean;
   canReuseMemoActions?: boolean;
+  emailSendCount?: number;
 }
 
 export function MemoDetailActions({ 
@@ -31,15 +33,13 @@ export function MemoDetailActions({
   canSendEmail = false,
   officialPdfReady = false,
   canReuseMemoActions = false,
+  emailSendCount = 0,
 }: MemoDetailActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [confirmFinalizeOpen, setConfirmFinalizeOpen] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
-  const [isEmailOpen, setIsEmailOpen] = useState(false);
-  const [emailRecipient, setEmailRecipient] = useState('');
-  const [emailMessage, setEmailMessage] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -134,8 +134,8 @@ export function MemoDetailActions({
 
       showToast('บันทึกเป็นเทมเพลตเรียบร้อยแล้ว', 'success');
       setIsSaveModalOpen(false);
-    } catch (error: any) {
-      showToast(error.message, 'error');
+    } catch (error: unknown) {
+      showToast(error instanceof Error ? error.message : 'ไม่สามารถบันทึกเทมเพลตได้', 'error');
     } finally {
       setLoading(false);
     }
@@ -343,26 +343,6 @@ export function MemoDetailActions({
     }
   };
 
-  const openEmailComposer = () => {
-    const recipient = emailRecipient.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
-      showToast('กรุณากรอกอีเมลผู้รับให้ถูกต้อง', 'error');
-      return;
-    }
-    const memoUrl = window.location.href;
-    const statusPrefix = status === 'DRAFT' ? '[DRAFT] ' : '';
-    const mailSubject = `${statusPrefix}${documentNo ? `${documentNo} - ` : ''}${subject || 'Memo'}`;
-    const defaultBody = [
-      emailMessage.trim(),
-      '',
-      `เปิดดู Memo: ${memoUrl}`,
-      '',
-      'หมายเหตุ: หากต้องการแนบไฟล์ PDF กรุณากด “สร้าง PDF” แล้วแนบไฟล์ในโปรแกรมอีเมล',
-    ].join('\n');
-    window.location.href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(defaultBody)}`;
-    setIsEmailOpen(false);
-  };
-
   return (
     <>
       <div className="flex flex-wrap gap-3 mb-6 print:hidden">
@@ -383,13 +363,7 @@ export function MemoDetailActions({
         )}
 
         {canSendEmail && status !== 'CANCELLED' && (
-          <button
-            type="button"
-            onClick={() => setIsEmailOpen(true)}
-            className="flex items-center gap-2 border border-sky-200 bg-sky-50 px-4 py-2 font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-900/50 rounded-lg"
-          >
-            <Mail size={18} /> ส่งอีเมล
-          </button>
+          <MemoEmailAction memoId={memoId} documentNo={documentNo} subject={subject || 'Memo'} initialSendCount={emailSendCount} variant="button" disabled={!officialPdfReady} />
         )}
 
         {canEdit && status !== 'CANCELLED' && (
@@ -466,39 +440,6 @@ export function MemoDetailActions({
         status={status}
         subject={subject}
       />
-
-      {isEmailOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm print:hidden">
-          <div role="dialog" aria-modal="true" aria-labelledby="send-email-title" className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="send-email-title" className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white"><Mail className="h-5 w-5 text-sky-600"/>ส่ง Memo ทางอีเมล</h2>
-                <p className="mt-1 text-sm text-slate-500">ระบบจะเปิดโปรแกรมอีเมลของเครื่องพร้อมหัวข้อและลิงก์เอกสาร</p>
-              </div>
-              <button type="button" onClick={() => setIsEmailOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800" aria-label="ปิด"><X className="h-5 w-5"/></button>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                อีเมลผู้รับ <span className="text-rose-500">*</span>
-                <input type="email" autoFocus value={emailRecipient} onChange={(event) => setEmailRecipient(event.target.value)} placeholder="name@company.com" className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-normal outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 dark:border-slate-600 dark:bg-slate-800 dark:focus:ring-sky-950" />
-              </label>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                ข้อความเพิ่มเติม
-                <textarea value={emailMessage} onChange={(event) => setEmailMessage(event.target.value)} rows={4} placeholder="ระบุข้อความถึงผู้รับ (ถ้ามี)" className="mt-2 w-full resize-y rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-normal outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 dark:border-slate-600 dark:bg-slate-800 dark:focus:ring-sky-950" />
-              </label>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-                ต้องการแนบ PDF: กด “สร้าง PDF” ก่อน แล้วแนบไฟล์จากโปรแกรมอีเมลของคุณ
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-              <button type="button" onClick={() => setIsEmailOpen(false)} className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">ยกเลิก</button>
-              <button type="button" onClick={openEmailComposer} className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-2 text-sm font-bold text-white hover:bg-sky-700"><Mail className="h-4 w-4"/>เปิดโปรแกรมอีเมล</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Confirm Finalize Modal */}
       {confirmFinalizeOpen && (

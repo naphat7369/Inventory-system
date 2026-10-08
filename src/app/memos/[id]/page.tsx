@@ -67,6 +67,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
       },
       attachments: { orderBy: { createdAt: 'asc' } },
       pdfArtifacts: { where: { kind: 'OFFICIAL' }, orderBy: { createdAt: 'desc' }, take: 1 },
+      _count: { select: { emailDeliveries: true } },
       approvalRounds: {
         orderBy: { roundNumber: 'desc' },
         take: 1,
@@ -189,6 +190,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           canSendEmail={isAdmin || isOwner}
           officialPdfReady={memo.pdfStatus === 'READY' && memo.pdfArtifacts.length > 0}
           canReuseMemoActions={isAdmin || isOwner}
+          emailSendCount={memo._count.emailDeliveries}
         />
 
         <ApprovalWorkflowPanel

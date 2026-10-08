@@ -45,7 +45,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
 
   try {
-    const delivery = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const created = await tx.emailDelivery.create({ data: {
         memoId: memo.id,
         recipient: parsed.data.recipient.toLowerCase(),
@@ -61,13 +61,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         userId: actor.id,
         details: JSON.stringify({ memoId: memo.id, recipient: created.recipient }),
       } });
-      return created;
+      const sendCount = await tx.emailDelivery.count({ where: { memoId: memo.id } });
+      return { delivery: created, sendCount };
     });
-    return NextResponse.json({ deliveryId: delivery.id, status: delivery.status }, { status: 202 });
+    return NextResponse.json({ deliveryId: result.delivery.id, status: result.delivery.status, sendCount: result.sendCount }, { status: 202 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       const existing = await prisma.emailDelivery.findUnique({ where: { idempotencyKey } });
-      if (existing) return NextResponse.json({ deliveryId: existing.id, status: existing.status, duplicate: true }, { status: 200 });
+      if (existing) {
+        const sendCount = await prisma.emailDelivery.count({ where: { memoId: memo.id } });
+        return NextResponse.json({ deliveryId: existing.id, status: existing.status, sendCount, duplicate: true }, { status: 200 });
+      }
     }
     console.error('Queue memo email failed');
     return NextResponse.json({ error: 'ไม่สามารถสร้างงานส่ง E-Mail ได้' }, { status: 500 });

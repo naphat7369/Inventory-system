@@ -81,6 +81,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
     include: {
       department: true,
       memoType: true,
+      _count: { select: { emailDeliveries: true } },
     },
     orderBy: { updatedAt: 'desc' },
     skip,
@@ -196,6 +197,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
                     pdfStatus={memo.pdfStatus}
                     canSendEmail={canSendEmail}
                     officialPdfReady={memo.pdfStatus === 'READY'}
+                    emailSendCount={memo._count.emailDeliveries}
                   />
                 </div>
               </article>
@@ -249,6 +251,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
                         pdfStatus={memo.pdfStatus}
                         canSendEmail={canSendEmail}
                         officialPdfReady={memo.pdfStatus === 'READY'}
+                        emailSendCount={memo._count.emailDeliveries}
                       />
                     </td>
                   </tr>

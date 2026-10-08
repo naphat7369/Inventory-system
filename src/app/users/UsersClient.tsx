@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Users, Trash2, Shield, User, Edit3, Plus } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Users, Trash2, Shield, User, Edit3, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { createUser, deleteUser } from '@/app/actions';
 import { EditUserModal } from './EditUserModal';
 import { useRouter } from 'next/navigation';
@@ -18,6 +18,7 @@ interface UserItem {
   branchId?: string | null;
   isAllBranches?: boolean;
   isActive?: boolean;
+  isApprover?: boolean;
   position?: string | null;
   email?: string | null;
   createdAt: Date | string;
@@ -41,6 +42,66 @@ interface UsersClientProps {
 export function UsersClient({ users, departments = [], branches = [], currentUserId }: UsersClientProps) {
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [approverFilter, setApproverFilter] = useState('ALL');
+  const [branchFilter, setBranchFilter] = useState('ALL');
+  const [departmentFilter, setDepartmentFilter] = useState('ALL');
+
+  const filteredUsers = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase('th-TH');
+
+    return users.filter((user) => {
+      const searchableText = [
+        user.username,
+        user.fullName,
+        user.email,
+        user.phone,
+        user.position,
+        user.branch,
+        user.department,
+        user.role,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('th-TH');
+
+      const matchesSearch = !normalizedQuery || searchableText.includes(normalizedQuery);
+      const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
+      const matchesStatus = statusFilter === 'ALL'
+        || (statusFilter === 'ACTIVE' ? user.isActive !== false : user.isActive === false);
+      const matchesApprover = approverFilter === 'ALL'
+        || (approverFilter === 'APPROVER' ? user.isApprover === true : user.isApprover !== true);
+      const matchesBranch = branchFilter === 'ALL'
+        || (branchFilter === '__ALL__' ? user.isAllBranches === true : user.branchId === branchFilter);
+      const matchesDepartment = departmentFilter === 'ALL'
+        || (departmentFilter === '__NONE__' ? !user.departmentId : user.departmentId === departmentFilter);
+
+      return matchesSearch
+        && matchesRole
+        && matchesStatus
+        && matchesApprover
+        && matchesBranch
+        && matchesDepartment;
+    });
+  }, [users, searchQuery, roleFilter, statusFilter, approverFilter, branchFilter, departmentFilter]);
+
+  const hasActiveFilters = searchQuery.trim() !== ''
+    || roleFilter !== 'ALL'
+    || statusFilter !== 'ALL'
+    || approverFilter !== 'ALL'
+    || branchFilter !== 'ALL'
+    || departmentFilter !== 'ALL';
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setRoleFilter('ALL');
+    setStatusFilter('ALL');
+    setApproverFilter('ALL');
+    setBranchFilter('ALL');
+    setDepartmentFilter('ALL');
+  };
 
   const handleRefresh = () => {
     router.refresh();
@@ -169,6 +230,81 @@ export function UsersClient({ users, departments = [], branches = [], currentUse
         {/* Users Table */}
         <div className="lg:col-span-2">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="border-b border-slate-200 p-4 dark:border-slate-800 sm:p-5">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-200">
+                  <SlidersHorizontal className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  ค้นหาและตัวกรอง
+                </div>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  แสดง {filteredUsers.length} จาก {users.length} ผู้ใช้งาน
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="ค้นหาชื่อ, Username, Email, เบอร์โทร, ตำแหน่ง, สาขา หรือแผนก"
+                    aria-label="ค้นหาผู้ใช้งาน"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-900 outline-hidden transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                      aria-label="ล้างคำค้นหา"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                  <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} aria-label="กรองตามสิทธิ์" className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <option value="ALL">ทุกสิทธิ์</option>
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="STAFF">STAFF</option>
+                  </select>
+
+                  <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="กรองตามสถานะ" className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <option value="ALL">ทุกสถานะ</option>
+                    <option value="ACTIVE">ใช้งานอยู่</option>
+                    <option value="INACTIVE">ปิดใช้งาน</option>
+                  </select>
+
+                  <select value={approverFilter} onChange={(event) => setApproverFilter(event.target.value)} aria-label="กรองตามสิทธิ์อนุมัติ" className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <option value="ALL">สิทธิ์อนุมัติทั้งหมด</option>
+                    <option value="APPROVER">ผู้อนุมัติ</option>
+                    <option value="NON_APPROVER">ผู้ใช้งานทั่วไป</option>
+                  </select>
+
+                  <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} aria-label="กรองตามสาขา" className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <option value="ALL">ทุกสาขา</option>
+                    <option value="__ALL__">สิทธิ์ทุกสาขา</option>
+                    {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+                  </select>
+
+                  <select value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)} aria-label="กรองตามแผนก" className="col-span-2 min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:col-span-1 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <option value="ALL">ทุกแผนก</option>
+                    <option value="__NONE__">ไม่ระบุแผนก</option>
+                    {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
+                  </select>
+                </div>
+
+                {hasActiveFilters && (
+                  <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 transition hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+                    <X className="h-3.5 w-3.5" />
+                    ล้างการค้นหาและตัวกรองทั้งหมด
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -180,7 +316,7 @@ export function UsersClient({ users, departments = [], branches = [], currentUse
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                  {users.map((u) => (
+                  {filteredUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
                       <td className="p-4">
                         <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -245,6 +381,17 @@ export function UsersClient({ users, departments = [], branches = [], currentUse
                       </td>
                     </tr>
                   ))}
+                  {filteredUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-12 text-center">
+                        <Search className="mx-auto mb-3 h-8 w-8 text-slate-300 dark:text-slate-600" />
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">ไม่พบผู้ใช้งานที่ตรงกับเงื่อนไข</p>
+                        <button type="button" onClick={clearFilters} className="mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+                          ล้างการค้นหาและตัวกรอง
+                        </button>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

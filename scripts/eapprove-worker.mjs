@@ -214,6 +214,7 @@ async function renderPdf(job, memoVersionId) {
   const browser = await puppeteer.launch({
     executablePath,
     headless: true,
+    pipe: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
   });
   try {

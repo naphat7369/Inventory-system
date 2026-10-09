@@ -113,6 +113,10 @@ export async function POST(request: Request) {
     if (!documentDate || !recipient || !subject || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+    const signatureApproverIds = (signatures ?? []).flatMap((signature: { approverId?: string | null }) => signature.approverId ? [signature.approverId] : []);
+    if (new Set(signatureApproverIds).size !== signatureApproverIds.length) {
+      return NextResponse.json({ error: 'ไม่สามารถเลือกชื่อผู้ลงนามซ้ำในเอกสารเดียวกันได้' }, { status: 400 });
+    }
 
     // Role-based Department enforcement
     let finalDepartmentId: string;

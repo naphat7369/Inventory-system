@@ -2,9 +2,18 @@ import { createHash } from 'node:crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { formatInTimeZone } from 'date-fns-tz';
 import { buildApprovalChain, ApprovalRuleError, type CandidateWithSource } from './chain';
-import { pdfJobKey, notificationKey, runIdempotentTransaction } from './idempotency';
+import { pdfJobKey, runIdempotentTransaction } from './idempotency';
 import { assertMemoTransition, canReplaceApprover } from './lifecycle';
 import { EApproveError } from './errors';
+import {
+  enqueueApprovalAssignment,
+  enqueueEmailDelivery,
+  enqueueInAppNotification,
+  automaticDeliveryKey,
+  getDeliverySettings,
+  isValidEmail,
+  resolveApprovalAssignment,
+} from './notification-service';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -14,16 +23,9 @@ const json = (value: unknown) => JSON.stringify(value);
 const hash = (value: unknown) => createHash('sha256').update(json(value)).digest('hex');
 
 async function enqueueNotification(tx: Db, input: { event: string; memoId: string; userId: string; payload: unknown }) {
-  return tx.notification.upsert({
-    where: { idempotencyKey: notificationKey(input.event, input.memoId, input.userId) },
-    update: {},
-    create: {
-      userId: input.userId,
-      memoId: input.memoId,
-      type: input.event,
-      payload: json(input.payload),
-      idempotencyKey: notificationKey(input.event, input.memoId, input.userId),
-    },
+  return enqueueInAppNotification(tx, {
+    type: input.event.split(':')[0], eventKey: input.event,
+    memoId: input.memoId, userId: input.userId, payload: input.payload,
   });
 }
 
@@ -172,7 +174,12 @@ export async function submitMemo(prisma: PrismaClient, input: {
       sequence: nextSequence, buddhistYear, documentNo, updatedById: input.actorId,
     } });
     const pending = round.steps.find((step) => step.status === 'PENDING');
-    if (pending) await enqueueNotification(tx, { event: `APPROVAL_PENDING:${round.id}`, memoId: memo.id, userId: pending.approverId, payload: { stepId: pending.id } });
+    if (pending) {
+      const approver = await tx.user.findUnique({ where: { id: pending.approverId } });
+      if (approver) await enqueueApprovalAssignment(tx, {
+        memo: { id: memo.id, documentNo, subject: memo.subject }, step: { ...pending, calendarSequence: 0 }, approver,
+      });
+    }
     await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'SUBMITTED', entity: 'MEMO', entityId: memo.id, userId: input.actorId, newValue: json({ roundId: round.id, versionId: version.id, chain }) } });
     return { memoId: memo.id, documentNo, versionId: version.id, roundId: round.id, chain };
   });
@@ -212,11 +219,16 @@ export async function approveCurrentStep(prisma: PrismaClient, input: {
       integrityHash: hash({ stepId: step.id, versionId: step.memoVersionId, actorId: input.actorId, signature: signatureSnapshot }),
     } });
     if (updated.count !== 1) throw new EApproveError('STEP_ALREADY_COMPLETED', 'Step นี้ถูกดำเนินการแล้ว', 409);
+    await resolveApprovalAssignment(tx, { memoId: memo.id, stepId: step.id, reason: 'APPROVED' });
     const next = round.steps.find((item) => item.sortOrder > step.sortOrder && item.status === 'WAITING');
     if (next) {
       await tx.memoApprovalStep.update({ where: { id: next.id }, data: { status: 'PENDING' } });
       await tx.memo.update({ where: { id: memo.id }, data: { status: 'IN_REVIEW', approvalStatus: 'IN_REVIEW' } });
-      await enqueueNotification(tx, { event: `APPROVAL_PENDING:${round.id}`, memoId: memo.id, userId: next.approverId, payload: { stepId: next.id } });
+      const nextStep = await tx.memoApprovalStep.findUnique({ where: { id: next.id } });
+      const nextApprover = await tx.user.findUnique({ where: { id: next.approverId } });
+      if (nextStep && nextApprover) await enqueueApprovalAssignment(tx, {
+        memo: { id: memo.id, documentNo: memo.documentNo, subject: memo.subject }, step: nextStep, approver: nextApprover,
+      });
     } else {
       // Approval is committed independently of the asynchronous PDF lifecycle.
       await tx.memo.update({ where: { id: memo.id }, data: { status: 'APPROVED', approvalStatus: 'APPROVED', pdfStatus: 'PENDING', pdfErrorCode: null } });
@@ -267,6 +279,8 @@ export async function requestMemoRevision(prisma: PrismaClient, input: {
     });
     if (updated.count !== 1) throw new EApproveError('STEP_ALREADY_COMPLETED', 'Step นี้ถูกดำเนินการแล้ว', 409);
 
+    await resolveApprovalAssignment(tx, { memoId: memo.id, stepId: step.id, reason: 'REVISION_REQUESTED' });
+
     await tx.memoApprovalRound.update({ where: { id: round.id }, data: { status: 'REVISION_REQUESTED', closedAt: new Date() } });
     await tx.memo.update({ where: { id: memo.id }, data: { status: 'REVISION_REQUESTED', approvalStatus: 'REVISION_REQUESTED' } });
     if (memo.createdById) {
@@ -274,6 +288,16 @@ export async function requestMemoRevision(prisma: PrismaClient, input: {
         event: `REVISION_REQUESTED:${round.id}`, memoId: memo.id, userId: memo.createdById,
         payload: { stepId: step.id, reason: input.reason.trim(), requestedBy: actor.fullName ?? actor.username },
       });
+      const creator = await tx.user.findUnique({ where: { id: memo.createdById } });
+      const settings = await getDeliverySettings(tx);
+      if (settings.emailEnabled && creator?.isActive && isValidEmail(creator.email)) {
+        await enqueueEmailDelivery(tx, {
+          memoId: memo.id, recipient: creator.email!, recipientUserId: creator.id, memoVersionId: step.memoVersionId,
+          template: 'REVISION_REQUESTED',
+          payload: { documentNo: memo.documentNo, subject: memo.subject, reason: input.reason.trim(), requestedBy: actor.fullName ?? actor.username },
+          idempotencyKey: automaticDeliveryKey(['REVISION_REQUESTED', memo.id, round.id, creator.id]),
+        });
+      }
     }
     await tx.auditLog.create({
       data: {
@@ -304,11 +328,14 @@ export async function replacePendingApprover(prisma: PrismaClient, input: {
     if (!replacement?.isActive || !replacement.isApprover || (!replacement.isAllBranches && replacement.branchId !== step.round.memo.branchId)) {
       throw new EApproveError('INVALID_REPLACEMENT', 'ผู้รับแทนต้องเป็น Active Approver ใน Branch เดียวกัน');
     }
-    await tx.memoApprovalStep.update({ where: { id: step.id }, data: {
+    await resolveApprovalAssignment(tx, { memoId: step.round.memoId, stepId: step.id, reason: 'REASSIGNED' });
+    const replacedStep = await tx.memoApprovalStep.update({ where: { id: step.id }, data: {
       approverId: replacement.id, approverNameSnapshot: replacement.fullName ?? replacement.username,
       approverPositionSnapshot: replacement.position, sourceMetadata: json([
         ...JSON.parse(step.sourceMetadata), { source: 'ADMIN_REPLACEMENT', oldApproverId: step.approverId, reason: input.reason.trim() },
       ]),
+      calendarStatus: 'NONE', calendarUid: null, calendarRecipient: null,
+      calendarStartAt: null, calendarEndAt: null,
     } });
     await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'REPLACED_PENDING_APPROVER', entity: 'MEMO_APPROVAL_STEP', entityId: step.id, userId: actor.id,
       oldValue: json({ approverId: step.approverId }), newValue: json({ approverId: replacement.id }), details: input.reason.trim() } });
@@ -316,7 +343,35 @@ export async function replacePendingApprover(prisma: PrismaClient, input: {
       event: `APPROVER_REPLACED:${step.id}:${userId}`, memoId: step.round.memoId, userId,
       payload: { stepId: step.id, oldApproverId: step.approverId, newApproverId: replacement.id, reason: input.reason.trim() },
     })));
+    if (replacedStep.status === 'PENDING') await enqueueApprovalAssignment(tx, {
+      memo: { id: step.round.memo.id, documentNo: step.round.memo.documentNo, subject: step.round.memo.subject },
+      step: replacedStep, approver: replacement,
+    });
     return { stepId: step.id, oldApproverId: step.approverId, newApproverId: replacement.id };
+  });
+}
+
+export async function withdrawMemo(prisma: PrismaClient, input: { memoId: string; actorId: string; idempotencyKey: string }) {
+  return runIdempotentTransaction(prisma, {
+    key: input.idempotencyKey, action: 'WITHDRAW_MEMO', actorId: input.actorId, resourceId: input.memoId, request: {},
+  }, async (tx) => {
+    const actor = await tx.user.findUnique({ where: { id: input.actorId } });
+    const memo = await tx.memo.findUnique({ where: { id: input.memoId }, include: {
+      approvalRounds: { where: { status: 'ACTIVE' }, orderBy: { roundNumber: 'desc' }, take: 1, include: { steps: true } },
+    } });
+    if (!actor?.isActive || !memo || memo.deletedAt) throw new EApproveError('MEMO_NOT_FOUND', 'ไม่พบ Memo', 404);
+    if (memo.createdById !== actor.id && actor.role !== 'ADMIN') throw new EApproveError('FORBIDDEN', 'เฉพาะผู้สร้างหรือ Admin เท่านั้นที่ถอน Memo ได้', 403);
+    if (!['SUBMITTED', 'IN_REVIEW'].includes(memo.approvalStatus)) throw new EApproveError('INVALID_MEMO_STATE', 'ถอน Memo ได้เฉพาะระหว่างรออนุมัติ', 409);
+    const round = memo.approvalRounds[0];
+    const pending = round?.steps.find((item) => item.status === 'PENDING');
+    if (pending) await resolveApprovalAssignment(tx, { memoId: memo.id, stepId: pending.id, reason: 'WITHDRAWN' });
+    if (round) {
+      await tx.memoApprovalStep.updateMany({ where: { roundId: round.id, status: { in: ['PENDING', 'WAITING'] } }, data: { status: 'CANCELLED' } });
+      await tx.memoApprovalRound.update({ where: { id: round.id }, data: { status: 'WITHDRAWN', closedAt: new Date() } });
+    }
+    await tx.memo.update({ where: { id: memo.id }, data: { status: 'WITHDRAWN', approvalStatus: 'WITHDRAWN', updatedById: actor.id } });
+    await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'WITHDRAWN', entity: 'MEMO', entityId: memo.id, userId: actor.id } });
+    return { memoId: memo.id, approvalStatus: 'WITHDRAWN' };
   });
 }
 

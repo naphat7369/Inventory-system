@@ -81,7 +81,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
     include: {
       department: true,
       memoType: true,
-      _count: { select: { emailDeliveries: true } },
+      _count: { select: { emailDeliveries: { where: { template: { in: ['MEMO_APPROVED_OFFICIAL', 'MEMO_OFFICIAL_PDF'] }, status: 'SENT' } } } },
     },
     orderBy: { updatedAt: 'desc' },
     skip,

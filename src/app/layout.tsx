@@ -32,12 +32,13 @@ export default async function RootLayout({
   const session = await getSession();
   const approvalProfile = session?.id ? await prisma.user.findUnique({
     where: { id: String(session.id) },
-    select: { isApprover: true, _count: { select: { approvalSteps: { where: { status: 'PENDING' } } } } },
+    select: { isApprover: true, _count: { select: { approvalSteps: { where: { status: 'PENDING' } }, notifications: { where: { readAt: null } } } } },
   }) : null;
   const sidebarUser = session ? {
     ...session,
     isApprover: approvalProfile?.isApprover ?? false,
     pendingApprovalCount: approvalProfile?._count.approvalSteps ?? 0,
+    unreadNotificationCount: approvalProfile?._count.notifications ?? 0,
   } : null;
 
   return (

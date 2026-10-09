@@ -151,6 +151,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     // Handle signatures update
     if (data.signatures) {
+      const signatureApproverIds = data.signatures.flatMap((signature: { approverId?: string | null }) => signature.approverId ? [signature.approverId] : []);
+      if (new Set(signatureApproverIds).size !== signatureApproverIds.length) {
+        return NextResponse.json({ error: 'ไม่สามารถเลือกชื่อผู้ลงนามซ้ำในเอกสารเดียวกันได้' }, { status: 400 });
+      }
       updateData.signatures = {
         deleteMany: {},
         create: data.signatures.map((sig: { approverId?: string | null; role?: string; name?: string | null; position?: string | null }, index: number) => ({

@@ -26,6 +26,7 @@ export const reassignApproverSchema = z.object({
 }).strict();
 
 export const retryJobSchema = z.object({ idempotencyKey }).strict();
+export const withdrawMemoSchema = z.object({ idempotencyKey }).strict();
 
 export const createBranchSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -66,6 +67,10 @@ export const systemSettingsSchema = z.object({
   itEmail: z.string().trim().email().max(254).nullable().optional(),
   attachmentMaxFileMb: z.number().int().min(1).max(100).optional(),
   attachmentMaxTotalMb: z.number().int().min(1).max(500).optional(),
+  eapproveEmailEnabled: z.boolean().optional(),
+  eapproveCalendarEnabled: z.boolean().optional(),
+  eapproveOfficialPdfAutoSendEnabled: z.boolean().optional(),
+  emailAttachmentMaxMb: z.number().int().min(1).max(100).optional(),
 }).strict();
 
 export function parseBody<T>(schema: z.ZodType<T>, value: unknown): T {

@@ -67,7 +67,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
       },
       attachments: { orderBy: { createdAt: 'asc' } },
       pdfArtifacts: { where: { kind: 'OFFICIAL' }, orderBy: { createdAt: 'desc' }, take: 1 },
-      _count: { select: { emailDeliveries: true } },
+      _count: { select: { emailDeliveries: { where: { template: { in: ['MEMO_APPROVED_OFFICIAL', 'MEMO_OFFICIAL_PDF'] }, status: 'SENT' } } } },
       approvalRounds: {
         orderBy: { roundNumber: 'desc' },
         take: 1,
@@ -163,6 +163,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
   const canEdit = (isAdmin || isOwner) && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
   const isCurrentApprover = latestRound?.status === 'ACTIVE' && latestRound.steps.some((step) => step.status === 'PENDING' && step.approverId === currentUser.id);
   const canSubmit = isOwner && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
+  const canWithdraw = (isOwner || isAdmin) && ['SUBMITTED', 'IN_REVIEW'].includes(memo.approvalStatus);
   const backFallbackHref = isApprovalParticipant && !isOwner ? '/memos/approvals' : '/memos';
 
   return (
@@ -198,6 +199,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           approvalStatus={memo.approvalStatus}
           pdfStatus={memo.pdfStatus}
           canSubmit={canSubmit}
+          canWithdraw={canWithdraw}
           isCurrentApprover={Boolean(isCurrentApprover)}
           memoTypeName={memo.memoType?.name ?? null}
           approvalSignatures={currentUser.approvalSignatures.map((signature) => ({

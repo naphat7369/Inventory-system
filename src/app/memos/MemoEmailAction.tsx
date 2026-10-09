@@ -97,14 +97,13 @@ export function MemoEmailAction({
         body: JSON.stringify({
           recipient: normalizedRecipient,
           message,
-          memoUrl: `${window.location.origin}/memos/${memoId}`,
           idempotencyKey: requestKeyRef.current,
         }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'ส่ง E-Mail ไม่สำเร็จ');
 
-      const nextCount = typeof body.sendCount === 'number' ? body.sendCount : displayedSendCount + 1;
+      const nextCount = typeof body.sendCount === 'number' ? body.sendCount : displayedSendCount;
       setSendCount(nextCount);
       setResult({ recipient: normalizedRecipient, status: body.status || 'PENDING', sendCount: nextCount });
       setMessage('');
@@ -162,7 +161,7 @@ export function MemoEmailAction({
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">ส่งถึง</p>
                       <p className="mt-1 break-all text-sm font-bold text-slate-900 dark:text-white">{result.recipient}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-extrabold text-sky-700 dark:bg-sky-950 dark:text-sky-300">ครั้งที่ {result.sendCount}</span>
+                    <span className="shrink-0 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-extrabold text-sky-700 dark:bg-sky-950 dark:text-sky-300">ส่งสำเร็จแล้ว {result.sendCount} ครั้ง</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3 text-xs font-semibold text-emerald-700 dark:border-slate-700 dark:text-emerald-300">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />

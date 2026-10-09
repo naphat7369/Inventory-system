@@ -352,6 +352,10 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   };
 
   const handleSignatureUserChange = (index: number, selectedId: string) => {
+    if (selectedId && signatures.some((signature, signatureIndex) => signatureIndex !== index && signature.approverId === selectedId)) {
+      alert('ไม่สามารถเลือกชื่อซ้ำในเอกสารเดียวกันได้');
+      return;
+    }
     const selectedUser = selectedId === currentUser.id
       ? currentUser
       : approvers.find((approver) => approver.id === selectedId);
@@ -981,7 +985,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
                           ...(sig.name && !sig.approverId
                             ? [{ value: `legacy:${sig.name}`, label: `${sig.name} (กรุณาเลือกใหม่)`, searchText: sig.name }]
                             : []),
-                          ...approverOptions,
+                          ...approverOptions.filter((option) => option.value === sig.approverId || !signatures.some((signature, signatureIndex) => signatureIndex !== index && signature.approverId === option.value)),
                         ]}
                     placeholder="ค้นหาและเลือกผู้เซ็น..."
                     ariaLabel={`ค้นหาและเลือกผู้เซ็นลำดับ ${index + 1}`}

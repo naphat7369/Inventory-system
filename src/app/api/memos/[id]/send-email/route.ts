@@ -1,13 +1,14 @@
 import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { stat } from 'node:fs/promises';
+import path from 'node:path';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 const requestSchema = z.object({
   recipient: z.string().trim().email().max(254),
   message: z.string().trim().max(5000).optional().default(''),
-  memoUrl: z.string().trim().url().max(2000),
   idempotencyKey: z.string().trim().min(8).max(200),
 });
 
@@ -35,12 +36,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (memo.pdfStatus !== 'READY' || memo.pdfArtifacts.length === 0) {
     return NextResponse.json({ error: 'Official PDF ยังไม่พร้อม กรุณารอให้ PDF Status เป็น READY' }, { status: 409 });
   }
+  const storageRoot = path.join(process.cwd(), 'storage', 'eapprove', 'official-pdfs');
+  const artifactPath = path.join(storageRoot, memo.id, path.basename(memo.pdfArtifacts[0].storageKey));
+  const setting = await prisma.systemSetting.findUnique({ where: { key: 'emailAttachmentMaxMb' } });
+  let maxMb = 10;
+  try { maxMb = Math.max(1, Math.min(100, Number(JSON.parse(setting?.value ?? '10')) || 10)); } catch { maxMb = 10; }
+  try {
+    if ((await stat(artifactPath)).size > maxMb * 1024 * 1024) return NextResponse.json({ error: `Official PDF เกินขนาดอีเมลสูงสุด ${maxMb} MB จึงไม่สามารถส่งให้ผู้รับภายนอกได้` }, { status: 413 });
+  } catch { return NextResponse.json({ error: 'ไม่พบไฟล์ Official PDF ใน Storage' }, { status: 409 }); }
 
   const idempotencyKey = `EMAIL:MEMO_SHARE:${memo.id}:${parsed.data.idempotencyKey}`;
   const payload = JSON.stringify({
     actorId: actor.id,
-    memoUrl: parsed.data.memoUrl,
-    subject: `${memo.documentNo ? `${memo.documentNo} - ` : ''}${memo.subject}`,
+    documentNo: memo.documentNo,
+    subject: memo.subject,
     message: parsed.data.message,
   });
 
@@ -61,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         userId: actor.id,
         details: JSON.stringify({ memoId: memo.id, recipient: created.recipient }),
       } });
-      const sendCount = await tx.emailDelivery.count({ where: { memoId: memo.id } });
+      const sendCount = await tx.emailDelivery.count({ where: { memoId: memo.id, template: { in: ['MEMO_APPROVED_OFFICIAL', 'MEMO_OFFICIAL_PDF'] }, status: 'SENT' } });
       return { delivery: created, sendCount };
     });
     return NextResponse.json({ deliveryId: result.delivery.id, status: result.delivery.status, sendCount: result.sendCount }, { status: 202 });
@@ -69,7 +78,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       const existing = await prisma.emailDelivery.findUnique({ where: { idempotencyKey } });
       if (existing) {
-        const sendCount = await prisma.emailDelivery.count({ where: { memoId: memo.id } });
+        const sendCount = await prisma.emailDelivery.count({ where: { memoId: memo.id, template: { in: ['MEMO_APPROVED_OFFICIAL', 'MEMO_OFFICIAL_PDF'] }, status: 'SENT' } });
         return NextResponse.json({ deliveryId: existing.id, status: existing.status, sendCount, duplicate: true }, { status: 200 });
       }
     }

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Building2, CheckCircle2, Clock3, FileCheck2, Filter, Inbox, RotateCcw } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { NotificationPreferences } from './NotificationPreferences';
 
 const views = [
   { key: 'pending', label: 'รอฉันอนุมัติ', icon: Clock3 },
@@ -19,7 +20,7 @@ function formatBangkok(value: Date) {
 export default async function ApprovalInboxPage({ searchParams }: { searchParams: Promise<{ view?: string; branchId?: string; departmentId?: string }> }) {
   const session = await getSession();
   if (!session?.id) redirect('/login');
-  const currentUser = await prisma.user.findUnique({ where: { id: String(session.id) }, select: { isActive: true, isApprover: true } });
+  const currentUser = await prisma.user.findUnique({ where: { id: String(session.id) }, select: { isActive: true, isApprover: true, email: true, approvalEmailEnabled: true, approvalCalendarEnabled: true } });
   if (!currentUser?.isActive || !currentUser.isApprover) redirect('/memos');
   const requested = await searchParams;
   const view = ['pending', 'history', 'all'].includes(requested.view ?? '') ? requested.view! : 'pending';
@@ -71,6 +72,7 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
           <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-blue-200">Approval workspace</p>
           <div className="mt-1 flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-3xl font-bold">กล่องงานอนุมัติ</h1><p className="mt-2 text-sm text-blue-100">เอกสารจะแสดงในรายการรออนุมัติเมื่อถึงคิวของคุณเท่านั้น</p></div><span className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-bold backdrop-blur">รอดำเนินการ {pendingCount} รายการ</span></div>
         </header>
+        <NotificationPreferences email={currentUser.email} initialEmail={currentUser.approvalEmailEnabled} initialCalendar={currentUser.approvalCalendarEnabled}/>
 
         <nav className="mt-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           {views.map(({ key, label, icon: Icon }) => {

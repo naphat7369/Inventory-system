@@ -6,6 +6,7 @@ import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wren
 import { logout, getExpiringRenewalsCount } from '@/app/actions';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/app/components/ThemeToggle';
+import { NotificationBell } from '@/components/NotificationBell';
 import type { JWTPayload } from 'jose';
 
 export function Sidebar({ user }: { user: JWTPayload }) {
@@ -68,6 +69,7 @@ export function Sidebar({ user }: { user: JWTPayload }) {
       <div suppressHydrationWarning className="md:hidden flex items-center justify-between bg-gray-900 text-white p-4 w-full print:hidden z-30 relative shadow-sm">
         <div suppressHydrationWarning className="text-xl font-bold">E-Approve System</div>
         <div suppressHydrationWarning className="flex items-center gap-1">
+          <NotificationBell initialUnreadCount={Number(user.unreadNotificationCount ?? 0)} />
           <ThemeToggle />
           <button 
             onClick={() => setIsOpen(true)}
@@ -93,6 +95,7 @@ export function Sidebar({ user }: { user: JWTPayload }) {
       <div suppressHydrationWarning className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-gray-900 text-white min-h-screen print:hidden transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} dark:border-r dark:border-slate-800 shadow-[4px_0_24px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.4)]`}>
         <div suppressHydrationWarning className="p-4 text-xl font-bold border-b border-gray-800 flex justify-between items-center">
           <span suppressHydrationWarning>E-Approve System</span>
+          <div className="ml-auto mr-2 hidden md:block"><NotificationBell initialUnreadCount={Number(user.unreadNotificationCount ?? 0)} /></div>
           <button 
             onClick={() => setIsOpen(false)}
             aria-label="Close Menu"

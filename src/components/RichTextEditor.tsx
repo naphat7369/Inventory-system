@@ -70,7 +70,7 @@ export function RichTextEditor({ value, onChange, disabled }: RichTextEditorProp
         contentEditable={!disabled}
         onInput={handleInput}
         onBlur={handleInput}
-        className="min-h-[300px] p-4 bg-white dark:bg-slate-900 focus:outline-none prose max-w-none dark:prose-invert"
+        className="memo-rich-text-editor min-h-[300px] p-4 bg-white dark:bg-slate-900 focus:outline-none prose max-w-none dark:prose-invert"
         style={{ whiteSpace: 'pre-wrap' }}
       />
     </div>

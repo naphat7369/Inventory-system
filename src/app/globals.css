@@ -67,6 +67,49 @@ body {
   font-family: var(--font-body), sans-serif;
 }
 
+/*
+ * Memo typography is shared by the editor, screen preview and PDF renderer.
+ * Keep the bundled Next.js font first so Windows preview and Linux PDF workers
+ * use identical glyph metrics and page breaks.
+ */
+.memo-rich-text-editor,
+.memo-document,
+.memo-measurement-container {
+  font-family: var(--font-sarabun), "Sarabun", "Noto Sans Thai", Tahoma, Arial, sans-serif;
+  font-kerning: normal;
+}
+
+.memo-rich-text-editor {
+  font-size: 14pt;
+  line-height: 1.45;
+  text-indent: 1.5cm;
+}
+
+.memo-rich-text-editor p,
+.memo-rich-text-editor > div {
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+  text-indent: 1.5cm;
+}
+
+.memo-rich-text-editor h1,
+.memo-rich-text-editor h2,
+.memo-rich-text-editor h3,
+.memo-rich-text-editor h4,
+.memo-rich-text-editor ul,
+.memo-rich-text-editor ol,
+.memo-rich-text-editor table,
+.memo-rich-text-editor li,
+.memo-rich-text-editor img {
+  text-indent: 0;
+}
+
+.memo-rich-text-editor *,
+.memo-content-page-blocks *,
+.memo-content * {
+  font-family: inherit !important;
+}
+
 /* Signature Element: Barcode-style divider pattern */
 .barcode-divider {
   background-image: repeating-linear-gradient(

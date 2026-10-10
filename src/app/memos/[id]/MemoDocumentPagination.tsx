@@ -145,9 +145,7 @@ export function MemoDocumentPagination({
   const dummy261mmRef = useRef<HTMLDivElement>(null);
   const page1HeaderRef = useRef<HTMLDivElement>(null);
   const page2RunningHeaderRef = useRef<HTMLDivElement>(null);
-  const closingTextRef = useRef<HTMLDivElement>(null);
-  const signatureGroupRef = useRef<HTMLDivElement>(null);
-  const footerNoteRef = useRef<HTMLDivElement>(null);
+  const finalBlockRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const viewport = previewViewportRef.current;
@@ -212,11 +210,7 @@ export function MemoDocumentPagination({
       const page1HeaderHeight = page1HeaderRef.current?.offsetHeight || 230;
       const page2RunningHeight = page2RunningHeaderRef.current?.offsetHeight || 42;
       
-      const closingHeight = closingTextRef.current?.offsetHeight || 44;
-      const sigHeight = signatureGroupRef.current?.offsetHeight || 130;
-      const remarkHeight = memo.remark ? (footerNoteRef.current?.offsetHeight || 32) : 0;
-      const finalBlockGap = 32; // mt-8 spacing before signatures
-      const finalBlockHeight = closingHeight + sigHeight + finalBlockGap + remarkHeight;
+      const finalBlockHeight = finalBlockRef.current?.offsetHeight || 220;
 
       // Usable capacity for content on Page 1 and Page 2+
       const page1Capacity = Math.max(100, a4InnerHeight - page1HeaderHeight - 8);
@@ -229,7 +223,7 @@ export function MemoDocumentPagination({
       const measureHtml = (html: string): number => {
         if (!measureContainer) return 30;
         const tempDiv = document.createElement('div');
-        tempDiv.className = 'memo-content text-[14pt] leading-[1.45] text-black';
+        tempDiv.className = 'memo-content memo-content-block pb-2 text-[14pt] leading-[1.45] text-black';
         tempDiv.style.width = '172mm';
         tempDiv.style.boxSizing = 'border-box';
         tempDiv.style.visibility = 'hidden';
@@ -246,8 +240,7 @@ export function MemoDocumentPagination({
       const totalContentHeight = blockHeights.reduce((acc, val) => acc + val, 0);
 
       // 5. Test if everything fits on Page 1 (Single Page Check)
-      const singlePageFinalHeight = closingHeight + sigHeight + finalBlockGap;
-      if (totalContentHeight + singlePageFinalHeight <= page1Capacity) {
+      if (totalContentHeight + finalBlockHeight <= page1Capacity) {
         if (!cancelled) {
           setPages([
             {
@@ -496,7 +489,10 @@ export function MemoDocumentPagination({
   const totalPages = pages.length || 1;
 
   return (
-    <div className="memo-document-container w-full flex flex-col items-center">
+    <div
+      className="memo-document-container w-full flex flex-col items-center"
+      data-memo-pagination-ready={!isPaginating && pages.length > 0 ? 'true' : 'false'}
+    >
       {/* Loading indicator while calculating pagination */}
       {isPaginating && (
         <div className="py-6 text-slate-500 font-medium text-sm flex items-center justify-center gap-2 print:hidden">
@@ -654,7 +650,7 @@ export function MemoDocumentPagination({
                 {page.blocks.map((b, idx) => (
                   <div
                     key={idx}
-                    className="memo-content-block mb-2"
+                    className="memo-content-block pb-2"
                     dangerouslySetInnerHTML={{ __html: b.html }}
                   />
                 ))}
@@ -702,7 +698,7 @@ export function MemoDocumentPagination({
           boxSizing: 'border-box',
           visibility: 'hidden',
           pointerEvents: 'none',
-          fontFamily: "'Angsana New', 'TH Sarabun New', 'Sarabun', 'Cordia New', sans-serif",
+          fontFamily: "var(--font-sarabun), 'Sarabun', 'Noto Sans Thai', Tahoma, Arial, sans-serif",
           color: '#000000',
         }}
       >
@@ -725,12 +721,28 @@ export function MemoDocumentPagination({
             </div>
             <div style={{ width: '100%', height: '1px', background: '#c6a36b', marginTop: '2.5mm' }} />
           </header>
-          <table className="w-full border border-black mb-2.5 text-[14pt]">
+          <table className="w-full border-collapse border border-black mb-2.5 text-[14pt] text-black">
             <tbody>
-              <tr><td className="p-1">Dummy Row 1</td></tr>
-              <tr><td className="p-1">Dummy Row 2</td></tr>
-              <tr><td className="p-1">Dummy Row 3</td></tr>
-              <tr><td className="p-1">Dummy Row 4</td></tr>
+              <tr className="border-b border-black">
+                <td className="border-r border-black px-2.5 py-0.5 font-bold w-20 text-center">เรียน</td>
+                <td className="px-2.5 py-0.5" colSpan={3}>{memo.recipient}</td>
+              </tr>
+              <tr className="border-b border-black">
+                <td className="border-r border-black px-2.5 py-0.5 font-bold text-center">จาก</td>
+                <td className="px-2.5 py-0.5" colSpan={3}>{memo.sender}</td>
+              </tr>
+              <tr className="border-b border-black">
+                <td className="border-r border-black px-2.5 py-0.5 font-bold text-center">เรื่อง</td>
+                <td className="border-r border-black px-2.5 py-0.5 w-1/2 font-medium">{memo.subject}</td>
+                <td className="border-r border-black px-2.5 py-0.5 font-bold w-20 text-center">อ้างถึง</td>
+                <td className="px-2.5 py-0.5">{memo.reference || '-'}</td>
+              </tr>
+              <tr>
+                <td className="border-r border-black px-2.5 py-0.5 font-bold text-center">วันที่</td>
+                <td className="border-r border-black px-2.5 py-0.5">{thaiDateStr}</td>
+                <td className="border-r border-black px-2.5 py-0.5 font-bold text-center">สำเนา</td>
+                <td className="px-2.5 py-0.5">{memo.carbonCopy || '-'}</td>
+              </tr>
             </tbody>
           </table>
           <div className="font-bold text-[14.5pt] mb-1.5">เรื่อง {memo.subject}</div>
@@ -742,33 +754,29 @@ export function MemoDocumentPagination({
           <span>{memo.documentNo || 'DRAFT'} | หน้า 2 / 2</span>
         </div>
 
-        {/* Closing Text Measurement */}
-        <div ref={closingTextRef} className="memo-closing-block mt-6 mb-3 text-[14pt] font-bold text-black indent-[1.5cm]">
-          จึงเรียนมาเพื่อโปรดพิจารณา และอนุมัติตามข้อมูลข้างต้น
-        </div>
-
-        {/* Signature Group Measurement */}
-        <div ref={signatureGroupRef} className="memo-signature-group">
-          {renderSignatures(signatures)}
-        </div>
-
-        {/* Footer Note Measurement */}
-        {memo.remark && (
-          <div ref={footerNoteRef} className="memo-footer-note mt-6 text-[13pt] leading-normal text-black whitespace-pre-wrap">
-            <span className="font-bold">หมายเหตุ: </span>
-            <span>{memo.remark}</span>
+        {/* Final section measurement uses the same spacing as the rendered page. */}
+        <div ref={finalBlockRef} className="flex flex-col">
+          <div className="memo-closing-block mt-6 mb-3 text-[14pt] font-bold text-black indent-[1.5cm]">
+            จึงเรียนมาเพื่อโปรดพิจารณา และอนุมัติตามข้อมูลข้างต้น
           </div>
-        )}
+          <div className="memo-signature-group mt-8 mb-2 pt-1 pb-1">
+            {renderSignatures(signatures)}
+          </div>
+          {memo.remark && (
+            <div className="memo-footer-note mt-auto pt-3 border-t border-slate-300/80 text-[13pt] leading-normal text-black whitespace-pre-wrap">
+              <span className="font-bold">หมายเหตุ: </span>
+              <span>{memo.remark}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ========================================================
           GLOBAL PRINT & PAGINATION STYLES
          ======================================================== */}
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
-
         .memo-paper {
-          font-family: 'Angsana New', 'TH Sarabun New', 'Sarabun', 'Cordia New', sans-serif;
+          font-family: var(--font-sarabun), 'Sarabun', 'Noto Sans Thai', Tahoma, Arial, sans-serif;
           color: #000000;
         }
 
@@ -836,7 +844,7 @@ export function MemoDocumentPagination({
         .memo-title {
           margin: 0;
           color: #000000;
-          font-family: 'Angsana New', 'TH Sarabun New', 'Sarabun', 'Cordia New', sans-serif;
+          font-family: inherit;
           font-size: 17pt;
           font-weight: 700;
           line-height: 1.1;
@@ -847,7 +855,7 @@ export function MemoDocumentPagination({
         .memo-department {
           margin: 1.2mm 0 0;
           color: #000000;
-          font-family: 'Angsana New', 'TH Sarabun New', 'Sarabun', 'Cordia New', sans-serif;
+          font-family: inherit;
           font-size: 11pt;
           font-weight: 700;
           line-height: 1.2;
@@ -859,7 +867,7 @@ export function MemoDocumentPagination({
           margin-left: auto;
           align-self: center;
           color: #000000;
-          font-family: 'Angsana New', 'TH Sarabun New', 'Sarabun', 'Cordia New', sans-serif;
+          font-family: inherit;
           font-size: 14pt;
           font-weight: 700;
           white-space: nowrap;

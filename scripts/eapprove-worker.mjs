@@ -12,7 +12,7 @@ import { renderCalendar, renderEmail } from './eapprove-email-templates.mjs';
 
 const prisma = new PrismaClient();
 const appUrl = (process.env.EAPPROVE_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
-const rendererVersion = 'v2-color-signatures';
+const rendererVersion = 'v3-sarabun-pagination';
 const once = process.argv.includes('--once');
 const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_FROM);
 let stopping = false;
@@ -323,6 +323,7 @@ async function renderPdf(job, memoVersionId) {
       () => {
         const signatureImages = [...document.querySelectorAll('.memo-approval-signature-image')];
         return document.fonts.status === 'loaded'
+          && document.querySelector('[data-memo-pagination-ready="true"]')
           && document.querySelectorAll('.memo-page-sheet').length > 0
           && document.querySelectorAll('[data-signature-processing="true"]').length === 0
           && signatureImages.every((image) => image.complete && image.naturalWidth > 0);

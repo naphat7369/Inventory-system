@@ -11,6 +11,7 @@ interface RichTextEditorProps {
 
 export function RichTextEditor({ value, onChange, disabled }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const initialMarkupRef = useRef({ __html: value });
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
@@ -68,10 +69,12 @@ export function RichTextEditor({ value, onChange, disabled }: RichTextEditorProp
       <div 
         ref={editorRef}
         contentEditable={!disabled}
+        suppressContentEditableWarning
         onInput={handleInput}
         onBlur={handleInput}
         className="memo-rich-text-editor min-h-[300px] p-4 bg-white dark:bg-slate-900 focus:outline-none prose max-w-none dark:prose-invert"
         style={{ whiteSpace: 'pre-wrap' }}
+        dangerouslySetInnerHTML={initialMarkupRef.current}
       />
     </div>
   );

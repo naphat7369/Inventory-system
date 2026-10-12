@@ -698,7 +698,7 @@ export function MemoDocumentPagination({
           boxSizing: 'border-box',
           visibility: 'hidden',
           pointerEvents: 'none',
-          fontFamily: "var(--font-sarabun), 'Sarabun', 'Noto Sans Thai', Tahoma, Arial, sans-serif",
+          fontFamily: "'Angsana New', 'TH Sarabun New', var(--font-sarabun), 'Sarabun', 'Noto Sans Thai', Tahoma, Arial, sans-serif",
           color: '#000000',
         }}
       >
@@ -776,7 +776,7 @@ export function MemoDocumentPagination({
          ======================================================== */}
       <style dangerouslySetInnerHTML={{__html: `
         .memo-paper {
-          font-family: var(--font-sarabun), 'Sarabun', 'Noto Sans Thai', Tahoma, Arial, sans-serif;
+          font-family: 'Angsana New', 'TH Sarabun New', var(--font-sarabun), 'Sarabun', 'Noto Sans Thai', Tahoma, Arial, sans-serif;
           color: #000000;
         }
 

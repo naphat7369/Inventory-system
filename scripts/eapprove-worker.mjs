@@ -12,7 +12,7 @@ import { renderCalendar, renderEmail } from './eapprove-email-templates.mjs';
 
 const prisma = new PrismaClient();
 const appUrl = (process.env.EAPPROVE_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
-const rendererVersion = 'v3-sarabun-pagination';
+const rendererVersion = 'v4-angsana-pagination';
 const once = process.argv.includes('--once');
 const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_FROM);
 let stopping = false;

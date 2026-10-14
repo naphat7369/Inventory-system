@@ -17,6 +17,8 @@ export type Signature = {
   name?: string | null;
   position?: string | null;
   sortOrder: number;
+  source?: string;
+  sources?: Array<{ source: string; referenceId?: string }>;
 };
 
 function memoAttachmentUrl(memoId: string, suffix = '') {
@@ -231,10 +233,10 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       ? initialData.signatures.map((signature) => ({ ...signature, role: normalizeSignatureRole(signature.role) }))
       : DEFAULT_SIGNATURES.map((signature, index) => {
           if (index === 0) {
-            return { ...signature, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position };
+            return { ...signature, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position, source: 'CREATOR' };
           }
           if (index === 1 && hod) {
-            return { ...signature, approverId: hod.id, name: userDisplayName(hod), position: hod.position };
+            return { ...signature, approverId: hod.id, name: userDisplayName(hod), position: hod.position, source: 'HOD' };
           }
           return signature;
         })
@@ -242,20 +244,32 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
 
   // Auto-update HOD signature when department changes
   useEffect(() => {
-    if (isEdit) return;
     const currentDept = departments.find(d => d.id === departmentId);
     const newHod = approvers.find(a => a.id === currentDept?.hodId);
     
     setSignatures(prev => {
-      const newSigs = [...prev];
-      if (newSigs[1] && newSigs[1].role === 'พิจารณาโดย' && (!newSigs[1].approverId || prev[1].approverId !== newHod?.id)) {
-        if (newHod) {
-          newSigs[1] = { ...newSigs[1], approverId: newHod.id, name: userDisplayName(newHod), position: newHod.position };
-        }
+      if (!newHod || prev[0]?.approverId === newHod.id) return prev;
+      const existingIndex = prev.findIndex((signature) => signature.approverId === newHod.id);
+      if (existingIndex >= 0) {
+        if (prev[existingIndex].source === 'HOD' && prev[existingIndex].role === 'พิจารณาโดย') return prev;
+        return prev.map((signature, index) => index === existingIndex
+          ? { ...signature, role: 'พิจารณาโดย', name: userDisplayName(newHod), position: newHod.position, source: 'HOD' }
+          : signature);
       }
-      return newSigs;
+      const newSigs = [...prev];
+      const hodSignature: Signature = { role: 'พิจารณาโดย', approverId: newHod.id, name: userDisplayName(newHod), position: newHod.position, sortOrder: 1, source: 'HOD' };
+      if (newSigs[1] && newSigs[1].role === 'พิจารณาโดย' && (!newSigs[1].approverId || newSigs[1].source === 'HOD')) newSigs[1] = hodSignature;
+      else newSigs.splice(1, 0, hodSignature);
+      return newSigs.map((signature, index) => ({ ...signature, sortOrder: index }));
     });
-  }, [departmentId, departments, approvers, isEdit]);
+  }, [departmentId, departments, approvers]);
+
+  const lockedSignatureReason = (signature: Signature, index: number) => {
+    if (index === 0 || signature.source === 'CREATOR' || signature.role === 'นำเสนอโดย') return 'ผู้จัดทำ Memo';
+    if (signature.source === 'HOD' || signature.source === 'GM_FALLBACK' || signature.approverId === selectedDepartment?.hodId) return 'HOD/GM สำรอง';
+    if (signature.source === 'MEMO_TYPE_REQUIRED' || signature.sources?.some((item) => item.source === 'MEMO_TYPE_REQUIRED')) return 'ผู้อนุมัติบังคับ';
+    return null;
+  };
 
   const isFinal = isEdit && initialData?.status === 'FINAL';
   const isCancelled = isEdit && initialData?.status === 'CANCELLED';
@@ -343,6 +357,8 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   };
 
   const handleSignatureRoleChange = (index: number, role: string) => {
+    if (lockedSignatureReason(signatures[index], index)) return;
+    if (index !== 0 && role === 'นำเสนอโดย') return;
     const next = [...signatures];
     next[index] = role === 'นำเสนอโดย'
       ? { ...next[index], role, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position }
@@ -352,6 +368,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   };
 
   const handleSignatureUserChange = (index: number, selectedId: string) => {
+    if (lockedSignatureReason(signatures[index], index)) return;
     if (selectedId && signatures.some((signature, signatureIndex) => signatureIndex !== index && signature.approverId === selectedId)) {
       alert('ไม่สามารถเลือกชื่อซ้ำในเอกสารเดียวกันได้');
       return;
@@ -376,6 +393,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   };
 
   const removeSignature = (index: number) => {
+    if (lockedSignatureReason(signatures[index], index)) return;
     const newSigs = signatures.filter((_, i) => i !== index).map((s, i) => ({ ...s, sortOrder: i }));
     setSignatures(newSigs);
     handleChange();
@@ -387,6 +405,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     
     const newSigs = [...signatures];
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (lockedSignatureReason(newSigs[index], index) || lockedSignatureReason(newSigs[swapIndex], swapIndex)) return;
     
     const temp = newSigs[index];
     newSigs[index] = newSigs[swapIndex];
@@ -412,8 +431,14 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       position: item.position ?? "",
       sortOrder: index,
     }));
+    const lockedSignatures = signatures.filter((signature, index) => Boolean(lockedSignatureReason(signature, index)));
+    const lockedIds = new Set(lockedSignatures.flatMap((signature) => signature.approverId ? [signature.approverId] : []));
+    const mergedSignatures = [
+      ...lockedSignatures,
+      ...copiedSignatures.filter((signature) => signature.role !== 'นำเสนอโดย' && (!signature.approverId || !lockedIds.has(signature.approverId))),
+    ].map((signature, index) => ({ ...signature, sortOrder: index }));
 
-    setSignatures(copiedSignatures);
+    setSignatures(mergedSignatures);
     setApprovalSignatureSource(null);
     setApprovalSignatureError('');
     setIsTemplateManagerOpen(false);
@@ -952,10 +977,10 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
           {signatures.map((sig, index) => (
             <div key={index} className="flex flex-col md:flex-row gap-3 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700 items-center">
               <div className="flex flex-col gap-1 text-gray-400">
-                <button type="button" onClick={() => moveSignature(index, 'up')} disabled={index === 0 || isCancelled} className="hover:text-gray-700 disabled:opacity-30">
+                <button type="button" onClick={() => moveSignature(index, 'up')} disabled={index === 0 || isCancelled || Boolean(lockedSignatureReason(sig, index)) || Boolean(index > 0 && lockedSignatureReason(signatures[index - 1], index - 1))} className="hover:text-gray-700 disabled:opacity-30">
                   <ArrowUp size={18} />
                 </button>
-                <button type="button" onClick={() => moveSignature(index, 'down')} disabled={index === signatures.length - 1 || isCancelled} className="hover:text-gray-700 disabled:opacity-30">
+                <button type="button" onClick={() => moveSignature(index, 'down')} disabled={index === signatures.length - 1 || isCancelled || Boolean(lockedSignatureReason(sig, index)) || Boolean(index < signatures.length - 1 && lockedSignatureReason(signatures[index + 1], index + 1))} className="hover:text-gray-700 disabled:opacity-30">
                   <ArrowDown size={18} />
                 </button>
               </div>
@@ -967,11 +992,13 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
                     value={sig.role}
                     onChange={e => handleSignatureRoleChange(index, e.target.value)}
                     required
-                    disabled={isCancelled}
+                    disabled={isCancelled || Boolean(lockedSignatureReason(sig, index))}
                     className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 disabled:opacity-60"
                   >
                     {!SIGNATURE_ROLES.includes(sig.role) && sig.role && <option value={sig.role}>{sig.role} (ข้อมูลเดิม)</option>}
-                    {SIGNATURE_ROLES.map((role) => <option value={role} key={role}>{role}</option>)}
+                    {SIGNATURE_ROLES
+                      .filter((role) => index === 0 || role !== 'นำเสนอโดย')
+                      .map((role) => <option value={role} key={role}>{role}</option>)}
                   </select>
                 </div>
                 <div>
@@ -990,7 +1017,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
                     placeholder="ค้นหาและเลือกผู้เซ็น..."
                     ariaLabel={`ค้นหาและเลือกผู้เซ็นลำดับ ${index + 1}`}
                     compact
-                    disabled={isCancelled}
+                    disabled={isCancelled || Boolean(lockedSignatureReason(sig, index))}
                   />
                 </div>
                 <div>
@@ -1005,10 +1032,15 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
                 </div>
               </div>
               
-              {!isCancelled && (
+              {!isCancelled && !lockedSignatureReason(sig, index) && (
                 <button type="button" onClick={() => removeSignature(index)} className="text-red-500 hover:text-red-700 p-2 ml-2 self-start md:self-center" title="Delete">
                   <Trash2 size={20} />
                 </button>
+              )}
+              {!isCancelled && lockedSignatureReason(sig, index) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-200" title="รายชื่อนี้ถูกกำหนดโดยระบบและไม่สามารถแก้ไขหรือลบได้">
+                  <Lock size={13}/>{lockedSignatureReason(sig, index)}
+                </span>
               )}
             </div>
           ))}

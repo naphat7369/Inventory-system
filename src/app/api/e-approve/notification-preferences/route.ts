@@ -2,55 +2,39 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { approvalCalendarWindow, automaticDeliveryKey, cancelApprovalCalendar, enqueueApprovalAssignment, enqueueEmailDelivery, isValidEmail } from '@/lib/eapprove/notification-service';
+import { cancelApprovalDigestJobs, enqueueApprovalAssignment, ensureApprovalDigestJob, isValidEmail, normalizeEmail } from '@/lib/eapprove/notification-service';
 
-const schema = z.object({ approvalEmailEnabled: z.boolean(), approvalCalendarEnabled: z.boolean() }).strict();
-
-export async function GET() {
-  const session = await getSession();
-  if (!session?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const user = await prisma.user.findUnique({ where: { id: String(session.id) }, select: { email: true, approvalEmailEnabled: true, approvalCalendarEnabled: true } });
-  return user ? NextResponse.json(user) : NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
-}
+const schema = z.object({ email: z.string().trim().email().max(254), approvalEmailEnabled: z.boolean(), approvalEmailMode: z.enum(['IMMEDIATE', 'DIGEST']), approvalEmailDigestTime: z.string().regex(/^(?:(?:0[89]|1[0-7]):(?:00|30)|18:00)$/) }).strict();
 
 export async function PATCH(request: Request) {
   const session = await getSession();
   if (!session?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: 'ข้อมูลไม่ถูกต้อง' }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: 'ข้อมูลการแจ้งเตือนไม่ถูกต้อง' }, { status: 400 });
   const userId = String(session.id);
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user?.isActive || !user.isApprover) return NextResponse.json({ error: 'บัญชีนี้ไม่มีสิทธิ์ Approver' }, { status: 403 });
-  if ((parsed.data.approvalEmailEnabled || parsed.data.approvalCalendarEnabled) && !isValidEmail(user.email)) return NextResponse.json({ error: 'ต้องกำหนดอีเมลที่ถูกต้องก่อนเปิดการแจ้งเตือน' }, { status: 400 });
-  const pending = await prisma.memoApprovalStep.findMany({ where: { approverId: userId, status: 'PENDING' }, include: { round: { include: { memo: true } } } });
-  await prisma.$transaction(async tx => {
-    await tx.user.update({ where: { id: userId }, data: parsed.data });
-    if (user.approvalCalendarEnabled && !parsed.data.approvalCalendarEnabled) {
-      for (const step of pending) await cancelApprovalCalendar(tx, { memoId: step.round.memoId, stepId: step.id, reason: 'USER_DISABLED_CALENDAR' });
-    } else if (!user.approvalCalendarEnabled && parsed.data.approvalCalendarEnabled) {
-      const updatedUser = { ...user, ...parsed.data };
-      for (const step of pending) await enqueueApprovalAssignment(tx, { memo: { id: step.round.memo.id, documentNo: step.round.memo.documentNo, subject: step.round.memo.subject }, step, approver: updatedUser });
+  if (!user?.isActive || !user.isApprover) return NextResponse.json({ error: 'ไม่มีสิทธิ์ Approver' }, { status: 403 });
+  const email = normalizeEmail(parsed.data.email);
+  if (!isValidEmail(email)) return NextResponse.json({ error: 'รูปแบบอีเมลไม่ถูกต้อง' }, { status: 400 });
+  const usersWithEmail = await prisma.user.findMany({ where: { id: { not: userId }, email: { not: null } }, select: { email: true } });
+  if (usersWithEmail.some((item) => normalizeEmail(item.email) === email)) return NextResponse.json({ error: 'อีเมลนี้ถูกใช้งานโดยผู้ใช้อื่นแล้ว' }, { status: 409 });
+  await prisma.$transaction(async (tx) => {
+    const pending = await tx.memoApprovalStep.findMany({ where: { approverId: userId, status: 'PENDING' }, include: { round: { include: { memo: true } } } });
+    const now = new Date();
+    await cancelApprovalDigestJobs(tx, userId, 'EMAIL_PREFERENCE_CHANGED');
+    await tx.backgroundJob.updateMany({ where: { type: 'SEND_APPROVAL_REMINDER', payload: { contains: userId }, status: { in: ['PENDING', 'FAILED'] } }, data: { status: 'CANCELLED', completedAt: now, lastErrorCode: 'EMAIL_PREFERENCE_CHANGED' } });
+    await tx.emailDelivery.updateMany({ where: { recipientUserId: userId, template: { in: ['APPROVAL_PENDING', 'APPROVAL_REMINDER'] }, status: { in: ['PENDING', 'RETRY_WAIT', 'PAUSED'] } }, data: { status: 'CANCELLED', completedAt: now, lastErrorCode: 'EMAIL_PREFERENCE_CHANGED' } });
+    const updated = await tx.user.update({ where: { id: userId }, data: { email, approvalEmailEnabled: parsed.data.approvalEmailEnabled, approvalEmailMode: parsed.data.approvalEmailMode, approvalEmailDigestTime: parsed.data.approvalEmailDigestTime } });
+    if (normalizeEmail(user.email) !== email) await tx.auditLog.create({ data: {
+      module: 'E_APPROVE', action: 'USER_NOTIFICATION_EMAIL_UPDATED', entity: 'USER', entityId: userId, userId,
+      oldValue: JSON.stringify({ email: user.email }), newValue: JSON.stringify({ email }),
+    } });
+    if (!updated.approvalEmailEnabled) return;
+    if (updated.approvalEmailMode === 'DIGEST') {
+      if (pending.length > 0) await ensureApprovalDigestJob(tx, updated);
+      return;
     }
-    if (user.approvalEmailEnabled && !parsed.data.approvalEmailEnabled) {
-      for (const step of pending) {
-        const deliveries = await tx.emailDelivery.findMany({ where: { stepId: step.id, template: 'APPROVAL_PENDING', status: { in: ['PENDING', 'RETRY_WAIT', 'PAUSED'] } } });
-        for (const delivery of deliveries) {
-          let hasCalendar = false;
-          try { hasCalendar = Boolean(JSON.parse(delivery.payload).calendar); } catch { hasCalendar = false; }
-          await tx.emailDelivery.update({ where: { id: delivery.id }, data: hasCalendar && parsed.data.approvalCalendarEnabled
-            ? { template: 'APPROVAL_CALENDAR_REQUEST' }
-            : { status: 'CANCELLED', completedAt: new Date(), lastErrorCode: 'USER_DISABLED_EMAIL' } });
-        }
-      }
-      await tx.backgroundJob.updateMany({ where: { type: 'SEND_APPROVAL_REMINDER', payload: { contains: userId }, status: { in: ['PENDING', 'FAILED'] } }, data: { status: 'CANCELLED', completedAt: new Date(), lastErrorCode: 'USER_DISABLED_EMAIL' } });
-    } else if (!user.approvalEmailEnabled && parsed.data.approvalEmailEnabled && !( !user.approvalCalendarEnabled && parsed.data.approvalCalendarEnabled)) {
-      const reminderAt = approvalCalendarWindow().reminderAt;
-      for (const step of pending) {
-        await enqueueEmailDelivery(tx, { memoId: step.round.memoId, recipient: user.email!, recipientUserId: userId, memoVersionId: step.memoVersionId, stepId: step.id, template: 'APPROVAL_PENDING', payload: { stepId: step.id, documentNo: step.round.memo.documentNo, subject: step.round.memo.subject, calendar: null }, idempotencyKey: automaticDeliveryKey(['APPROVAL_PENDING', step.round.memoId, step.memoVersionId, step.id, userId, 'EMAIL_ENABLED']) });
-        await tx.backgroundJob.upsert({ where: { idempotencyKey: `REMINDER:${step.id}:${step.memoVersionId}:${userId}` }, update: { status: 'PENDING', availableAt: reminderAt, completedAt: null, lastErrorCode: null }, create: { type: 'SEND_APPROVAL_REMINDER', memoId: step.round.memoId, idempotencyKey: `REMINDER:${step.id}:${step.memoVersionId}:${userId}`, payload: JSON.stringify({ stepId: step.id, memoVersionId: step.memoVersionId, approverUserId: userId }), availableAt: reminderAt, maxAttempts: 3 } });
-      }
-    }
-    await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'UPDATED_NOTIFICATION_PREFERENCES', entity: 'USER', entityId: userId, userId, newValue: JSON.stringify(parsed.data) } });
+    for (const step of pending) await enqueueApprovalAssignment(tx, { memo: { id: step.round.memo.id, documentNo: step.round.memo.documentNo, subject: step.round.memo.subject }, step, approver: updated });
   });
-  return NextResponse.json(parsed.data);
+  return NextResponse.json({ success: true });
 }

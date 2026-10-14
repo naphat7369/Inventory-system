@@ -68,7 +68,6 @@ export const systemSettingsSchema = z.object({
   attachmentMaxFileMb: z.number().int().min(1).max(100).optional(),
   attachmentMaxTotalMb: z.number().int().min(1).max(500).optional(),
   eapproveEmailEnabled: z.boolean().optional(),
-  eapproveCalendarEnabled: z.boolean().optional(),
   eapproveOfficialPdfAutoSendEnabled: z.boolean().optional(),
   emailAttachmentMaxMb: z.number().int().min(1).max(100).optional(),
 }).strict();

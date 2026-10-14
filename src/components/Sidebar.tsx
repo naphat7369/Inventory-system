@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText, FileCheck2, PenLine, ShieldCheck } from 'lucide-react';
+import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText, FileCheck2, PenLine, ShieldCheck, Mail } from 'lucide-react';
 import { logout, getExpiringRenewalsCount } from '@/app/actions';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/app/components/ThemeToggle';
@@ -37,6 +37,7 @@ export function Sidebar({ user }: { user: JWTPayload }) {
       { name: 'Licenses', href: '/licenses', icon: Key },
       { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText, section: 'เอกสารและการอนุมัติ' },
       ...(user?.isApprover ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
+      ...(user?.isApprover ? [{ name: 'ตั้งค่าอีเมลแจ้งเตือน', href: '/memos/approvals/notification-settings', icon: Mail }] : []),
       { name: 'ลายเซ็นของฉัน', href: '/memos/signatures', icon: PenLine },
       { name: 'Audit & Operations', href: '/e-approve/admin/audit-logs', icon: ShieldCheck },
       { name: 'เอกสารต่ออายุ (Renewals)', href: '/renewals', icon: FileText, badge: expiringCount },
@@ -52,6 +53,7 @@ export function Sidebar({ user }: { user: JWTPayload }) {
       { name: 'ขอยืมอุปกรณ์ (Borrow Form)', href: '/borrows', icon: ArrowLeftRight },
       { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText },
       ...(user?.isApprover ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
+      ...(user?.isApprover ? [{ name: 'ตั้งค่าอีเมลแจ้งเตือน', href: '/memos/approvals/notification-settings', icon: Mail }] : []),
       { name: 'ลายเซ็นของฉัน', href: '/memos/signatures', icon: PenLine },
     ];
   }

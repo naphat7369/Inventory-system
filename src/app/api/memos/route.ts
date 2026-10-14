@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
+import { validateRequiredMemoSignatures } from '@/lib/memo-signature-rules';
 
 const prisma = new PrismaClient();
 
@@ -113,11 +114,6 @@ export async function POST(request: Request) {
     if (!documentDate || !recipient || !subject || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    const signatureApproverIds = (signatures ?? []).flatMap((signature: { approverId?: string | null }) => signature.approverId ? [signature.approverId] : []);
-    if (new Set(signatureApproverIds).size !== signatureApproverIds.length) {
-      return NextResponse.json({ error: 'ไม่สามารถเลือกชื่อผู้ลงนามซ้ำในเอกสารเดียวกันได้' }, { status: 400 });
-    }
-
     // Role-based Department enforcement
     let finalDepartmentId: string;
     if (currentUser.role !== 'ADMIN') {
@@ -148,13 +144,28 @@ export async function POST(request: Request) {
     }
 
     let finalBranchId: string | null = currentUser.branchId ?? department.branchId ?? null;
+    let selectedMemoType: { branchId: string | null; requiredApprovers: Array<{ approverId: string }> } | null = null;
     if (memoTypeId) {
-      const memoType = await prisma.memoType.findFirst({ where: { id: memoTypeId, isActive: true } });
-      finalBranchId = currentUser.branchId ?? memoType?.branchId ?? department.branchId ?? null;
-      if (!memoType || (memoType.branchId && memoType.branchId !== finalBranchId)) {
+      selectedMemoType = await prisma.memoType.findFirst({
+        where: { id: memoTypeId, isActive: true },
+        include: { requiredApprovers: { select: { approverId: true } } },
+      });
+      finalBranchId = currentUser.branchId ?? selectedMemoType?.branchId ?? department.branchId ?? null;
+      if (!selectedMemoType || (selectedMemoType.branchId && selectedMemoType.branchId !== finalBranchId)) {
         return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
       }
     }
+    const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({
+      where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } },
+      include: { branch: { select: { generalManagerId: true } } },
+    }) : null;
+    const signatureRuleError = validateRequiredMemoSignatures({
+      signatures: signatures ?? [],
+      creatorId: currentUser.id,
+      headApproverId: branchDepartment?.hodId ?? branchDepartment?.branch.generalManagerId ?? department.hodId,
+      requiredApproverIds: selectedMemoType?.requiredApprovers?.map((item) => item.approverId) ?? [],
+    });
+    if (signatureRuleError) return NextResponse.json({ error: signatureRuleError }, { status: 400 });
     // const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } } }) : null;
     // if (!finalBranchId || !branchDepartment?.isActive) {
     //   return NextResponse.json({ error: 'Department is not configured for an active E-Approve branch' }, { status: 400 });

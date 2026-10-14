@@ -156,7 +156,8 @@ model User {
   isApprover              Boolean                    @default(false)
   isAllBranches           Boolean                    @default(false)
   approvalEmailEnabled    Boolean                    @default(true)
-  approvalCalendarEnabled Boolean                    @default(false)
+  approvalEmailMode       String                     @default("IMMEDIATE")
+  approvalEmailDigestTime String                     @default("16:00")
   branchId                String?
   branch                  Branch?                    @relation("BranchUsers", fields: [branchId], references: [id], onDelete: SetNull)
   headedDepartments       Department[]               @relation("DepartmentHod")
@@ -607,12 +608,6 @@ model MemoApprovalStep {
   actedAt                  DateTime?
   memoVersionId            String
   integrityHash            String?
-  calendarStatus           String            @default("NONE")
-  calendarUid              String?
-  calendarRecipient        String?
-  calendarStartAt          DateTime?
-  calendarEndAt            DateTime?
-  calendarSequence         Int               @default(0)
   createdAt                DateTime          @default(now())
   updatedAt                DateTime          @updatedAt
 

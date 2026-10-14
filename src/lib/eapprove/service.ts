@@ -177,7 +177,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
     if (pending) {
       const approver = await tx.user.findUnique({ where: { id: pending.approverId } });
       if (approver) await enqueueApprovalAssignment(tx, {
-        memo: { id: memo.id, documentNo, subject: memo.subject }, step: { ...pending, calendarSequence: 0 }, approver,
+        memo: { id: memo.id, documentNo, subject: memo.subject }, step: pending, approver,
       });
     }
     await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'SUBMITTED', entity: 'MEMO', entityId: memo.id, userId: input.actorId, newValue: json({ roundId: round.id, versionId: version.id, chain }) } });
@@ -334,8 +334,6 @@ export async function replacePendingApprover(prisma: PrismaClient, input: {
       approverPositionSnapshot: replacement.position, sourceMetadata: json([
         ...JSON.parse(step.sourceMetadata), { source: 'ADMIN_REPLACEMENT', oldApproverId: step.approverId, reason: input.reason.trim() },
       ]),
-      calendarStatus: 'NONE', calendarUid: null, calendarRecipient: null,
-      calendarStartAt: null, calendarEndAt: null,
     } });
     await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'REPLACED_PENDING_APPROVER', entity: 'MEMO_APPROVAL_STEP', entityId: step.id, userId: actor.id,
       oldValue: json({ approverId: step.approverId }), newValue: json({ approverId: replacement.id }), details: input.reason.trim() } });

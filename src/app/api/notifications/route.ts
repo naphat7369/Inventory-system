@@ -8,10 +8,10 @@ export async function GET() {
   const userId = String(session.id);
   const [items, unreadCount] = await Promise.all([
     prisma.notification.findMany({
-      where: { userId }, orderBy: { createdAt: 'desc' }, take: 20,
+      where: { userId, type: { not: 'APPROVAL_PENDING' } }, orderBy: { createdAt: 'desc' }, take: 20,
       include: { memo: { select: { id: true, documentNo: true, subject: true } } },
     }),
-    prisma.notification.count({ where: { userId, readAt: null } }),
+    prisma.notification.count({ where: { userId, readAt: null, type: { not: 'APPROVAL_PENDING' } } }),
   ]);
   return NextResponse.json({ items, unreadCount });
 }

@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import { requireAdmin } from './authorization';
 import { EApproveError } from './errors';
 import { serializeAuditValue } from '../audit';
-import { cancelApprovalCalendar, enqueueApprovalAssignment, normalizeEmail } from './notification-service';
+import { cancelApprovalDigestJobs, ensureApprovalDigestJob, normalizeEmail } from './notification-service';
 
 const json = (value: unknown) => JSON.stringify(value);
 async function audit(prisma: PrismaClient, actorId: string, action: string, entity: string, entityId: string, oldValue: unknown, newValue: unknown) {
@@ -55,17 +55,14 @@ export async function updateUserApprovalConfig(prisma: PrismaClient, actorId: st
     ? { ...input, email: input.email === undefined ? undefined : normalizeEmail(input.email) || null, branchId: null, departmentId: null }
     : { ...input, email: input.email === undefined ? undefined : normalizeEmail(input.email) || null };
   const emailChanged = input.email !== undefined && normalizeEmail(input.email) !== normalizeEmail(existing.email);
+  const approvalStateChanged = (input.isActive !== undefined && input.isActive !== existing.isActive)
+    || (input.isApprover !== undefined && input.isApprover !== existing.isApprover);
   return prisma.$transaction(async tx => {
-    const pending = emailChanged && existing.approvalCalendarEnabled ? await tx.memoApprovalStep.findMany({
-      where: { approverId: userId, status: 'PENDING' }, include: { round: { include: { memo: true } } },
-    }) : [];
-    if (emailChanged) for (const step of pending) await cancelApprovalCalendar(tx, { memoId: step.round.memoId, stepId: step.id, reason: 'APPROVER_EMAIL_CHANGED', recipientOverride: normalizeEmail(existing.email) });
+    if (emailChanged || approvalStateChanged) await cancelApprovalDigestJobs(tx, userId, emailChanged ? 'APPROVER_EMAIL_CHANGED' : 'APPROVER_STATUS_CHANGED');
     const user = await tx.user.update({ where: { id: userId }, data: normalizedInput });
-    if (emailChanged && user.approvalCalendarEnabled) for (const step of pending) {
-      const freshStep = await tx.memoApprovalStep.findUnique({ where: { id: step.id } });
-      if (freshStep) await enqueueApprovalAssignment(tx, {
-        memo: { id: step.round.memo.id, documentNo: step.round.memo.documentNo, subject: step.round.memo.subject }, step: freshStep, approver: user,
-      });
+    if ((emailChanged || approvalStateChanged) && user.approvalEmailMode === 'DIGEST') {
+      const pending = await tx.memoApprovalStep.count({ where: { approverId: userId, status: 'PENDING' } });
+      if (pending > 0) await ensureApprovalDigestJob(tx, user);
     }
     await tx.auditLog.create({ data: { module: 'E_APPROVE', userId: actorId, action: 'UPDATED_APPROVAL_CONFIG', entity: 'USER', entityId: user.id, oldValue: serializeAuditValue(existing), newValue: serializeAuditValue(user) } });
     return user;
@@ -165,9 +162,13 @@ export async function updateSystemSettings(prisma: PrismaClient, actorId: string
     await audit(prisma, actorId, 'UPDATED', 'SYSTEM_SETTING', key, null, setting);
     results.push(setting);
   }
-  if (values.eapproveEmailEnabled === true || values.eapproveCalendarEnabled === true) {
+  if (values.eapproveEmailEnabled === true) {
     await prisma.emailDelivery.updateMany({
       where: { status: 'PAUSED', lastErrorCode: 'FEATURE_DISABLED' },
+      data: { status: 'PENDING', availableAt: new Date(), completedAt: null, lastErrorCode: null },
+    });
+    await prisma.backgroundJob.updateMany({
+      where: { type: 'SEND_APPROVAL_DIGEST', status: 'PAUSED', lastErrorCode: 'FEATURE_DISABLED' },
       data: { status: 'PENDING', availableAt: new Date(), completedAt: null, lastErrorCode: null },
     });
   }

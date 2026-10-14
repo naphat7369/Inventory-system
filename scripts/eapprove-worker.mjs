@@ -8,7 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import { SignJWT } from 'jose';
 import nodemailer from 'nodemailer';
 import puppeteer from 'puppeteer-core';
-import { renderCalendar, renderEmail } from './eapprove-email-templates.mjs';
+import { renderEmail } from './eapprove-email-templates.mjs';
 
 const prisma = new PrismaClient();
 const appUrl = (process.env.EAPPROVE_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -122,11 +122,6 @@ function isPermanentEmailError(error) {
   return responseCode >= 500 && responseCode < 600 && !['ECONNECTION', 'ECONNREFUSED', 'ETIMEDOUT', 'ESOCKET'].includes(code);
 }
 
-function smtpFromAddress() {
-  const value = String(process.env.SMTP_FROM || '').trim();
-  return value.match(/<([^>]+)>/)?.[1]?.trim() || value;
-}
-
 async function setting(key, fallback) {
   const row = await prisma.systemSetting.findUnique({ where: { key } });
   if (!row) return fallback;
@@ -168,26 +163,43 @@ async function claimNextEmailDelivery() {
 }
 
 async function processEmailDelivery(delivery) {
-  if (!delivery.memoId) throw new Error('MEMO_NOT_FOUND');
-  const memo = await prisma.memo.findUnique({
-    where: { id: delivery.memoId },
-    include: { pdfArtifacts: { where: { kind: 'OFFICIAL' }, orderBy: { createdAt: 'desc' }, take: 1 } },
-  });
-  if (!memo) throw new Error('MEMO_NOT_FOUND');
-
   const payload = JSON.parse(delivery.payload);
+  const digestTemplate = delivery.template === 'APPROVAL_SUMMARY';
+  const approvalNotification = ['APPROVAL_PENDING', 'APPROVAL_REMINDER'].includes(delivery.template);
+  if (approvalNotification) {
+    const step = delivery.stepId ? await prisma.memoApprovalStep.findUnique({
+      where: { id: delivery.stepId },
+      select: { status: true, approverId: true, memoVersionId: true },
+    }) : null;
+    const stillPending = step?.status === 'PENDING'
+      && step.approverId === delivery.recipientUserId
+      && step.memoVersionId === delivery.memoVersionId;
+    if (!stillPending) {
+      await prisma.emailDelivery.update({
+        where: { id: delivery.id },
+        data: { status: 'CANCELLED', completedAt: new Date(), lockedAt: null, lastErrorCode: 'NO_LONGER_PENDING' },
+      });
+      return 'CANCELLED';
+    }
+  }
+  let memo = null;
+  if (!digestTemplate) {
+    if (!delivery.memoId) throw new Error('MEMO_NOT_FOUND');
+    memo = await prisma.memo.findUnique({
+      where: { id: delivery.memoId },
+      include: { pdfArtifacts: { where: { kind: 'OFFICIAL' }, orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!memo) throw new Error('MEMO_NOT_FOUND');
+  }
+
   const emailEnabled = await setting('eapproveEmailEnabled', true) !== false
     && process.env.EAPPROVE_EMAIL_DISABLED !== 'true';
-  const calendarEnabled = await setting('eapproveCalendarEnabled', true) !== false
-    && process.env.EAPPROVE_CALENDAR_DISABLED !== 'true';
-  const hasCalendar = Boolean(payload.calendar);
-  const calendarOnly = ['APPROVAL_CALENDAR_REQUEST', 'APPROVAL_CALENDAR_CANCEL'].includes(delivery.template);
-  if ((calendarOnly && !calendarEnabled) || (!hasCalendar && !emailEnabled) || (hasCalendar && !calendarEnabled && !emailEnabled)) {
+  if (!emailEnabled) {
     await prisma.emailDelivery.update({
       where: { id: delivery.id },
       data: { status: 'PAUSED', lockedAt: null, lastErrorCode: 'FEATURE_DISABLED' },
     });
-    return;
+    return 'PAUSED';
   }
   const officialTemplate = ['MEMO_APPROVED_OFFICIAL', 'MEMO_OFFICIAL_PDF'].includes(delivery.template);
   let attachment = null;
@@ -214,10 +226,6 @@ async function processEmailDelivery(delivery) {
     }
   }
   const rendered = renderEmail({ template: delivery.template, memo, payload, attachmentIncluded, attachmentTooLarge });
-  const calendarContent = calendarEnabled ? renderCalendar({
-    calendar: payload.calendar, recipient: delivery.recipient, organizer: smtpFromAddress(),
-    documentNo: payload.documentNo || memo.documentNo || 'Memo', subject: payload.subject || memo.subject, reason: payload.reason,
-  }) : null;
   const messageIdHash = createHash('sha256').update(delivery.idempotencyKey).digest('hex').slice(0, 32);
 
   const transport = createSmtpTransport();
@@ -229,7 +237,6 @@ async function processEmailDelivery(delivery) {
     text: rendered.text,
     messageId: `<${messageIdHash}@eapprove.local>`,
     attachments: attachment ? [attachment] : [],
-    ...(calendarContent ? { icalEvent: { method: payload.calendar.method, filename: 'eapprove.ics', content: calendarContent } } : {}),
   });
 
   const updates = [
@@ -240,12 +247,11 @@ async function processEmailDelivery(delivery) {
       entity: 'EMAIL_DELIVERY',
       entityId: delivery.id,
       userId: typeof payload.actorId === 'string' ? payload.actorId : null,
-      details: JSON.stringify({ memoId: memo.id, recipient: delivery.recipient, template: delivery.template, attachmentHash: artifact?.contentHash ?? null }),
+      details: JSON.stringify({ memoId: memo?.id ?? null, recipient: delivery.recipient, template: delivery.template, attachmentHash: artifact?.contentHash ?? null }),
     } }),
   ];
-  if (delivery.stepId && payload.calendar?.method === 'REQUEST') updates.push(prisma.memoApprovalStep.update({ where: { id: delivery.stepId }, data: { calendarStatus: 'ACTIVE' } }));
-  if (delivery.stepId && payload.calendar?.method === 'CANCEL') updates.push(prisma.memoApprovalStep.update({ where: { id: delivery.stepId }, data: { calendarStatus: 'CANCELLED' } }));
   await prisma.$transaction(updates);
+  return 'SENT';
 }
 
 async function claimNextReminderJob() {
@@ -267,7 +273,8 @@ async function processReminderJob(job) {
   const step = await prisma.memoApprovalStep.findUnique({ where: { id: payload.stepId }, include: { approver: true, round: { include: { memo: true } } } });
   const valid = step && step.status === 'PENDING' && step.memoVersionId === payload.memoVersionId
     && step.approverId === payload.approverUserId && step.approver.isActive
-    && step.approver.approvalEmailEnabled && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(step.approver.email || '')
+    && step.approver.approvalEmailEnabled && step.approver.approvalEmailMode === 'IMMEDIATE'
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(step.approver.email || '')
     && await setting('eapproveEmailEnabled', true) !== false && process.env.EAPPROVE_EMAIL_DISABLED !== 'true';
   if (!valid) {
     await prisma.backgroundJob.update({ where: { id: job.id }, data: { status: 'CANCELLED', completedAt: new Date(), lockedAt: null, lastErrorCode: 'NO_LONGER_PENDING' } });
@@ -282,6 +289,61 @@ async function processReminderJob(job) {
       payload: JSON.stringify({ stepId: step.id, documentNo: step.round.memo.documentNo, subject: step.round.memo.subject }),
     } }),
     prisma.backgroundJob.update({ where: { id: job.id }, data: { status: 'COMPLETED', completedAt: new Date(), lockedAt: null } }),
+  ]);
+}
+
+function nextBangkokDigestAt(time, reference = new Date()) {
+  const [hours, minutes] = /^(?:(?:0[89]|1[0-7]):(?:00|30)|18:00)$/.test(time || '')
+    ? time.split(':').map(Number) : [16, 0];
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(reference).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  let scheduled = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), hours - 7, minutes));
+  if (scheduled <= reference) scheduled = new Date(scheduled.getTime() + 24 * 60 * 60_000);
+  const keyParts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(scheduled).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  return { scheduled, dateKey: `${keyParts.year}-${keyParts.month}-${keyParts.day}` };
+}
+
+async function claimNextDigestJob() {
+  await prisma.backgroundJob.updateMany({
+    where: { type: 'SEND_APPROVAL_DIGEST', status: 'PROCESSING', lockedAt: { lt: new Date(Date.now() - 5 * 60_000) }, attemptCount: { lt: 3 } },
+    data: { status: 'PENDING', availableAt: new Date(), lockedAt: null, lastErrorCode: 'LEASE_EXPIRED' },
+  });
+  const job = await prisma.backgroundJob.findFirst({ where: { type: 'SEND_APPROVAL_DIGEST', status: 'PENDING', availableAt: { lte: new Date() }, attemptCount: { lt: 3 } }, orderBy: { availableAt: 'asc' } });
+  if (!job) return null;
+  const claimed = await prisma.backgroundJob.updateMany({ where: { id: job.id, status: 'PENDING' }, data: { status: 'PROCESSING', lockedAt: new Date(), attemptCount: { increment: 1 } } });
+  return claimed.count === 1 ? prisma.backgroundJob.findUnique({ where: { id: job.id } }) : null;
+}
+
+async function processDigestJob(job) {
+  const payload = JSON.parse(job.payload);
+  const approver = await prisma.user.findUnique({ where: { id: payload.approverUserId } });
+  const pendingCount = approver ? await prisma.memoApprovalStep.count({ where: { approverId: approver.id, status: 'PENDING' } }) : 0;
+  const featureEnabled = await setting('eapproveEmailEnabled', true) !== false && process.env.EAPPROVE_EMAIL_DISABLED !== 'true';
+  if (!featureEnabled) {
+    await prisma.backgroundJob.update({ where: { id: job.id }, data: { status: 'PAUSED', lockedAt: null, lastErrorCode: 'FEATURE_DISABLED' } });
+    return;
+  }
+  const valid = approver?.isActive && approver.isApprover && approver.approvalEmailEnabled
+    && approver.approvalEmailMode === 'DIGEST' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(approver.email || '');
+  if (!valid || pendingCount === 0) {
+    await prisma.backgroundJob.update({ where: { id: job.id }, data: { status: 'CANCELLED', completedAt: new Date(), lockedAt: null, lastErrorCode: pendingCount === 0 ? 'NO_PENDING_APPROVALS' : 'FEATURE_DISABLED' } });
+    return;
+  }
+  const emailKey = `AUTO:${createHash('sha256').update(`approval-summary:${approver.id}:${payload.scheduledDate}`).digest('hex')}`;
+  const next = nextBangkokDigestAt(approver.approvalEmailDigestTime);
+  await prisma.$transaction([
+    prisma.emailDelivery.upsert({ where: { idempotencyKey: emailKey }, update: {}, create: {
+      recipientUserId: approver.id, recipient: approver.email.trim().toLowerCase(), template: 'APPROVAL_SUMMARY',
+      idempotencyKey: emailKey, maxAttempts: 3, payload: JSON.stringify({ pendingCount, digestDate: payload.scheduledDate }),
+    } }),
+    prisma.backgroundJob.update({ where: { id: job.id }, data: { status: 'COMPLETED', completedAt: new Date(), lockedAt: null } }),
+    prisma.backgroundJob.upsert({ where: { idempotencyKey: `APPROVAL_DIGEST:${approver.id}:${next.dateKey}` }, update: { availableAt: next.scheduled }, create: {
+      type: 'SEND_APPROVAL_DIGEST', idempotencyKey: `APPROVAL_DIGEST:${approver.id}:${next.dateKey}`,
+      payload: JSON.stringify({ approverUserId: approver.id, scheduledDate: next.dateKey }), availableAt: next.scheduled, maxAttempts: 3,
+    } }),
   ]);
 }
 
@@ -453,6 +515,22 @@ async function runOne() {
     return true;
   }
 
+  const digest = await claimNextDigestJob();
+  if (digest) {
+    try { await processDigestJob(digest); }
+    catch (error) {
+      const errorCode = safeEmailErrorCode(error);
+      console.error(`[eapprove-worker] digest failed ${digest.id}: ${errorCode}`);
+      const exhausted = digest.attemptCount >= digest.maxAttempts;
+      const minutes = [1, 5, 15][Math.max(0, digest.attemptCount - 1)] ?? 15;
+      await prisma.backgroundJob.update({ where: { id: digest.id }, data: exhausted
+        ? { status: 'FAILED', completedAt: new Date(), lockedAt: null, lastErrorCode: errorCode }
+        : { status: 'PENDING', availableAt: new Date(Date.now() + minutes * 60_000), lockedAt: null, lastErrorCode: errorCode }
+      });
+    }
+    return true;
+  }
+
   const reminder = await claimNextReminderJob();
   if (reminder) {
     try { await processReminderJob(reminder); }
@@ -472,8 +550,8 @@ async function runOne() {
   const delivery = await claimNextEmailDelivery();
   if (!delivery) return false;
   try {
-    await processEmailDelivery(delivery);
-    console.log(`[eapprove-worker] email sent ${delivery.id}`);
+    const result = await processEmailDelivery(delivery);
+    console.log(`[eapprove-worker] email ${result.toLowerCase()} ${delivery.id}`);
   } catch (error) {
     const errorCode = safeEmailErrorCode(error);
     console.error(`[eapprove-worker] email failed ${delivery.id}: ${errorCode}`);

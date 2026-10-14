@@ -18,7 +18,6 @@ function shell({ title, badge, badgeColor = '#087a5b', content, footer = noLinks
   <tr><td align="center" style="padding:16px 28px;background:#0b3b31;border-radius:0 0 12px 12px;font-size:11px;color:#bfe0d7">E‑Approve System · S Hotel · Official Notification</td></tr>
   </table></td></tr></table></body></html>`;
 }
-
 function memoCard(documentNo, subject, status) {
   return `<tr><td style="padding:14px 28px 0"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f8f6;border:1px solid #d5e5df;border-radius:8px"><tr><td style="padding:17px 18px"><div style="font-size:12px;color:#60756f">เลขที่เอกสาร</div><div style="padding-top:3px;font-size:20px;font-weight:700">${escapeHtml(documentNo || 'ยังไม่ออกเลข')}</div><div style="padding-top:8px;font-size:14px;line-height:1.6;color:#344a44">${escapeHtml(subject)}</div></td><td width="100" align="right" valign="top" style="padding:17px 18px"><span style="display:inline-block;padding:5px 9px;border-radius:12px;background:#d8f2e8;font-size:10px;font-weight:700;color:#087a5b">${escapeHtml(status)}</span></td></tr></table></td></tr>`;
 }
@@ -28,23 +27,34 @@ function messageBlock(label, message) {
   return `<tr><td style="padding:20px 28px 0"><div style="font-size:13px;font-weight:700;color:#344a44">${escapeHtml(label)}</div><div style="padding-top:7px;font-size:14px;line-height:1.7;color:#344a44">${escapeHtml(message).replaceAll('\n', '<br>')}</div></td></tr>`;
 }
 
-export function renderEmail({ template, memo, payload, attachmentIncluded = false, attachmentTooLarge = false }) {
-  const documentNo = safeHeader(payload.documentNo || memo.documentNo || 'Memo');
-  const subject = safeHeader(payload.subject || memo.subject || 'เอกสาร');
+export function renderEmail({ template, memo, payload = {}, attachmentIncluded = false, attachmentTooLarge = false }) {
+  if (template === 'APPROVAL_SUMMARY') {
+    const pendingCount = Math.max(0, Number(payload.pendingCount) || 0);
+    return {
+      subject: `[E‑Approve] สรุปงานรออนุมัติ: ${pendingCount} รายการ`,
+      html: shell({
+        title: `คุณมี Memo รออนุมัติ ${pendingCount} รายการ`,
+        badge: 'DAILY SUMMARY',
+        badgeColor: '#b7791f',
+        content: messageBlock('สรุปงาน', `ณ เวลาส่งอีเมล มี Memo ที่ถึงคิวและยังรอคุณอนุมัติ ${pendingCount} รายการ`)
+          + messageBlock('การดำเนินการ', 'กรุณาเข้าสู่ระบบ E‑Approve ผ่านช่องทางภายในองค์กรเพื่อตรวจสอบรายการ'),
+      }),
+      text: `คุณมี Memo รออนุมัติ ${pendingCount} รายการ\n\nกรุณาเข้าสู่ระบบ E‑Approve ผ่านช่องทางภายในองค์กร\n${noLinksNotice}`,
+    };
+  }
+
+  const documentNo = safeHeader(payload.documentNo || memo?.documentNo || 'Memo');
+  const subject = safeHeader(payload.subject || memo?.subject || 'เอกสาร');
   const reason = stripUrls(payload.reason || '').slice(0, 500);
   let mailSubject = `[E‑Approve] ${documentNo} - ${subject}`;
   let html;
   let text;
 
-  if (template === 'APPROVAL_PENDING' || template === 'APPROVAL_CALENDAR_REQUEST') {
+  if (template === 'APPROVAL_PENDING') {
     mailSubject = `[E‑Approve] รอคุณอนุมัติ: ${documentNo}`;
     html = shell({ title: 'มี Memo รอการอนุมัติจากคุณ', badge: 'ACTION REQUIRED', badgeColor: '#b7791f', content:
-      memoCard(documentNo, subject, 'PENDING') + messageBlock('การดำเนินการ', 'กรุณาเข้าสู่ระบบ E‑Approve เพื่อตรวจสอบ อนุมัติ หรือส่งกลับแก้ไข') + '<tr><td style="padding:22px 28px 28px;font-size:12px;line-height:1.7;color:#60756f">หากเปิดการแจ้งเตือน Calendar คำเชิญจะอยู่ในอีเมลฉบับนี้</td></tr>' });
+      memoCard(documentNo, subject, 'PENDING') + messageBlock('การดำเนินการ', 'กรุณาเข้าสู่ระบบ E‑Approve เพื่อตรวจสอบ อนุมัติ หรือส่งกลับแก้ไข') });
     text = `มี Memo รอการอนุมัติจากคุณ\nเลขที่: ${documentNo}\nหัวข้อ: ${subject}\n\nกรุณาเข้าสู่ระบบ E‑Approve ผ่านช่องทางภายในองค์กร\n${noLinksNotice}`;
-  } else if (template === 'APPROVAL_CALENDAR_CANCEL') {
-    mailSubject = `[E‑Approve] ยกเลิกรายการ Calendar: ${documentNo}`;
-    html = shell({ title: 'งานอนุมัตินี้สิ้นสุดแล้ว', badge: 'CALENDAR UPDATE', content: memoCard(documentNo, subject, 'CLOSED') + messageBlock('สถานะ', 'ระบบส่งการยกเลิก Calendar สำหรับรายการนี้') });
-    text = `ยกเลิกรายการ Calendar\nเลขที่: ${documentNo}\nหัวข้อ: ${subject}`;
   } else if (template === 'APPROVAL_REMINDER') {
     mailSubject = `[E‑Approve] เตือน: ${documentNo} ยังรอการอนุมัติ`;
     html = shell({ title: 'แจ้งเตือนงานอนุมัติที่ยังค้าง', badge: 'REMINDER', badgeColor: '#b7791f', content: memoCard(documentNo, subject, 'PENDING') + messageBlock('การดำเนินการ', 'กรุณาเข้าสู่ระบบ E‑Approve ผ่านช่องทางภายในองค์กร') });
@@ -69,38 +79,4 @@ export function renderEmail({ template, memo, payload, attachmentIncluded = fals
     text = `เอกสารได้รับการอนุมัติแล้ว\nเลขที่: ${documentNo}\nหัวข้อ: ${subject}\n\n${senderMessage ? `${senderMessage}\n\n` : ''}${attachmentMessage}\n${noLinksNotice}`;
   }
   return { subject: safeHeader(mailSubject), html, text };
-}
-
-const pad = (value) => String(value).padStart(2, '0');
-const icsUtc = (value) => {
-  const date = new Date(value);
-  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
-};
-const icsEscape = (value) => String(value ?? '').replaceAll('\\', '\\\\').replaceAll('\n', '\\n').replaceAll(',', '\\,').replaceAll(';', '\\;');
-const foldLine = (line) => {
-  const chunks = [];
-  let current = '';
-  for (const character of line) {
-    if (Buffer.byteLength(current + character, 'utf8') > 73) { chunks.push(current); current = ` ${character}`; }
-    else current += character;
-  }
-  chunks.push(current);
-  return chunks.join('\r\n');
-};
-
-export function renderCalendar({ calendar, recipient, organizer, documentNo, subject, reason }) {
-  if (!calendar || !['REQUEST', 'CANCEL'].includes(calendar.method)) return null;
-  const method = calendar.method;
-  const status = method === 'CANCEL' ? 'CANCELLED' : 'CONFIRMED';
-  const lines = [
-    'BEGIN:VCALENDAR', 'PRODID:-//S Hotel//E-Approve//TH', 'VERSION:2.0', `METHOD:${method}`, 'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT', `UID:${icsEscape(calendar.uid)}`, `SEQUENCE:${Number(calendar.sequence) || 0}`, `DTSTAMP:${icsUtc(new Date())}`,
-    `DTSTART:${icsUtc(calendar.startAt)}`, `DTEND:${icsUtc(calendar.endAt)}`, `STATUS:${status}`,
-    `ORGANIZER:mailto:${organizer}`, `ATTENDEE;CN=${icsEscape(recipient)};PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${recipient}`,
-    `SUMMARY:${icsEscape(stripUrls(`[E-Approve] ${documentNo} รออนุมัติ`))}`,
-    `DESCRIPTION:${icsEscape(stripUrls(method === 'CANCEL' ? `ยกเลิกรายการอนุมัติ ${documentNo}${reason ? `: ${reason}` : ''}` : `${subject}\nกรุณาเข้าสู่ระบบ E-Approve ผ่านช่องทางภายในองค์กร`))}`,
-  ];
-  if (method === 'REQUEST') lines.push('BEGIN:VALARM', 'TRIGGER:-PT30M', 'ACTION:DISPLAY', 'DESCRIPTION:แจ้งเตือนงานอนุมัติ E-Approve', 'END:VALARM');
-  lines.push('END:VEVENT', 'END:VCALENDAR');
-  return lines.map(foldLine).join('\r\n') + '\r\n';
 }

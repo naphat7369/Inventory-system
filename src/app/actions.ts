@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { createSession, deleteSession, getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { serializeAuditValue } from '@/lib/audit';
-import { cancelApprovalCalendar, enqueueApprovalAssignment, isValidEmail, normalizeEmail } from '@/lib/eapprove/notification-service';
+import { cancelApprovalDigestJobs, isValidEmail, normalizeEmail } from '@/lib/eapprove/notification-service';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -618,13 +618,8 @@ export async function updateUser(
 
   const emailChanged = data.email !== undefined && normalizeEmail(data.email) !== normalizeEmail(existingUser.email);
   await prisma.$transaction(async tx => {
-    const pending = emailChanged && existingUser.approvalCalendarEnabled ? await tx.memoApprovalStep.findMany({ where: { approverId: userId, status: 'PENDING' }, include: { round: { include: { memo: true } } } }) : [];
-    if (emailChanged) for (const step of pending) await cancelApprovalCalendar(tx, { memoId: step.round.memoId, stepId: step.id, reason: 'APPROVER_EMAIL_CHANGED', recipientOverride: normalizeEmail(existingUser.email) });
+    if (emailChanged) await cancelApprovalDigestJobs(tx, userId, 'APPROVER_EMAIL_CHANGED');
     const updatedUser = await tx.user.update({ where: { id: userId }, data: updateData });
-    if (emailChanged && updatedUser.approvalCalendarEnabled && isValidEmail(updatedUser.email)) for (const step of pending) {
-      const freshStep = await tx.memoApprovalStep.findUnique({ where: { id: step.id } });
-      if (freshStep) await enqueueApprovalAssignment(tx, { memo: { id: step.round.memo.id, documentNo: step.round.memo.documentNo, subject: step.round.memo.subject }, step: freshStep, approver: updatedUser });
-    }
     if (emailChanged) await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'USER_EMAIL_UPDATED', entity: 'USER', entityId: userId, userId: String(session.id), oldValue: serializeAuditValue({ email: existingUser.email }), newValue: serializeAuditValue({ email: updatedUser.email }) } });
   });
 

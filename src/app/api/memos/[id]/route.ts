@@ -3,6 +3,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { promises as fs } from 'node:fs';
 import { memoAttachmentPath } from '@/lib/memo-attachments';
+import { validateRequiredMemoSignatures } from '@/lib/memo-signature-rules';
 
 const prisma = new PrismaClient();
 const uploadReadyHeaders = { 'Cache-Control': 'no-store', Connection: 'close' };
@@ -96,10 +97,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const effectiveDepartmentId = existing.status === 'DRAFT' && data.departmentId
       ? data.departmentId
       : existing.departmentId;
+    const effectiveMemoTypeId = data.memoTypeId === undefined ? existing.memoTypeId : data.memoTypeId;
     const [department, memoType] = await Promise.all([
       prisma.department.findUnique({ where: { id: effectiveDepartmentId } }),
-      data.memoTypeId
-        ? prisma.memoType.findFirst({ where: { id: data.memoTypeId, isActive: true } })
+      effectiveMemoTypeId
+        ? prisma.memoType.findFirst({
+            where: { id: effectiveMemoTypeId, isActive: true },
+            include: { requiredApprovers: { select: { approverId: true } } },
+          })
         : Promise.resolve(null),
     ]);
     const effectiveBranchId = existing.branchId ?? currentUser.branchId ?? memoType?.branchId ?? department?.branchId ?? null;
@@ -151,10 +156,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     // Handle signatures update
     if (data.signatures) {
-      const signatureApproverIds = data.signatures.flatMap((signature: { approverId?: string | null }) => signature.approverId ? [signature.approverId] : []);
-      if (new Set(signatureApproverIds).size !== signatureApproverIds.length) {
-        return NextResponse.json({ error: 'ไม่สามารถเลือกชื่อผู้ลงนามซ้ำในเอกสารเดียวกันได้' }, { status: 400 });
-      }
+      const branchDepartment = effectiveBranchId ? await prisma.branchDepartment.findUnique({
+        where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: effectiveDepartmentId } },
+        include: { branch: { select: { generalManagerId: true } } },
+      }) : null;
+      const signatureRuleError = validateRequiredMemoSignatures({
+        signatures: data.signatures,
+        creatorId: existing.createdById ?? currentUser.id,
+        headApproverId: branchDepartment?.hodId ?? branchDepartment?.branch.generalManagerId ?? department.hodId,
+        requiredApproverIds: memoType?.requiredApprovers.map((item) => item.approverId) ?? [],
+      });
+      if (signatureRuleError) return NextResponse.json({ error: signatureRuleError }, { status: 400 });
       updateData.signatures = {
         deleteMany: {},
         create: data.signatures.map((sig: { approverId?: string | null; role?: string; name?: string | null; position?: string | null }, index: number) => ({

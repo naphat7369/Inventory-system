@@ -52,8 +52,10 @@ export default function LoginPage() {
               type="text" 
               name="username" 
               required 
+              onInput={(event) => { event.currentTarget.value = event.currentTarget.value.toLocaleUpperCase('en-US'); }}
+              autoCapitalize="characters"
               className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder="admin"
+              placeholder="ADMIN"
             />
           </div>
           <div>

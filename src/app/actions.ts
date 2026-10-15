@@ -7,6 +7,7 @@ import { createSession, deleteSession, getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { serializeAuditValue } from '@/lib/audit';
 import { cancelApprovalDigestJobs, isValidEmail, normalizeEmail } from '@/lib/eapprove/notification-service';
+import { normalizeUsername } from '@/lib/username';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -71,7 +72,7 @@ export async function initAdmin() {
     const passwordHash = await bcrypt.hash('password123', 10);
     await prisma.user.create({
       data: {
-        username: 'admin',
+        username: 'ADMIN',
         passwordHash,
         role: 'ADMIN'
       }
@@ -397,7 +398,7 @@ export async function getAllAssetsForExport() {
 }
 
 export async function login(formData: FormData) {
-  const username = formData.get('username') as string;
+  const username = normalizeUsername(formData.get('username'));
   const password = formData.get('password') as string;
 
   if (!username || !password) {
@@ -487,7 +488,7 @@ export async function createUser(formData: FormData) {
   const session = await getSession();
   if (session?.role !== 'ADMIN') throw new Error('Unauthorized');
 
-  const username = (formData.get('username') as string)?.trim();
+  const username = normalizeUsername(formData.get('username'));
   const password = formData.get('password') as string;
   const fullName = (formData.get('fullName') as string)?.trim() || null;
   const rawDept = (formData.get('departmentId') as string)?.trim() || (formData.get('department') as string)?.trim() || null;
@@ -568,13 +569,14 @@ export async function updateUser(
   const existingUser = await prisma.user.findUnique({ where: { id: userId } });
   if (!existingUser) return { success: false, error: 'ไม่พบผู้ใช้งานนี้ในระบบ' };
 
-  if (data.username && data.username.trim() !== existingUser.username) {
-    const duplicate = await prisma.user.findUnique({ where: { username: data.username.trim() } });
+  const normalizedUsername = data.username === undefined ? undefined : normalizeUsername(data.username);
+  if (normalizedUsername && normalizedUsername !== existingUser.username) {
+    const duplicate = await prisma.user.findUnique({ where: { username: normalizedUsername } });
     if (duplicate) return { success: false, error: 'Username นี้ถูกใช้งานไปแล้ว' };
   }
 
   const updateData: any = {};
-  if (data.username) updateData.username = data.username.trim();
+  if (normalizedUsername) updateData.username = normalizedUsername;
   if (data.fullName !== undefined) updateData.fullName = data.fullName ? data.fullName.trim() : null;
   
   const rawDept = data.departmentId !== undefined ? data.departmentId : data.department;

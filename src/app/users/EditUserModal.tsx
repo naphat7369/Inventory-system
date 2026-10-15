@@ -140,7 +140,8 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], branche
               type="text"
               required
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value.toLocaleUpperCase('en-US'))}
+              autoCapitalize="characters"
               className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
             />
           </div>

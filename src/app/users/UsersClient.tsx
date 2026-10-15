@@ -144,7 +144,9 @@ export function UsersClient({ users, departments = [], branches = [], currentUse
                   type="text"
                   name="username"
                   required
-                  placeholder="เช่น john_doe"
+                  placeholder="เช่น JOHN_DOE"
+                  onInput={(event) => { event.currentTarget.value = event.currentTarget.value.toLocaleUpperCase('en-US'); }}
+                  autoCapitalize="characters"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-slate-100 font-medium"
                 />
               </div>

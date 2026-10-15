@@ -96,6 +96,7 @@ export type DepartmentItem = {
   logoAssetId?: string | null;
   branchId?: string | null;
   hodId?: string | null;
+  headApproverSource?: 'HOD' | 'GM_FALLBACK' | null;
 };
 
 export type MemoTypeItem = {
@@ -227,6 +228,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const [attachmentSelectionError, setAttachmentSelectionError] = useState('');
   const userDept = departments.find(d => d.id === defaultDeptId);
   const hod = approvers.find(a => a.id === userDept?.hodId);
+  const initialHeadSource = userDept?.headApproverSource ?? 'HOD';
 
   const [signatures, setSignatures] = useState<Signature[]>(
     initialData?.signatures && initialData.signatures.length > 0
@@ -236,7 +238,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             return { ...signature, approverId: currentUser.id, name: userDisplayName(currentUser), position: currentUser.position, source: 'CREATOR' };
           }
           if (index === 1 && hod) {
-            return { ...signature, approverId: hod.id, name: userDisplayName(hod), position: hod.position, source: 'HOD' };
+            return { ...signature, approverId: hod.id, name: userDisplayName(hod), position: hod.position, source: initialHeadSource };
           }
           return signature;
         })
@@ -246,19 +248,20 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   useEffect(() => {
     const currentDept = departments.find(d => d.id === departmentId);
     const newHod = approvers.find(a => a.id === currentDept?.hodId);
+    const headSource = currentDept?.headApproverSource ?? 'HOD';
     
     setSignatures(prev => {
       if (!newHod || prev[0]?.approverId === newHod.id) return prev;
       const existingIndex = prev.findIndex((signature) => signature.approverId === newHod.id);
       if (existingIndex >= 0) {
-        if (prev[existingIndex].source === 'HOD' && prev[existingIndex].role === 'พิจารณาโดย') return prev;
+        if (prev[existingIndex].source === headSource && prev[existingIndex].role === 'พิจารณาโดย') return prev;
         return prev.map((signature, index) => index === existingIndex
-          ? { ...signature, role: 'พิจารณาโดย', name: userDisplayName(newHod), position: newHod.position, source: 'HOD' }
+          ? { ...signature, role: 'พิจารณาโดย', name: userDisplayName(newHod), position: newHod.position, source: headSource }
           : signature);
       }
       const newSigs = [...prev];
-      const hodSignature: Signature = { role: 'พิจารณาโดย', approverId: newHod.id, name: userDisplayName(newHod), position: newHod.position, sortOrder: 1, source: 'HOD' };
-      if (newSigs[1] && newSigs[1].role === 'พิจารณาโดย' && (!newSigs[1].approverId || newSigs[1].source === 'HOD')) newSigs[1] = hodSignature;
+      const hodSignature: Signature = { role: 'พิจารณาโดย', approverId: newHod.id, name: userDisplayName(newHod), position: newHod.position, sortOrder: 1, source: headSource };
+      if (newSigs[1] && newSigs[1].role === 'พิจารณาโดย' && (!newSigs[1].approverId || ['HOD', 'GM_FALLBACK'].includes(newSigs[1].source ?? ''))) newSigs[1] = hodSignature;
       else newSigs.splice(1, 0, hodSignature);
       return newSigs.map((signature, index) => ({ ...signature, sortOrder: index }));
     });

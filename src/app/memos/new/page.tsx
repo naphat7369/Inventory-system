@@ -52,7 +52,7 @@ export default async function NewMemoPage() {
 
   // Active departments only
   const [departments, memoTypes, approvers, attachmentLimits, branchDepartments] = await Promise.all([
-    prisma.department.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
+    prisma.department.findMany({ where: { isActive: true }, include: { branch: { select: { generalManagerId: true } } }, orderBy: { name: 'asc' } }),
     prisma.memoType.findMany({
       where: { isActive: true }, orderBy: { name: 'asc' },
       select: { id: true, name: true, code: true, branchId: true },
@@ -63,7 +63,7 @@ export default async function NewMemoPage() {
       select: { id: true, username: true, fullName: true, position: true, branchId: true, isAllBranches: true, branch: { select: { name: true, code: true } } },
     }),
     getAttachmentLimits(prisma),
-    prisma.branchDepartment.findMany({ where: { isActive: true } }),
+    prisma.branchDepartment.findMany({ where: { isActive: true }, include: { branch: { select: { generalManagerId: true } } } }),
   ]);
 
   return (
@@ -81,10 +81,13 @@ export default async function NewMemoPage() {
         departments={departments.map((department) => {
           const effectiveBranchId = currentUser.branchId ?? department.branchId;
           const branchDept = branchDepartments.find(b => b.departmentId === department.id && b.branchId === effectiveBranchId);
+          const configuredHodId = branchDept?.hodId ?? department.hodId;
+          const gmFallbackId = branchDept?.branch.generalManagerId ?? department.branch?.generalManagerId;
           return {
             ...department,
             branchId: effectiveBranchId,
-            hodId: branchDept?.hodId || department.hodId
+            hodId: configuredHodId ?? gmFallbackId,
+            headApproverSource: configuredHodId ? 'HOD' as const : gmFallbackId ? 'GM_FALLBACK' as const : null,
           };
         })}
         userDepartmentId={currentUser.departmentId}

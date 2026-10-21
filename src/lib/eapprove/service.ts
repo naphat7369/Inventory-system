@@ -121,7 +121,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
         creatorId: input.actorId,
         branchId: branch.id,
         hod: branchDepartment.hod,
-        gmFallback: branchDepartment.hod ? null : branch.generalManager,
+        gmFallback: branch.generalManager,
         template: template?.items.map((item) => mapped(item.approverId, 'TEMPLATE', template.id)),
         userAdded: [
           ...manualApprovers,

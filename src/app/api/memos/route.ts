@@ -136,7 +136,8 @@ export async function POST(request: Request) {
     }
 
     const department = await prisma.department.findUnique({
-      where: { id: finalDepartmentId }
+      where: { id: finalDepartmentId },
+      include: { branch: { select: { generalManagerId: true } } },
     });
 
     if (!department || !department.isActive) {
@@ -159,10 +160,13 @@ export async function POST(request: Request) {
       where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } },
       include: { branch: { select: { generalManagerId: true } } },
     }) : null;
+    const configuredHodId = branchDepartment?.hodId ?? department.hodId;
+    const gmFallbackId = branchDepartment?.branch.generalManagerId ?? department.branch?.generalManagerId;
+    const headApproverId = configuredHodId === currentUser.id ? gmFallbackId : configuredHodId ?? gmFallbackId;
     const signatureRuleError = validateRequiredMemoSignatures({
       signatures: signatures ?? [],
       creatorId: currentUser.id,
-      headApproverId: branchDepartment?.hodId ?? branchDepartment?.branch.generalManagerId ?? department.hodId,
+      headApproverId,
       requiredApproverIds: selectedMemoType?.requiredApprovers?.map((item) => item.approverId) ?? [],
     });
     if (signatureRuleError) return NextResponse.json({ error: signatureRuleError }, { status: 400 });

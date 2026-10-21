@@ -42,7 +42,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       const chain = buildApprovalChain({
         creatorId: String(session.id), branchId: branch.id,
         hod: branchDepartment.hod,
-        gmFallback: branchDepartment.hod ? null : branch.generalManager,
+        gmFallback: branch.generalManager,
         userAdded: memo.signatures
           .filter((signature) => signature.role !== 'นำเสนอโดย' && signature.approver)
           .map((signature) => ({

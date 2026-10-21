@@ -43,7 +43,7 @@ export async function GET(request: Request) {
         creatorId: creator.id,
         branchId,
         hod: branchDepartment.hod,
-        gmFallback: branchDepartment.hod ? null : branchDepartment.branch.generalManager,
+        gmFallback: branchDepartment.branch.generalManager,
         required: memoType.requiredApprovers.map((rule) => ({
           approver: rule.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: rule.id,
         })),

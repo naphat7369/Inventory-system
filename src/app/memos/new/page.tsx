@@ -83,11 +83,14 @@ export default async function NewMemoPage() {
           const branchDept = branchDepartments.find(b => b.departmentId === department.id && b.branchId === effectiveBranchId);
           const configuredHodId = branchDept?.hodId ?? department.hodId;
           const gmFallbackId = branchDept?.branch.generalManagerId ?? department.branch?.generalManagerId;
+          const creatorIsHod = configuredHodId === currentUser.id;
           return {
             ...department,
             branchId: effectiveBranchId,
-            hodId: configuredHodId ?? gmFallbackId,
-            headApproverSource: configuredHodId ? 'HOD' as const : gmFallbackId ? 'GM_FALLBACK' as const : null,
+            hodId: creatorIsHod ? gmFallbackId : configuredHodId ?? gmFallbackId,
+            headApproverSource: creatorIsHod
+              ? (gmFallbackId ? 'GM_FALLBACK' as const : null)
+              : configuredHodId ? 'HOD' as const : gmFallbackId ? 'GM_FALLBACK' as const : null,
           };
         })}
         userDepartmentId={currentUser.departmentId}

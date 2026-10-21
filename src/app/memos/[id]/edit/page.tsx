@@ -84,7 +84,15 @@ export default async function EditMemoPage({ params }: { params: Promise<{ id: s
           const branchDepartment = branchDepartments.find((item) => item.departmentId === department.id && item.branchId === effectiveBranchId);
           const configuredHodId = branchDepartment?.hodId ?? department.hodId;
           const gmFallbackId = branchDepartment?.branch.generalManagerId ?? department.branch?.generalManagerId;
-          return { ...department, branchId: effectiveBranchId, hodId: configuredHodId ?? gmFallbackId, headApproverSource: configuredHodId ? 'HOD' as const : gmFallbackId ? 'GM_FALLBACK' as const : null };
+          const creatorIsHod = configuredHodId === (memo.createdById ?? currentUser.id);
+          return {
+            ...department,
+            branchId: effectiveBranchId,
+            hodId: creatorIsHod ? gmFallbackId : configuredHodId ?? gmFallbackId,
+            headApproverSource: creatorIsHod
+              ? (gmFallbackId ? 'GM_FALLBACK' as const : null)
+              : configuredHodId ? 'HOD' as const : gmFallbackId ? 'GM_FALLBACK' as const : null,
+          };
         })}
         initialData={memo} 
         isEdit={true} 

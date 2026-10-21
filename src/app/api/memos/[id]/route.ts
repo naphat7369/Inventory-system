@@ -99,7 +99,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       : existing.departmentId;
     const effectiveMemoTypeId = data.memoTypeId === undefined ? existing.memoTypeId : data.memoTypeId;
     const [department, memoType] = await Promise.all([
-      prisma.department.findUnique({ where: { id: effectiveDepartmentId } }),
+      prisma.department.findUnique({
+        where: { id: effectiveDepartmentId },
+        include: { branch: { select: { generalManagerId: true } } },
+      }),
       effectiveMemoTypeId
         ? prisma.memoType.findFirst({
             where: { id: effectiveMemoTypeId, isActive: true },
@@ -160,10 +163,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: effectiveDepartmentId } },
         include: { branch: { select: { generalManagerId: true } } },
       }) : null;
+      const memoCreatorId = existing.createdById ?? currentUser.id;
+      const configuredHodId = branchDepartment?.hodId ?? department.hodId;
+      const gmFallbackId = branchDepartment?.branch.generalManagerId ?? department.branch?.generalManagerId;
+      const headApproverId = configuredHodId === memoCreatorId ? gmFallbackId : configuredHodId ?? gmFallbackId;
       const signatureRuleError = validateRequiredMemoSignatures({
         signatures: data.signatures,
-        creatorId: existing.createdById ?? currentUser.id,
-        headApproverId: branchDepartment?.hodId ?? branchDepartment?.branch.generalManagerId ?? department.hodId,
+        creatorId: memoCreatorId,
+        headApproverId,
         requiredApproverIds: memoType?.requiredApprovers.map((item) => item.approverId) ?? [],
       });
       if (signatureRuleError) return NextResponse.json({ error: signatureRuleError }, { status: 400 });

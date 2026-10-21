@@ -60,9 +60,18 @@ test('inactive approver is rejected and must be replaced', () => {
     (error: unknown) => error instanceof ApprovalRuleError && error.code === 'APPROVER_INACTIVE');
 });
 
-test('creator self-skip still requires a different approver', () => {
+test('HOD creator is replaced by the branch GM as the approval head', () => {
+  const chain = buildApprovalChain({
+    creatorId: 'hod', branchId: 'b1', hod: user('hod'), gmFallback: user('gm'),
+  });
+  assert.deepEqual(chain.map((step) => step.approverId), ['gm']);
+  assert.equal(chain[0].source, 'GM_FALLBACK');
+  assert.equal(chain[0].status, 'PENDING');
+});
+
+test('HOD creator requires a configured branch GM', () => {
   assert.throws(() => buildApprovalChain({ creatorId: 'hod', branchId: 'b1', hod: user('hod') }),
-    (error: unknown) => error instanceof ApprovalRuleError && error.code === 'APPROVER_REQUIRED_AFTER_SELF_SKIP');
+    (error: unknown) => error instanceof ApprovalRuleError && error.code === 'GM_REQUIRED_FOR_HOD_CREATOR');
 });
 
 test('all-branches executive can approve a memo from any branch', () => {

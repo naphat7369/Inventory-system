@@ -52,13 +52,23 @@ export type BuildApprovalChainInput = {
  * every later source is retained in `sources` for audit.
  */
 export function buildApprovalChain(input: BuildApprovalChainInput): ApprovalChainStep[] {
-  const head = input.hod
+  // A memo creator must never approve their own HOD step. When the creator is
+  // the configured HOD, promote the branch GM to the head of the chain instead
+  // of retaining a cosmetic SKIPPED_SELF HOD step in the document.
+  const creatorIsHod = input.hod?.id === input.creatorId;
+  const head = input.hod && !creatorIsHod
     ? { approver: input.hod, source: 'HOD' as const }
     : input.gmFallback
       ? { approver: input.gmFallback, source: 'GM_FALLBACK' as const }
       : null;
 
   if (!head) {
+    if (creatorIsHod) {
+      throw new ApprovalRuleError(
+        'GM_REQUIRED_FOR_HOD_CREATOR',
+        'ผู้สร้าง Memo เป็น HOD กรุณากำหนด GM ของสาขาเพื่อเป็นผู้อนุมัติแทน',
+      );
+    }
     throw new ApprovalRuleError('APPROVAL_HEAD_MISSING', 'ไม่พบ HOD หรือ GM สำรองของสาขา กรุณาติดต่อ Super Admin');
   }
 

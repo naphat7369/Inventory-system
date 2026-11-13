@@ -90,7 +90,9 @@ export default async function PrintAssetsPage({
   }
 
   // Property filter
-  if (property && property !== 'ALL') {
+  if (property === 'unassigned') {
+    andConditions.push({ propertyId: null });
+  } else if (property && property !== 'ALL') {
     andConditions.push({ propertyId: property });
   }
 

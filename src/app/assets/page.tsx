@@ -1,14 +1,14 @@
 import prisma from '@/lib/prisma';
 import Link from 'next/link';
-import { Package, Plus, Search, Filter, Trash2 } from 'lucide-react';
+import { Package, Plus, Filter, Trash2, Building } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { ImportExportButtons } from './ImportExportButtons';
 import { AssetTable } from './AssetTable';
 import { AssetSearchBar } from './AssetSearchBar';
 import { Pagination } from '@/components/Pagination';
 
-export default async function AssetsPage({ searchParams }: { searchParams: Promise<{ search?: string, status?: string, page?: string, completeness?: string, trash?: string }> }) {
-  const { search = '', status = '', page = '1', completeness = '', trash = '' } = await searchParams;
+export default async function AssetsPage({ searchParams }: { searchParams: Promise<{ search?: string, status?: string, page?: string, completeness?: string, trash?: string, property?: string }> }) {
+  const { search = '', status = '', page = '1', completeness = '', trash = '', property = '' } = await searchParams;
   const session = await getSession();
 
   const whereClause: any = {};
@@ -37,6 +37,12 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
     });
   }
 
+  if (property === 'unassigned') {
+    andConditions.push({ propertyId: null });
+  } else if (property) {
+    andConditions.push({ propertyId: property });
+  }
+
   if (trash === 'true') {
     andConditions.push({ isDeleted: true });
   } else {
@@ -51,7 +57,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
   const currentPage = parseInt(page, 10) || 1;
   const skip = (currentPage - 1) * PAGE_SIZE;
 
-  const totalItems = await prisma.asset.count({ where: whereClause });
+  const [totalItems, properties] = await Promise.all([
+    prisma.asset.count({ where: whereClause }),
+    prisma.property.findMany({ orderBy: { name: 'asc' } }),
+  ]);
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
   const assets = await prisma.asset.findMany({
@@ -76,8 +85,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             <ImportExportButtons assets={assets} />
           )}
           <Link 
-            href={`/assets/print?search=${search}&status=${status}`} 
-            target="_blank"
+            href={`/assets/print?search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&property=${encodeURIComponent(property)}`}
             className="flex items-center gap-2 bg-gray-800 dark:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-900 dark:hover:bg-slate-700 transition-colors"
           >
             <Package size={20} /> Print Labels
@@ -104,6 +112,20 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4">
         <form method="GET" className="flex flex-col md:flex-row gap-4 md:items-center">
           <AssetSearchBar defaultValue={search} />
+          <div className="relative w-full md:w-56">
+            <Building className="absolute left-3 top-2.5 text-gray-400" size={18} />
+            <select
+              name="property"
+              defaultValue={property}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+            >
+              <option value="">All Properties</option>
+              {properties.map((item) => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+              <option value="unassigned">Unassigned Property</option>
+            </select>
+          </div>
           <div className="relative w-full md:w-48">
             <Filter className="absolute left-3 top-2.5 text-gray-400" size={18} />
             <select 
@@ -132,7 +154,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
           <button type="submit" className="w-full md:w-auto bg-gray-800 dark:bg-slate-800 text-white px-6 py-2 rounded-lg hover:bg-gray-900 dark:hover:bg-slate-700 transition-colors font-medium">
             Filter
           </button>
-          {(search || status || completeness) && (
+          {(search || status || completeness || property) && (
             <Link href="/assets" className="w-full md:w-auto text-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 font-medium px-2 py-2">
               Clear
             </Link>

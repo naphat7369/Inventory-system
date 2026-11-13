@@ -8,10 +8,48 @@ import bcrypt from 'bcryptjs';
 import { serializeAuditValue } from '@/lib/audit';
 import { cancelApprovalDigestJobs, isValidEmail, normalizeEmail } from '@/lib/eapprove/notification-service';
 import { normalizeUsername } from '@/lib/username';
+import { buildAssetIdPrefix, formatAssetId, nextAssetSequence, normalizeAssetIdSegment, normalizeDepartmentCode } from '@/lib/asset-id';
+import type { Prisma } from '@prisma/client';
 
 async function requireAdmin() {
   const session = await getSession();
   if (session?.role !== 'ADMIN') throw new Error('Unauthorized');
+}
+
+async function generateNextAssetId(
+  tx: Prisma.TransactionClient | typeof prisma,
+  categoryId: string,
+  propertyId: string | null | undefined,
+  department: string | null | undefined,
+  lockNamespace = false,
+) {
+  const [category, property] = await Promise.all([
+    tx.category.findUnique({ where: { id: categoryId }, select: { name: true, prefix: true } }),
+    propertyId
+      ? tx.property.findUnique({ where: { id: propertyId }, select: { name: true, prefix: true } })
+      : Promise.resolve(null),
+  ]);
+  if (!category) throw new Error('Category not found');
+
+  const departmentCode = normalizeDepartmentCode(department);
+  const prefix = buildAssetIdPrefix({
+    propertyPrefix: property?.prefix,
+    propertyName: property?.name,
+    categoryPrefix: category.prefix,
+    categoryName: category.name,
+    department: departmentCode,
+  });
+
+  if (lockNamespace) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${prefix}))`;
+  }
+
+  const existing = await tx.asset.findMany({
+    where: { assetId: { startsWith: `${prefix}-` } },
+    select: { assetId: true },
+  });
+  const sequence = nextAssetSequence(existing.map((asset: { assetId: string }) => asset.assetId), prefix);
+  return { assetId: formatAssetId(prefix, sequence), departmentCode };
 }
 
 export async function getAssetSuggestions(query: string) {
@@ -87,12 +125,14 @@ export async function createCategory(formData: FormData) {
   if (!name) return;
   await prisma.category.create({ data: { name, prefix: prefix || null } });
   revalidatePath('/categories');
+  revalidatePath('/settings/categories');
 }
 
 export async function deleteCategory(id: string) {
   await requireAdmin();
   await prisma.category.delete({ where: { id } });
   revalidatePath('/categories');
+  revalidatePath('/settings/categories');
 }
 
 // Custom Fields
@@ -119,42 +159,21 @@ export async function deleteCustomField(id: string) {
 // Assets
 export async function createAsset(data: any) {
   await requireAdmin();
-  let assetId = data.assetId;
-  
-  if (!assetId && data.categoryId) {
-    const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
-    
-    let catPrefix = category?.prefix;
-    if (!catPrefix && category?.name) {
-      catPrefix = category.name.substring(0, 3).toUpperCase();
-    }
-    if (!catPrefix) catPrefix = 'ASSET';
-
-    let propPrefix = '';
-    if (data.propertyId) {
-      const property = await prisma.property.findUnique({ where: { id: data.propertyId } });
-      if (property) {
-        propPrefix = property.prefix || property.name.substring(0, 3).toUpperCase();
-        propPrefix += '-';
-      }
-    }
-    
-    const count = await prisma.asset.count({ 
-      where: { 
-        categoryId: data.categoryId,
-        propertyId: data.propertyId || null
-      } 
-    });
-    assetId = `${propPrefix}${catPrefix}-${(count + 1).toString().padStart(4, '0')}`;
-  } else if (!assetId) {
-    assetId = `ASSET-${Date.now()}`;
-  }
 
   await prisma.$transaction(async (tx) => {
+    const requestedAssetId = typeof data.assetId === 'string' ? data.assetId.trim().toUpperCase() : '';
+    const generated = !requestedAssetId && data.categoryId
+      ? await generateNextAssetId(tx, data.categoryId, data.propertyId || null, data.department, true)
+      : null;
+    const assetId = requestedAssetId || generated?.assetId || `ASSET-GEN-${Date.now()}`;
+    const department = generated?.departmentCode ?? normalizeDepartmentCode(data.department);
+    const assetData = { ...data };
+    delete assetData.assetId;
     const newAsset = await tx.asset.create({
       data: {
-        ...data,
-        assetId
+        ...assetData,
+        department,
+        assetId,
       }
     });
 
@@ -169,42 +188,38 @@ export async function createAsset(data: any) {
   revalidatePath('/');
 }
 
-export async function getNextAssetId(categoryId: string, propertyId?: string) {
+export async function getNextAssetId(categoryId: string, propertyId?: string, department?: string) {
+  await requireAdmin();
   if (!categoryId) return '';
-  const category = await prisma.category.findUnique({ where: { id: categoryId } });
-  
-  // If prefix is missing, use the first 3 letters of the category name
-  let catPrefix = category?.prefix;
-  if (!catPrefix && category?.name) {
-    catPrefix = category.name.substring(0, 3).toUpperCase();
-  }
-  if (!catPrefix) catPrefix = 'ASSET';
-
-  let propPrefix = '';
-  if (propertyId) {
-    const property = await prisma.property.findUnique({ where: { id: propertyId } });
-    if (property) {
-      propPrefix = property.prefix || property.name.substring(0, 3).toUpperCase();
-      propPrefix += '-';
-    }
-  }
-  
-  const count = await prisma.asset.count({ 
-    where: { 
-      categoryId,
-      propertyId: propertyId || null
-    } 
-  });
-  return `${propPrefix}${catPrefix}-${(count + 1).toString().padStart(4, '0')}`;
+  const result = await generateNextAssetId(prisma, categoryId, propertyId || null, department, false);
+  return result.assetId;
 }
 
 export async function createProperty(formData: FormData) {
   await requireAdmin();
-  const name = formData.get('name') as string;
-  const prefix = formData.get('prefix') as string;
+  const name = String(formData.get('name') ?? '').trim();
+  const prefix = normalizeAssetIdSegment(String(formData.get('prefix') ?? ''), '').slice(0, 12);
   if (!name) return;
   await prisma.property.create({ data: { name, prefix: prefix || null } });
   revalidatePath('/properties');
+  revalidatePath('/settings/properties');
+  revalidatePath('/assets/new');
+}
+
+export async function updateProperty(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get('id') ?? '').trim();
+  const name = String(formData.get('name') ?? '').trim();
+  const prefix = normalizeAssetIdSegment(String(formData.get('prefix') ?? ''), '').slice(0, 12);
+  if (!id || !name) throw new Error('Property name is required');
+
+  await prisma.property.update({
+    where: { id },
+    data: { name, prefix: prefix || null },
+  });
+  revalidatePath('/properties');
+  revalidatePath('/settings/properties');
+  revalidatePath('/assets');
   revalidatePath('/assets/new');
 }
 
@@ -212,6 +227,7 @@ export async function deleteProperty(id: string) {
   await requireAdmin();
   await prisma.property.delete({ where: { id } });
   revalidatePath('/properties');
+  revalidatePath('/settings/properties');
   revalidatePath('/assets/new');
 }
 
@@ -995,8 +1011,12 @@ export async function importAssets(rows: any[]) {
     // Cache for categories and properties to avoid redundant creates
     const categoryCache = new Map<string, string>();
     const propertyCache = new Map<string, string>();
-    // Cache for asset counts to auto-generate IDs safely without race conditions
-    const countCache = new Map<string, number>();
+    const departmentRows = await tx.department.findMany({ select: { name: true, code: true } });
+    const departmentCodeByName = new Map<string, string>();
+    for (const department of departmentRows) {
+      departmentCodeByName.set(department.name.trim().toUpperCase(), department.code);
+      departmentCodeByName.set(department.code.trim().toUpperCase(), department.code);
+    }
 
     for (const rawRow of rows) {
       const row: Record<string, any> = {};
@@ -1006,61 +1026,33 @@ export async function importAssets(rows: any[]) {
 
       const categoryName = (row['Category']?.toString().trim() || row['Asset Type']?.toString().trim()) || 'Uncategorized';
       let categoryId = categoryCache.get(categoryName);
-      let catPrefix = '';
 
       if (!categoryId) {
         let category = await tx.category.findFirst({ where: { name: categoryName } });
         if (!category) {
-          catPrefix = categoryName.substring(0, 3).toUpperCase();
           category = await tx.category.create({
-            data: { name: categoryName, prefix: catPrefix }
+            data: { name: categoryName, prefix: categoryName.substring(0, 3).toUpperCase() }
           });
-        } else {
-          catPrefix = category.prefix || category.name.substring(0, 3).toUpperCase();
         }
         categoryId = category.id;
         categoryCache.set(categoryName, categoryId);
-      } else {
-        const cat = await tx.category.findUnique({ where: { id: categoryId } });
-        catPrefix = cat?.prefix || cat?.name.substring(0, 3).toUpperCase() || 'CAT';
       }
 
       let propertyId = null;
-      let propPrefix = '';
       if (row['Property']) {
         const propertyName = row['Property'].toString().trim();
         propertyId = propertyCache.get(propertyName);
         if (!propertyId) {
           let property = await tx.property.findFirst({ where: { name: propertyName } });
           if (!property) {
-            propPrefix = propertyName.substring(0, 3).toUpperCase();
             property = await tx.property.create({
-              data: { name: propertyName, prefix: propPrefix }
+              data: { name: propertyName, prefix: propertyName.substring(0, 3).toUpperCase() }
             });
-          } else {
-            propPrefix = property.prefix || property.name.substring(0, 3).toUpperCase();
           }
           propertyId = property.id;
           propertyCache.set(propertyName, propertyId);
-        } else {
-          const prop = await tx.property.findUnique({ where: { id: propertyId } });
-          propPrefix = prop?.prefix || prop?.name.substring(0, 3).toUpperCase() || 'PRP';
         }
-        propPrefix += '-';
       }
-
-      // Generate Asset ID
-      const countKey = `${categoryId}-${propertyId || 'none'}`;
-      let currentCount = countCache.get(countKey);
-      if (currentCount === undefined) {
-        currentCount = await tx.asset.count({
-          where: { categoryId, propertyId: propertyId || null }
-        });
-      }
-      currentCount++;
-      countCache.set(countKey, currentCount);
-
-      const assetId = `${propPrefix}${catPrefix}-${currentCount.toString().padStart(4, '0')}`;
 
       // Core fields
       const name = (row['Asset Name']?.toString().trim() || row['Device Name']?.toString().trim()) || 'Unknown Asset';
@@ -1078,7 +1070,9 @@ export async function importAssets(rows: any[]) {
       else status = rawStatus; // fallback to whatever it is
       const location = row['Location'] || null;
       const ipAddress = row['IP Address'] || null;
-      const department = row['Department']?.toString().trim() || row['Departments']?.toString().trim() || null;
+      const rawDepartment = row['Department']?.toString().trim() || row['Departments']?.toString().trim() || null;
+      const department = departmentCodeByName.get(rawDepartment?.toUpperCase() ?? '') ?? normalizeDepartmentCode(rawDepartment);
+      const { assetId } = await generateNextAssetId(tx, categoryId, propertyId, department, true);
       const owner = row['Owner']?.toString().trim() || null;
       const os = row['OS']?.toString().trim() || row['Operating System']?.toString().trim() || null;
       
@@ -1107,7 +1101,7 @@ export async function importAssets(rows: any[]) {
           status: status.toString(),
           location: location?.toString(),
           ipAddress: ipAddress?.toString(),
-          department: department?.toString(),
+          department,
           owner: owner?.toString(),
           os: os?.toString(),
           purchaseDate,
@@ -1123,7 +1117,9 @@ export async function importAssets(rows: any[]) {
 
   revalidatePath('/assets');
   revalidatePath('/categories');
+  revalidatePath('/settings/categories');
   revalidatePath('/properties');
+  revalidatePath('/settings/properties');
   revalidatePath('/');
   return { success: true, count: importedCount };
 }

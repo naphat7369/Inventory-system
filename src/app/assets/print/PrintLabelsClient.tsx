@@ -161,7 +161,15 @@ export function PrintLabelsClient({
   const allVisibleSelected = filteredAssets.length > 0 && visibleSelectedCount === filteredAssets.length;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 print:bg-white print:text-black print:p-0 print:m-0 print:min-h-0">
+    <>
+      <style>{`
+        @page { size: A4; margin: 0; }
+        @media print {
+          html, body { margin: 0 !important; padding: 0 !important; }
+          .asset-label-print-page { box-sizing: border-box; padding: 10mm !important; }
+        }
+      `}</style>
+      <div className="asset-label-print-page min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 print:bg-white print:text-black print:m-0 print:min-h-0">
       {/* 1. Control Toolbar (Hidden in Print Mode) */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs print:hidden">
         <div className="max-w-7xl mx-auto p-4 sm:px-6 space-y-4">
@@ -443,6 +451,7 @@ export function PrintLabelsClient({
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
-import { createProperty, deleteProperty } from '@/app/actions';
-import { Building, Trash2 } from 'lucide-react';
+import { createProperty, deleteProperty, updateProperty } from '@/app/actions';
+import { Building, Save, Trash2 } from 'lucide-react';
 
 export default async function PropertiesPage() {
   const properties = await prisma.property.findMany({
@@ -37,7 +37,7 @@ export default async function PropertiesPage() {
               type="text" 
               name="prefix" 
               placeholder="e.g. HQ, B1"
-              maxLength={4}
+              maxLength={12}
               className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
             />
           </div>
@@ -63,10 +63,20 @@ export default async function PropertiesPage() {
           <tbody>
             {properties.map(property => (
               <tr key={property.id} className="border-b border-gray-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
-                <td className="p-4 font-medium">{property.name}</td>
-                <td className="p-4 text-gray-500 dark:text-gray-400">{property.prefix || '-'}</td>
+                <td className="p-4 font-medium">
+                  <form id={`property-${property.id}`} action={updateProperty}>
+                    <input type="hidden" name="id" value={property.id} />
+                    <input name="name" required defaultValue={property.name} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium dark:border-slate-600 dark:bg-slate-800" />
+                  </form>
+                </td>
+                <td className="p-4 text-gray-500 dark:text-gray-400">
+                  <input form={`property-${property.id}`} name="prefix" defaultValue={property.prefix || ''} maxLength={12} placeholder="Prefix" className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm uppercase dark:border-slate-600 dark:bg-slate-800" />
+                </td>
                 <td className="p-4 text-gray-500 dark:text-gray-400">{property._count.assets} items</td>
-                <td className="p-4">
+                <td className="p-4 flex items-center gap-1">
+                  <button form={`property-${property.id}`} type="submit" className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors" title="Save changes">
+                    <Save size={18} />
+                  </button>
                   <form action={async () => {
                     'use server';
                     await deleteProperty(property.id);

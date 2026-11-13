@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateAsset } from '@/app/actions';
 
-export default function EditAssetForm({ asset, categories, properties, allAssets }: { asset: any, categories: any[], properties: any[], allAssets: any[] }) {
+export default function EditAssetForm({ asset, categories, properties, departments, allAssets }: { asset: any, categories: any[], properties: any[], departments: any[], allAssets: any[] }) {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string>(asset.categoryId);
   const [selectedProperty, setSelectedProperty] = useState<string>(asset.propertyId || '');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>(asset.department || '');
   const [assetIdValue, setAssetIdValue] = useState<string>(asset.assetId || '');
   
   let initialCustomData = {};
@@ -21,10 +22,10 @@ export default function EditAssetForm({ asset, categories, properties, allAssets
 
   useEffect(() => {
     // Fetch new ID only if category or property is different from the original asset
-    if (selectedCategory !== asset.categoryId || selectedProperty !== (asset.propertyId || '')) {
+    if (selectedCategory !== asset.categoryId || selectedProperty !== (asset.propertyId || '') || selectedDepartment !== (asset.department || '')) {
       import('@/app/actions').then(({ getNextAssetId }) => {
-        if (selectedCategory) {
-          getNextAssetId(selectedCategory, selectedProperty || undefined).then(id => setAssetIdValue(id));
+        if (selectedCategory && selectedProperty && selectedDepartment) {
+          getNextAssetId(selectedCategory, selectedProperty || undefined, selectedDepartment).then(id => setAssetIdValue(id));
         } else {
           setAssetIdValue('');
         }
@@ -32,7 +33,7 @@ export default function EditAssetForm({ asset, categories, properties, allAssets
     } else {
       setAssetIdValue(asset.assetId || '');
     }
-  }, [selectedCategory, selectedProperty, asset]);
+  }, [selectedCategory, selectedProperty, selectedDepartment, asset]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,20 +75,21 @@ export default function EditAssetForm({ asset, categories, properties, allAssets
             type="text" 
             name="assetId" 
             value={assetIdValue}
-            onChange={(e) => setAssetIdValue(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" 
+            readOnly
+            className="w-full px-4 py-2 bg-gray-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg font-mono"
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Property</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Property *</label>
           <select 
             name="propertyId" 
+            required
             value={selectedProperty}
             onChange={(e) => setSelectedProperty(e.target.value)}
             className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Select a property (optional)</option>
+            <option value="">Select a property</option>
             {properties.map(prop => (
               <option key={prop.id} value={prop.id}>{prop.name}</option>
             ))}
@@ -135,8 +137,12 @@ export default function EditAssetForm({ asset, categories, properties, allAssets
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
-          <input type="text" name="department" defaultValue={asset.department || ''} placeholder="e.g. IT, HR, Sales" className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department *</label>
+          <select name="department" required value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)} className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select a department</option>
+            {selectedDepartment && !departments.some((department) => department.code === selectedDepartment) ? <option value={selectedDepartment}>{selectedDepartment} - Existing department</option> : null}
+            {departments.map((department) => <option key={department.id} value={department.code}>{department.code} - {department.name}</option>)}
+          </select>
         </div>
 
         <div>

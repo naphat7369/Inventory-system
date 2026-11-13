@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createAsset, getNextAssetId } from '@/app/actions';
 
-export default function NewAssetForm({ categories, properties, allAssets }: { categories: any[], properties: any[], allAssets: any[] }) {
+export default function NewAssetForm({ categories, properties, departments, allAssets }: { categories: any[], properties: any[], departments: any[], allAssets: any[] }) {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProperty, setSelectedProperty] = useState<string>('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [customData, setCustomData] = useState<Record<string, string>>({});
   const [assetIdValue, setAssetIdValue] = useState<string>('');
 
@@ -15,12 +16,12 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
   const customFields = activeCategory?.customFields || [];
 
   useEffect(() => {
-    if (selectedCategory) {
-      getNextAssetId(selectedCategory, selectedProperty || undefined).then(id => setAssetIdValue(id));
+    if (selectedCategory && selectedProperty && selectedDepartment) {
+      getNextAssetId(selectedCategory, selectedProperty || undefined, selectedDepartment).then(id => setAssetIdValue(id));
     } else {
       setAssetIdValue('');
     }
-  }, [selectedCategory, selectedProperty]);
+  }, [selectedCategory, selectedProperty, selectedDepartment]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,7 +29,7 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
     
     const data = {
       name: formData.get('name'),
-      assetId: formData.get('assetId') || undefined,
+      assetId: undefined,
       ipAddress: formData.get('ipAddress') || null,
       department: formData.get('department') || null,
       owner: formData.get('owner') || null,
@@ -62,21 +63,22 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
             type="text" 
             name="assetId" 
             value={assetIdValue}
-            onChange={(e) => setAssetIdValue(e.target.value)}
-            placeholder="Auto-generated if left blank" 
-            className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" 
+            readOnly
+            placeholder="Select Property, Category and Department"
+            className="w-full px-4 py-2 bg-gray-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg font-mono"
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Property</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Property *</label>
           <select 
             name="propertyId" 
+            required
             value={selectedProperty}
             onChange={(e) => setSelectedProperty(e.target.value)}
             className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Select a property (optional)</option>
+            <option value="">Select a property</option>
             {properties.map(prop => (
               <option key={prop.id} value={prop.id}>{prop.name}</option>
             ))}
@@ -123,8 +125,11 @@ export default function NewAssetForm({ categories, properties, allAssets }: { ca
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
-          <input type="text" name="department" placeholder="e.g. IT, HR, Sales" className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department *</label>
+          <select name="department" required value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)} className="w-full px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select a department</option>
+            {departments.map((department) => <option key={department.id} value={department.code}>{department.code} - {department.name}</option>)}
+          </select>
         </div>
 
         <div>

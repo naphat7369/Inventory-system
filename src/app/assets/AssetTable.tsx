@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Eye, Pencil, Trash2, CheckSquare, Square, ArrowUpDown, ArrowUp, ArrowDown, Printer } from 'lucide-react';
 import { DeleteAssetButton } from './DeleteAssetButton';
 import { RestoreAssetButton } from './RestoreAssetButton';
@@ -10,6 +11,7 @@ import { hardDeleteAssets, hardDeleteAsset, softDeleteAssets } from '@/app/actio
 import { createPrintSession } from './print/actions';
 
 export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: string, isTrash: boolean }) {
+  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -35,18 +37,18 @@ export function AssetTable({ assets, role, isTrash }: { assets: any[], role?: st
     setIsPrinting(true);
     try {
       if (selectedIds.length <= 20) {
-        window.open(`/assets/print?ids=${selectedIds.join(',')}`, '_blank');
+        router.push(`/assets/print?ids=${selectedIds.join(',')}`);
       } else {
         const res = await createPrintSession(selectedIds);
         if (res.success && res.token) {
-          window.open(`/assets/print?token=${res.token}`, '_blank');
+          router.push(`/assets/print?token=${res.token}`);
         } else {
-          window.open(`/assets/print?ids=${selectedIds.slice(0, 100).join(',')}`, '_blank');
+          router.push(`/assets/print?ids=${selectedIds.slice(0, 100).join(',')}`);
         }
       }
     } catch (e) {
       console.error('Failed to initiate print session', e);
-      window.open(`/assets/print?ids=${selectedIds.slice(0, 50).join(',')}`, '_blank');
+      router.push(`/assets/print?ids=${selectedIds.slice(0, 50).join(',')}`);
     } finally {
       setIsPrinting(false);
     }

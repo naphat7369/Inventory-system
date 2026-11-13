@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma';
 import { createCustomField, deleteCustomField } from '@/app/actions';
 import Link from 'next/link';
-import { ArrowRight, Building2, Settings, Trash2, Workflow } from 'lucide-react';
+import { ArrowRight, Building, Building2, Settings, Tag, Trash2, Workflow } from 'lucide-react';
 
 export default async function SettingsPage() {
   const categories = await prisma.category.findMany();
@@ -59,6 +59,42 @@ export default async function SettingsPage() {
               </div>
             </div>
             <ArrowRight className="mt-2 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-indigo-600" size={19} />
+          </div>
+        </Link>
+
+        <Link
+          href="/settings/categories"
+          className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-emerald-500"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
+                <Tag size={22} />
+              </span>
+              <div>
+                <h2 className="font-bold text-slate-900 dark:text-slate-100">Categories</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">จัดการหมวดหมู่และ Prefix ของ Asset</p>
+              </div>
+            </div>
+            <ArrowRight className="mt-2 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-emerald-600" size={19} />
+          </div>
+        </Link>
+
+        <Link
+          href="/settings/properties"
+          className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-amber-500"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300">
+                <Building size={22} />
+              </span>
+              <div>
+                <h2 className="font-bold text-slate-900 dark:text-slate-100">Properties</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">จัดการ Property และ Prefix ที่ใช้สร้าง Asset ID</p>
+              </div>
+            </div>
+            <ArrowRight className="mt-2 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-amber-600" size={19} />
           </div>
         </Link>
       </section>

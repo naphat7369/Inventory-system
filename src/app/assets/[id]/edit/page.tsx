@@ -10,9 +10,10 @@ export default async function EditAssetPage({ params }: { params: Promise<{ id: 
   });
   if (!asset) notFound();
 
-  const [categories, properties, allAssets] = await Promise.all([
+  const [categories, properties, departments, allAssets] = await Promise.all([
     prisma.category.findMany({ include: { customFields: true } }),
     prisma.property.findMany(),
+    prisma.department.findMany({ where: { isActive: true }, select: { id: true, name: true, code: true }, orderBy: { code: 'asc' } }),
     prisma.asset.findMany({ 
       where: { id: { not: id } }, // Exclude self
       orderBy: { assetId: 'asc' } 
@@ -22,7 +23,7 @@ export default async function EditAssetPage({ params }: { params: Promise<{ id: 
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Edit Asset</h1>
-      <EditAssetForm asset={asset} categories={categories} properties={properties} allAssets={allAssets} />
+      <EditAssetForm asset={asset} categories={categories} properties={properties} departments={departments} allAssets={allAssets} />
     </div>
   );
 }

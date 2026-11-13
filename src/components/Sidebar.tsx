@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, Settings, Tag, Building, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText, FileCheck2, PenLine, ShieldCheck, Mail } from 'lucide-react';
+import { Home, Package, Settings, Users, User, Key, Menu, X, Wrench, ArrowLeftRight, Boxes, FileText, FileCheck2, PenLine, ShieldCheck, Mail } from 'lucide-react';
 import { logout, getExpiringRenewalsCount } from '@/app/actions';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/app/components/ThemeToggle';
@@ -41,9 +41,7 @@ export function Sidebar({ user }: { user: JWTPayload }) {
       { name: 'ลายเซ็นของฉัน', href: '/memos/signatures', icon: PenLine },
       { name: 'Audit & Operations', href: '/e-approve/admin/audit-logs', icon: ShieldCheck },
       { name: 'เอกสารต่ออายุ (Renewals)', href: '/renewals', icon: FileText, badge: expiringCount },
-      { name: 'Categories', href: '/categories', icon: Tag, section: 'การจัดการระบบ' },
-      { name: 'Properties', href: '/properties', icon: Building },
-      { name: 'Repair Center', href: '/repairs', icon: Wrench },
+      { name: 'Repair Center', href: '/repairs', icon: Wrench, section: 'การจัดการระบบ' },
       { name: 'Users', href: '/users', icon: Users },
       { name: 'Settings', href: '/settings', icon: Settings },
     ];

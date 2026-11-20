@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { approveCurrentStep } from '@/lib/eapprove/service';
-import { eApproveErrorResponse } from '@/lib/eapprove/http';
-import { approveMemoSchema, parseBody } from '@/lib/eapprove/schemas';
+import { approveCurrentStep } from '@/lib/edocuments/service';
+import { eDocumentsErrorResponse } from '@/lib/edocuments/http';
+import { approveMemoSchema, parseBody } from '@/lib/edocuments/schemas';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,5 +14,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json(await approveCurrentStep(prisma, {
       memoId: id, actorId: String(session.id), signatureId: body.signatureId, idempotencyKey: body.idempotencyKey,
     }));
-  } catch (error) { return eApproveErrorResponse(error); }
+  } catch (error) { return eDocumentsErrorResponse(error); }
 }

@@ -126,7 +126,7 @@ export function ApprovalSignaturesClient({ initialSignatures }: { initialSignatu
   return <main className="min-h-screen bg-slate-50 p-4 dark:bg-slate-950 md:p-8">
     <div className="mx-auto max-w-6xl">
       <Link href="/memos/approvals" className="text-sm font-semibold text-blue-600 hover:underline">&larr; กลับกล่องงานอนุมัติ</Link>
-      <div className="mt-4"><h1 className="text-2xl font-black text-slate-900 dark:text-white md:text-3xl">ลายเซ็นของฉัน</h1><p className="mt-1 text-sm text-slate-500">ใช้เป็นลายเซ็นผู้นำเสนอ Memo และผู้อนุมัติ E-Approve โดยแบบ Default จะถูกเลือกให้อัตโนมัติ</p></div>
+      <div className="mt-4"><h1 className="text-2xl font-black text-slate-900 dark:text-white md:text-3xl">ลายเซ็นของฉัน</h1><p className="mt-1 text-sm text-slate-500">ใช้เป็นลายเซ็นผู้นำเสนอ Memo และผู้อนุมัติ E-Documents โดยแบบ Default จะถูกเลือกให้อัตโนมัติ</p></div>
       {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</div>}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-6">

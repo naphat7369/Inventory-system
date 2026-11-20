@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Official PDF ยังไม่พร้อมใช้งาน' }, { status: 409 });
   }
 
-  const storageRoot = path.resolve(process.cwd(), 'storage', 'eapprove', 'official-pdfs');
+  const storageRoot = path.resolve(process.cwd(), 'storage', 'edocuments', 'official-pdfs');
   const target = path.resolve(/* turbopackIgnore: true */ process.cwd(), artifact.storageKey);
   if (target !== storageRoot && !target.startsWith(`${storageRoot}${path.sep}`)) {
     return NextResponse.json({ error: 'ตำแหน่งไฟล์ไม่ถูกต้อง' }, { status: 500 });

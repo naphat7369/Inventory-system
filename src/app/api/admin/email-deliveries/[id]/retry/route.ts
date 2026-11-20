@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { isValidEmail } from '@/lib/eapprove/notification-service';
+import { isValidEmail } from '@/lib/edocuments/notification-service';
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -15,7 +15,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   if (delivery.status !== 'FAILED') return NextResponse.json({ error: 'Retry ได้เฉพาะรายการ FAILED' }, { status: 409 });
   await prisma.$transaction([
     prisma.emailDelivery.update({ where: { id }, data: { status: 'PENDING', attemptCount: 0, availableAt: new Date(), lockedAt: null, completedAt: null, lastErrorCode: null } }),
-    prisma.auditLog.create({ data: { module: 'E_APPROVE', action: 'EMAIL_RETRY_QUEUED', entity: 'EMAIL_DELIVERY', entityId: id, userId: String(session.id) } }),
+    prisma.auditLog.create({ data: { module: 'E_DOCUMENTS', action: 'EMAIL_RETRY_QUEUED', entity: 'EMAIL_DELIVERY', entityId: id, userId: String(session.id) } }),
   ]);
   return NextResponse.json({ id, status: 'PENDING' });
 }

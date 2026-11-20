@@ -187,7 +187,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           canDelete={canDelete}
           canEdit={canEdit}
           signatures={signatures}
-          isEApprove
+          isEDocuments
           canSendEmail={isAdmin || isOwner}
           officialPdfReady={memo.pdfStatus === 'READY' && memo.pdfArtifacts.length > 0}
           canReuseMemoActions={isAdmin || isOwner}

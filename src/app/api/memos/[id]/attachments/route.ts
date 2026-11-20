@@ -164,7 +164,7 @@ async function handleChunkUpload(request: Request, options: {
         uploadedById: options.actorId,
       } });
       await tx.auditLog.create({ data: {
-        module: 'E_APPROVE',
+        module: 'E_DOCUMENTS',
         action: 'ADDED_MEMO_ATTACHMENTS', entity: 'MEMO', entityId: options.memoId, userId: options.actorId,
         newValue: JSON.stringify([{ fileName, fileSize: file.length, mimeType }]),
       } });
@@ -269,7 +269,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         uploadedById: actor.id,
       })) });
       await tx.auditLog.create({ data: {
-        module: 'E_APPROVE',
+        module: 'E_DOCUMENTS',
         action: 'ADDED_MEMO_ATTACHMENTS', entity: 'MEMO', entityId: memoId, userId: actor.id,
         newValue: JSON.stringify(prepared.map((item) => ({ fileName: item.file.name, fileSize: item.file.size, mimeType: item.file.type }))),
       } });

@@ -25,7 +25,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-gray-900 rounded-xl flex items-center justify-center mb-4 text-white">
             <Package size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">E-Approve System</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">E-Documents System</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-center text-sm">
             Sign in to access your assets.
           </p>

@@ -14,7 +14,7 @@ interface MemoDetailActionsProps {
   canDelete?: boolean;
   canEdit?: boolean;
   signatures?: unknown[];
-  isEApprove?: boolean;
+  isEDocuments?: boolean;
   canSendEmail?: boolean;
   officialPdfReady?: boolean;
   canReuseMemoActions?: boolean;
@@ -29,7 +29,7 @@ export function MemoDetailActions({
   canDelete = true,
   canEdit = true,
   signatures = [],
-  isEApprove = false,
+  isEDocuments = false,
   canSendEmail = false,
   officialPdfReady = false,
   canReuseMemoActions = false,
@@ -375,7 +375,7 @@ export function MemoDetailActions({
           </button>
         )}
 
-        {status === 'DRAFT' && !isEApprove && (
+        {status === 'DRAFT' && !isEDocuments && (
           <button 
             onClick={() => setConfirmFinalizeOpen(true)} 
             disabled={loading} 

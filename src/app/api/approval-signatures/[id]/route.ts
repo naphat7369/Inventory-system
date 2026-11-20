@@ -17,7 +17,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const signature = await prisma.$transaction(async (tx) => {
     if (body.isDefault === true) await tx.approvalSignature.updateMany({ where: { userId }, data: { isDefault: false } });
     const updated = await tx.approvalSignature.update({ where: { id }, data: { name, ...(body.isDefault === true ? { isDefault: true } : {}) } });
-    await tx.auditLog.create({ data: { module: 'E_APPROVE', userId, action: 'UPDATED_APPROVAL_SIGNATURE', entity: 'APPROVAL_SIGNATURE', entityId: id, newValue: JSON.stringify({ name: updated.name, type: updated.type, isDefault: updated.isDefault }) } });
+    await tx.auditLog.create({ data: { module: 'E_DOCUMENTS', userId, action: 'UPDATED_APPROVAL_SIGNATURE', entity: 'APPROVAL_SIGNATURE', entityId: id, newValue: JSON.stringify({ name: updated.name, type: updated.type, isDefault: updated.isDefault }) } });
     return updated;
   });
   return NextResponse.json(signature);
@@ -38,7 +38,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       const next = await tx.approvalSignature.findFirst({ where: { userId }, orderBy: { updatedAt: 'desc' } });
       if (next) await tx.approvalSignature.update({ where: { id: next.id }, data: { isDefault: true } });
     }
-    await tx.auditLog.create({ data: { module: 'E_APPROVE', userId, action: 'DELETED_APPROVAL_SIGNATURE', entity: 'APPROVAL_SIGNATURE', entityId: id, oldValue: JSON.stringify({ name: existing.name, type: existing.type, isDefault: existing.isDefault }) } });
+    await tx.auditLog.create({ data: { module: 'E_DOCUMENTS', userId, action: 'DELETED_APPROVAL_SIGNATURE', entity: 'APPROVAL_SIGNATURE', entityId: id, oldValue: JSON.stringify({ name: existing.name, type: existing.type, isDefault: existing.isDefault }) } });
   });
   return NextResponse.json({ deleted: true });
 }

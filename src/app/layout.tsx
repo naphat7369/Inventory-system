@@ -20,7 +20,7 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "E-Approve System",
+  title: "E-Documents System",
   description: "Enterprise Asset Management System",
 };
 

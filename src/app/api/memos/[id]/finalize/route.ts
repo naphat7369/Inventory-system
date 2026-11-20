@@ -7,7 +7,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   return NextResponse.json({
-    error: 'Memo ทุกฉบับต้องส่งผ่าน E-Approve ก่อนออกเลขเอกสาร',
+    error: 'Memo ทุกฉบับต้องส่งผ่าน E-Documents ก่อนออกเลขเอกสาร',
     memoId: id,
   }, { status: 409 });
 }

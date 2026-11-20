@@ -29,7 +29,7 @@ try {
   const result = await transporter.sendMail({
     from: process.env.SMTP_FROM,
     to: recipient,
-    subject: 'E-Approve SMTP test',
+    subject: 'E-Documents SMTP test',
     text: `SMTP is working. Test sent at ${new Date().toISOString()}.`,
   });
   console.log(`SMTP test sent successfully. Message ID: ${result.messageId}`);

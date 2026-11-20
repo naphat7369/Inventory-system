@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const signature = await prisma.$transaction(async (tx) => {
       if (makeDefault) await tx.approvalSignature.updateMany({ where: { userId }, data: { isDefault: false } });
       const created = await tx.approvalSignature.create({ data: { userId, ...parsed.data, isDefault: makeDefault } });
-      await tx.auditLog.create({ data: { module: 'E_APPROVE', userId, action: 'CREATED_APPROVAL_SIGNATURE', entity: 'APPROVAL_SIGNATURE', entityId: created.id, newValue: JSON.stringify({ name: created.name, type: created.type, isDefault: created.isDefault }) } });
+      await tx.auditLog.create({ data: { module: 'E_DOCUMENTS', userId, action: 'CREATED_APPROVAL_SIGNATURE', entity: 'APPROVAL_SIGNATURE', entityId: created.id, newValue: JSON.stringify({ name: created.name, type: created.type, isDefault: created.isDefault }) } });
       return created;
     });
     return NextResponse.json(signature, { status: 201 });

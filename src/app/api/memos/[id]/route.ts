@@ -115,7 +115,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     //   ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: department.id } } })
     //   : null;
     if (!department) {
-      return NextResponse.json({ error: 'Department is not configured for an active E-Approve branch' }, { status: 400 });
+      return NextResponse.json({ error: 'Department is not configured for an active E-Documents branch' }, { status: 400 });
     }
     if (effectiveBranchId) {
       updateData.branch = { connect: { id: effectiveBranchId } };
@@ -128,7 +128,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       updateData.memoType = { connect: { id: memoType.id } };
     } else if (data.memoTypeId === null) {
       if (existing.memoTypeId && existing.approvalStatus !== 'DRAFT') {
-        return NextResponse.json({ error: 'Cannot remove E-Approve Memo Type after the memo has entered approval' }, { status: 409 });
+        return NextResponse.json({ error: 'Cannot remove E-Documents Memo Type after the memo has entered approval' }, { status: 409 });
       }
       updateData.memoType = { disconnect: true };
     }

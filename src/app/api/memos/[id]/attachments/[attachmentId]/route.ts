@@ -138,7 +138,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   await prisma.$transaction([
     prisma.memoAttachment.delete({ where: { id: attachmentId } }),
     prisma.auditLog.create({ data: {
-      module: 'E_APPROVE',
+      module: 'E_DOCUMENTS',
       action: 'DELETED_MEMO_ATTACHMENT', entity: 'MEMO_ATTACHMENT', entityId: attachmentId, userId: actor.id,
       oldValue: JSON.stringify({ memoId, fileName: attachment.fileName, fileSize: attachment.fileSize, mimeType: attachment.mimeType }),
     } }),

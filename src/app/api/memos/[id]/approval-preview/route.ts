@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { buildApprovalChain, ApprovalRuleError } from '@/lib/eapprove/chain';
-import { eApproveErrorResponse } from '@/lib/eapprove/http';
-import { EApproveError } from '@/lib/eapprove/errors';
+import { buildApprovalChain, ApprovalRuleError } from '@/lib/edocuments/chain';
+import { eDocumentsErrorResponse } from '@/lib/edocuments/http';
+import { EDocumentsError } from '@/lib/edocuments/errors';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,21 +19,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         signatures: { orderBy: { sortOrder: 'asc' }, include: { approver: true } },
       },
     });
-    if (!memo || memo.deletedAt) throw new EApproveError('MEMO_NOT_FOUND', 'ไม่พบ Memo', 404);
-    if (memo.createdById !== String(session.id)) throw new EApproveError('FORBIDDEN', 'เฉพาะผู้สร้าง Memo เท่านั้น', 403);
-    if (memo.memoType && !memo.memoType.isActive) throw new EApproveError('MEMO_TYPE_INACTIVE', 'Memo Type ที่เลือกถูกปิดใช้งาน');
+    if (!memo || memo.deletedAt) throw new EDocumentsError('MEMO_NOT_FOUND', 'ไม่พบ Memo', 404);
+    if (memo.createdById !== String(session.id)) throw new EDocumentsError('FORBIDDEN', 'เฉพาะผู้สร้าง Memo เท่านั้น', 403);
+    if (memo.memoType && !memo.memoType.isActive) throw new EDocumentsError('MEMO_TYPE_INACTIVE', 'Memo Type ที่เลือกถูกปิดใช้งาน');
     const branch = memo.branch ?? memo.department.branch;
-    if (!branch?.isActive) throw new EApproveError('BRANCH_REQUIRED', 'แผนกยังไม่ได้กำหนดสาขาที่เปิดใช้งาน');
+    if (!branch?.isActive) throw new EDocumentsError('BRANCH_REQUIRED', 'แผนกยังไม่ได้กำหนดสาขาที่เปิดใช้งาน');
     const branchDepartment = await prisma.branchDepartment.findUnique({
       where: { branchId_departmentId: { branchId: branch.id, departmentId: memo.departmentId } },
       include: { hod: true },
     });
-    if (!branchDepartment?.isActive) throw new EApproveError('DEPARTMENT_WRONG_BRANCH', 'แผนกนี้ไม่ได้เปิดใช้งานในสาขาของ Memo');
+    if (!branchDepartment?.isActive) throw new EDocumentsError('DEPARTMENT_WRONG_BRANCH', 'แผนกนี้ไม่ได้เปิดใช้งานในสาขาของ Memo');
     const unresolvedManualSigner = memo.signatures.find((signature) =>
       signature.role !== 'นำเสนอโดย' && Boolean(signature.name?.trim()) && !signature.approver,
     );
     if (unresolvedManualSigner) {
-      throw new EApproveError(
+      throw new EDocumentsError(
         'MANUAL_APPROVER_REQUIRED',
         `กรุณาเลือกผู้อนุมัติ “${unresolvedManualSigner.name}” จาก Dropdown ใหม่ก่อนส่งอนุมัติ`,
       );
@@ -59,10 +59,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         branch: { id: branch.id, name: branch.name, code: branch.code }, chain,
       });
     } catch (error) {
-      if (error instanceof ApprovalRuleError) throw new EApproveError(error.code, error.message);
+      if (error instanceof ApprovalRuleError) throw new EDocumentsError(error.code, error.message);
       throw error;
     }
   } catch (error) {
-    return eApproveErrorResponse(error);
+    return eDocumentsErrorResponse(error);
   }
 }

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { pdfJobKey } from '@/lib/eapprove/idempotency';
+import { pdfJobKey } from '@/lib/edocuments/idempotency';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 

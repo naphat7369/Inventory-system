@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { createSession, deleteSession, getSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { serializeAuditValue } from '@/lib/audit';
-import { cancelApprovalDigestJobs, isValidEmail, normalizeEmail } from '@/lib/eapprove/notification-service';
+import { cancelApprovalDigestJobs, isValidEmail, normalizeEmail } from '@/lib/edocuments/notification-service';
 import { normalizeUsername } from '@/lib/username';
 import { buildAssetIdPrefix, formatAssetId, nextAssetSequence, normalizeAssetIdSegment, normalizeDepartmentCode } from '@/lib/asset-id';
 import type { Prisma } from '@prisma/client';
@@ -638,7 +638,7 @@ export async function updateUser(
   await prisma.$transaction(async tx => {
     if (emailChanged) await cancelApprovalDigestJobs(tx, userId, 'APPROVER_EMAIL_CHANGED');
     const updatedUser = await tx.user.update({ where: { id: userId }, data: updateData });
-    if (emailChanged) await tx.auditLog.create({ data: { module: 'E_APPROVE', action: 'USER_EMAIL_UPDATED', entity: 'USER', entityId: userId, userId: String(session.id), oldValue: serializeAuditValue({ email: existingUser.email }), newValue: serializeAuditValue({ email: updatedUser.email }) } });
+    if (emailChanged) await tx.auditLog.create({ data: { module: 'E_DOCUMENTS', action: 'USER_EMAIL_UPDATED', entity: 'USER', entityId: userId, userId: String(session.id), oldValue: serializeAuditValue({ email: existingUser.email }), newValue: serializeAuditValue({ email: updatedUser.email }) } });
   });
 
   revalidatePath('/users');

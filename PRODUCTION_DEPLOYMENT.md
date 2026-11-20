@@ -1,6 +1,6 @@
 # Production deployment
 
-The current application architecture requires a persistent Node.js host. It uses SQLite, local file storage, and a long-running E-Approve worker, so a stateless/serverless deployment without a persistent volume is not supported.
+The current application architecture requires a persistent Node.js host. It uses SQLite, local file storage, and a long-running E-Documents worker, so a stateless/serverless deployment without a persistent volume is not supported.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ Required production values:
 
 Refreshing the browser does not end the session. Closing the website tab/window ends its tab session, so opening the website again requires a new login. The authentication cookie is also a browser-session cookie and is not persisted after the browser session ends.
 - `NEXTAUTH_URL`: public HTTPS URL; this enables secure authentication cookies
-- `EAPPROVE_APP_URL`: URL the worker can use to reach the web application
+- `EDOCUMENTS_APP_URL`: URL the worker can use to reach the web application
 - `CHROME_PATH`: Chrome/Chromium executable path
 - `SMTP_HOST` and `SMTP_FROM`: required to enable email; SMTP credentials depend on the provider
 
@@ -35,6 +35,21 @@ npm run build
 ```
 
 Back up the database and `storage/` before running migrations on an existing production installation.
+
+### One-time E-Documents rename upgrade
+
+For the release that renames E-Approve to E-Documents, stop both the web process and the worker before upgrading. Rename the production environment variables from `EAPPROVE_*` to `EDOCUMENTS_*`, then run the database and PDF storage migrations before starting the new build:
+
+```bash
+npm ci
+npx prisma migrate deploy
+npm run storage:migrate:edocuments
+npm run build
+```
+
+The storage migration moves existing Official PDF artifacts from `storage/eapprove/` to `storage/edocuments/` and updates their database keys. It is safe to run again after a partial failure. Do not restart the application until it completes with `missing=0`; otherwise existing Official PDFs may be unavailable through the new route.
+
+If PM2 currently runs a process named `eapprove-worker`, remove that old process after stopping it and start `npm run worker` under the new process name `edocuments-worker`. The process name itself is operational metadata, but renaming it avoids leaving the retired product name in monitoring and logs.
 
 ## Start
 

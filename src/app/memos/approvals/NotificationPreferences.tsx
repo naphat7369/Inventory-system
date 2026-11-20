@@ -12,7 +12,7 @@ export function NotificationPreferences({ email, initialEmail, initialMode, init
   const [saving, setSaving] = useState(false);
   const save = async () => {
     setSaving(true); setMessage('');
-    const response = await fetch('/api/e-approve/notification-preferences', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailAddress, approvalEmailEnabled: enabled, approvalEmailMode: mode, approvalEmailDigestTime: digestTime }) });
+    const response = await fetch('/api/e-documents/notification-preferences', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: emailAddress, approvalEmailEnabled: enabled, approvalEmailMode: mode, approvalEmailDigestTime: digestTime }) });
     const body = await response.json().catch(() => ({}));
     setMessage(response.ok ? 'บันทึกการแจ้งเตือนแล้ว' : body.error ?? 'บันทึกไม่สำเร็จ'); setSaving(false);
   };
@@ -24,7 +24,7 @@ export function NotificationPreferences({ email, initialEmail, initialMode, init
         <select value={digestTime} onChange={(e) => setDigestTime(e.target.value)} disabled={!enabled || mode !== 'DIGEST'} className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950">{timeOptions().map((v) => <option key={v} value={v}>{v} น.</option>)}</select>
       </label>
       <label className={`block rounded-xl border p-3 ${mode === 'IMMEDIATE' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20' : 'dark:border-slate-700'}`}><span className="flex items-start gap-3"><input type="radio" checked={mode === 'IMMEDIATE'} onChange={() => setMode('IMMEDIATE')} disabled={!enabled} className="mt-1"/><span><b className="flex items-center gap-2 text-sm"><MailCheck className="h-4 w-4 text-blue-600"/>แจ้งทันทีทุกฉบับ</b><span className="mt-1 block text-xs leading-5 text-slate-500">ส่งอีเมลทุกครั้งที่ Memo ถึงคิวของคุณ และเตือนอีกครั้งเวลา 09:00 น. ของวันถัดไปหากยังค้าง</span></span></span></label>
-      <p className="text-xs leading-5 text-slate-500">อีเมลไม่มีลิงก์และไม่แสดงรายละเอียดลับ กรุณาเข้าระบบ E‑Approve ผ่านช่องทางภายในองค์กรเพื่อตรวจสอบงาน</p>
+      <p className="text-xs leading-5 text-slate-500">อีเมลไม่มีลิงก์และไม่แสดงรายละเอียดลับ กรุณาเข้าระบบ E‑Documents ผ่านช่องทางภายในองค์กรเพื่อตรวจสอบงาน</p>
       {message && <p className="text-xs font-bold text-blue-600">{message}</p>}
       <button onClick={() => void save()} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"><Save className="h-4 w-4"/>{saving ? 'กำลังบันทึก...' : 'บันทึก'}</button>
     </div>

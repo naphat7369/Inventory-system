@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (memo.pdfStatus !== 'READY' || memo.pdfArtifacts.length === 0) {
     return NextResponse.json({ error: 'Official PDF ยังไม่พร้อม กรุณารอให้ PDF Status เป็น READY' }, { status: 409 });
   }
-  const storageRoot = path.join(process.cwd(), 'storage', 'eapprove', 'official-pdfs');
+  const storageRoot = path.join(process.cwd(), 'storage', 'edocuments', 'official-pdfs');
   const artifactPath = path.join(storageRoot, memo.id, path.basename(memo.pdfArtifacts[0].storageKey));
   const setting = await prisma.systemSetting.findUnique({ where: { key: 'emailAttachmentMaxMb' } });
   let maxMb = 10;
@@ -63,7 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         idempotencyKey,
       } });
       await tx.auditLog.create({ data: {
-        module: 'E_APPROVE',
+        module: 'E_DOCUMENTS',
         action: 'MEMO_EMAIL_QUEUED',
         entity: 'EMAIL_DELIVERY',
         entityId: created.id,

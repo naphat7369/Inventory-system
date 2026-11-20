@@ -43,7 +43,7 @@ export default async function SettingsPage() {
         </Link>
 
         <Link
-          href="/settings/e-approve"
+          href="/settings/e-documents"
           className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-500"
         >
           <div className="flex items-start justify-between gap-4">
@@ -52,7 +52,7 @@ export default async function SettingsPage() {
                 <Workflow size={22} />
               </span>
               <div>
-                <h2 className="font-bold text-slate-900 dark:text-slate-100">E‑Approve</h2>
+                <h2 className="font-bold text-slate-900 dark:text-slate-100">E‑Documents</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
                   ตั้งค่าสาขา HOD/GM ผู้อนุมัติ ประเภท Memo และลำดับการอนุมัติ
                 </p>

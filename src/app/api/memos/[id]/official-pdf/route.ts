@@ -35,9 +35,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Official PDF ยังไม่พร้อมใช้งาน' }, { status: 409 });
   }
 
-  const storageRoot = path.resolve(process.cwd(), 'storage', 'edocuments', 'official-pdfs');
+  const storageRoots = [
+    path.resolve(process.cwd(), 'storage', 'edocuments', 'official-pdfs'),
+    path.resolve(process.cwd(), 'storage', 'eapprove', 'official-pdfs'),
+  ];
   const target = path.resolve(/* turbopackIgnore: true */ process.cwd(), artifact.storageKey);
-  if (target !== storageRoot && !target.startsWith(`${storageRoot}${path.sep}`)) {
+  const isAllowedStoragePath = storageRoots.some((storageRoot) => target === storageRoot || target.startsWith(`${storageRoot}${path.sep}`));
+  if (!isAllowedStoragePath) {
     return NextResponse.json({ error: 'ตำแหน่งไฟล์ไม่ถูกต้อง' }, { status: 500 });
   }
 

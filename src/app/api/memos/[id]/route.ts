@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth';
 import { promises as fs } from 'node:fs';
 import { memoAttachmentPath } from '@/lib/memo-attachments';
 import { validateRequiredMemoSignatures } from '@/lib/memo-signature-rules';
+import { resolveApprovalBranchId } from '@/lib/edocuments/chain';
 
 const prisma = new PrismaClient();
 const uploadReadyHeaders = { 'Cache-Control': 'no-store', Connection: 'close' };
@@ -106,11 +107,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       effectiveMemoTypeId
         ? prisma.memoType.findFirst({
             where: { id: effectiveMemoTypeId, isActive: true },
-            include: { requiredApprovers: { select: { approverId: true } } },
+            include: { requiredApprovers: { select: { approverId: true, stepType: true, approver: { select: { branchId: true, isAllBranches: true } } } } },
           })
         : Promise.resolve(null),
     ]);
-    const effectiveBranchId = existing.branchId ?? currentUser.branchId ?? memoType?.branchId ?? department?.branchId ?? null;
+    const effectiveBranchId = existing.branchId ?? resolveApprovalBranchId({
+      actorBranchId: currentUser.branchId,
+      memoTypeBranchId: memoType?.branchId,
+      departmentBranchId: department?.branchId,
+      workflowUsers: memoType?.requiredApprovers.map((rule) => rule.approver),
+    });
     // const branchDepartment = department && effectiveBranchId
     //   ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: effectiveBranchId, departmentId: department.id } } })
     //   : null;
@@ -171,7 +177,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         signatures: data.signatures,
         creatorId: memoCreatorId,
         headApproverId,
-        requiredApproverIds: memoType?.requiredApprovers.map((item) => item.approverId) ?? [],
+        requiredApproverIds: memoType?.requiredApprovers.filter((item) => item.stepType !== 'REVIEWER').map((item) => item.approverId) ?? [],
       });
       if (signatureRuleError) return NextResponse.json({ error: signatureRuleError }, { status: 400 });
       updateData.signatures = {

@@ -13,7 +13,7 @@ export async function PATCH(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'ข้อมูลการแจ้งเตือนไม่ถูกต้อง' }, { status: 400 });
   const userId = String(session.id);
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user?.isActive || !user.isApprover) return NextResponse.json({ error: 'ไม่มีสิทธิ์ Approver' }, { status: 403 });
+  if (!user?.isActive || (!user.isApprover && !user.isReviewer)) return NextResponse.json({ error: 'ไม่มีสิทธิ์ Approver หรือ Reviewer' }, { status: 403 });
   const email = normalizeEmail(parsed.data.email);
   if (!isValidEmail(email)) return NextResponse.json({ error: 'รูปแบบอีเมลไม่ถูกต้อง' }, { status: 400 });
   const usersWithEmail = await prisma.user.findMany({ where: { id: { not: userId }, email: { not: null } }, select: { email: true } });

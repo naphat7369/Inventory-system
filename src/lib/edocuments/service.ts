@@ -127,7 +127,10 @@ export async function submitMemo(prisma: PrismaClient, input: {
           ...manualApprovers,
           ...(input.userAddedApproverIds ?? []).map((id) => mapped(id, 'USER_ADDED')),
         ],
-        required: (memo.memoType?.requiredApprovers ?? []).map((item) => ({ approver: item.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: item.id })),
+        required: (memo.memoType?.requiredApprovers ?? []).map((item) => ({
+          approver: item.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: item.id,
+          stepType: item.stepType === 'REVIEWER' ? 'REVIEWER' as const : 'APPROVER' as const,
+        })),
       });
     } catch (error) {
       if (error instanceof ApprovalRuleError) throw new EDocumentsError(error.code, error.message);
@@ -166,7 +169,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
       steps: { create: chain.map((step) => ({
         sortOrder: step.sortOrder, approverId: step.approverId, status: step.status,
         source: step.source, sourceMetadata: json(step.sources), approverNameSnapshot: step.approverName,
-        approverPositionSnapshot: step.approverPosition, memoVersionId: version.id,
+        approverPositionSnapshot: step.approverPosition, memoVersionId: version.id, stepType: step.stepType,
       })) },
     }, include: { steps: true } });
     await tx.memo.update({ where: { id: memo.id }, data: {
@@ -186,7 +189,7 @@ export async function submitMemo(prisma: PrismaClient, input: {
 }
 
 export async function approveCurrentStep(prisma: PrismaClient, input: {
-  memoId: string; actorId: string; signatureId: string; idempotencyKey: string;
+  memoId: string; actorId: string; signatureId?: string; idempotencyKey: string;
 }) {
   return runIdempotentTransaction(prisma, {
     key: input.idempotencyKey, action: 'APPROVE_STEP', actorId: input.actorId, resourceId: input.memoId,
@@ -201,21 +204,21 @@ export async function approveCurrentStep(prisma: PrismaClient, input: {
     if (!step) throw new EDocumentsError('PENDING_STEP_NOT_FOUND', 'ไม่มี Step ที่รออนุมัติ', 409);
     if (step.approverId !== input.actorId) throw new EDocumentsError('NOT_CURRENT_APPROVER', 'ยังไม่ถึงคิวของผู้ใช้นี้', 403);
     const actor = await tx.user.findUnique({ where: { id: input.actorId } });
-    if (!actor?.isActive || !actor.isApprover) throw new EDocumentsError('APPROVER_INACTIVE', 'ผู้อนุมัติถูกปิดใช้งานหรือไม่มีสิทธิ์ กรุณาให้ Super Admin เปลี่ยนผู้อนุมัติ', 403);
-    const signature = await tx.approvalSignature.findFirst({ where: { id: input.signatureId, userId: input.actorId } });
-    if (!signature) throw new EDocumentsError('SIGNATURE_NOT_FOUND', 'ไม่พบลายเซ็นที่เลือก กรุณาตั้งค่าลายเซ็นของคุณก่อนอนุมัติ', 400);
     const confirmedAt = new Date();
-    const signatureSnapshot = {
-      signatureId: signature.id,
-      signatureName: signature.name,
-      signatureType: signature.type,
-      signatureData: signature.data,
-      confirmedBy: actor.fullName ?? actor.username,
+    const isReviewer = step.stepType === 'REVIEWER';
+    if (!actor?.isActive || (isReviewer ? !actor.isReviewer : !actor.isApprover)) {
+      throw new EDocumentsError(isReviewer ? 'REVIEWER_INACTIVE' : 'APPROVER_INACTIVE', isReviewer ? 'ผู้ตรวจสอบถูกปิดใช้งานหรือไม่มีสิทธิ์ Reviewer' : 'ผู้อนุมัติถูกปิดใช้งานหรือไม่มีสิทธิ์ Approver', 403);
+    }
+    const signature = isReviewer ? null : await tx.approvalSignature.findFirst({ where: { id: input.signatureId, userId: input.actorId } });
+    if (!isReviewer && !signature) throw new EDocumentsError('SIGNATURE_NOT_FOUND', 'ไม่พบลายเซ็นที่เลือก กรุณาตั้งค่าลายเซ็นของคุณก่อนอนุมัติ', 400);
+    const signatureSnapshot = signature ? {
+      signatureId: signature.id, signatureName: signature.name, signatureType: signature.type,
+      signatureData: signature.data, confirmedBy: actor.fullName ?? actor.username,
       confirmedAt: confirmedAt.toISOString(),
-    };
+    } : null;
     const updated = await tx.memoApprovalStep.updateMany({ where: { id: step.id, status: 'PENDING' }, data: {
       status: 'APPROVED', actedById: input.actorId, actedByNameSnapshot: step.approverNameSnapshot,
-      signatureSnapshot: json(signatureSnapshot), actedAt: confirmedAt,
+      signatureSnapshot: signatureSnapshot ? json(signatureSnapshot) : null, actedAt: confirmedAt,
       integrityHash: hash({ stepId: step.id, versionId: step.memoVersionId, actorId: input.actorId, signature: signatureSnapshot }),
     } });
     if (updated.count !== 1) throw new EDocumentsError('STEP_ALREADY_COMPLETED', 'Step นี้ถูกดำเนินการแล้ว', 409);
@@ -239,7 +242,7 @@ export async function approveCurrentStep(prisma: PrismaClient, input: {
         payload: json({ memoId: memo.id, memoVersionId: step.memoVersionId }),
       } });
     }
-    await tx.auditLog.create({ data: { module: 'E_DOCUMENTS', action: 'APPROVED_STEP', entity: 'MEMO_APPROVAL_STEP', entityId: step.id, userId: input.actorId, details: input.idempotencyKey } });
+    await tx.auditLog.create({ data: { module: 'E_DOCUMENTS', action: isReviewer ? 'REVIEWED_STEP' : 'APPROVED_STEP', entity: 'MEMO_APPROVAL_STEP', entityId: step.id, userId: input.actorId, details: input.idempotencyKey } });
     return { stepId: step.id, approvalStatus: next ? 'IN_REVIEW' : 'APPROVED', pdfStatus: next ? memo.pdfStatus : 'PENDING' };
   });
 }
@@ -266,7 +269,8 @@ export async function requestMemoRevision(prisma: PrismaClient, input: {
     if (!step) throw new EDocumentsError('PENDING_STEP_NOT_FOUND', 'ไม่มี Step ที่รอดำเนินการ', 409);
     if (step.approverId !== input.actorId) throw new EDocumentsError('NOT_CURRENT_APPROVER', 'ยังไม่ถึงคิวของผู้ใช้นี้', 403);
     const actor = await tx.user.findUnique({ where: { id: input.actorId } });
-    if (!actor?.isActive || !actor.isApprover) throw new EDocumentsError('APPROVER_INACTIVE', 'ผู้ใช้ไม่มีสิทธิ์ Approver', 403);
+    const isReviewer = step.stepType === 'REVIEWER';
+    if (!actor?.isActive || (isReviewer ? !actor.isReviewer : !actor.isApprover)) throw new EDocumentsError(isReviewer ? 'REVIEWER_INACTIVE' : 'APPROVER_INACTIVE', isReviewer ? 'ผู้ใช้ไม่มีสิทธิ์ Reviewer' : 'ผู้ใช้ไม่มีสิทธิ์ Approver', 403);
 
     const updated = await tx.memoApprovalStep.updateMany({
       where: { id: step.id, status: 'PENDING' },
@@ -325,8 +329,9 @@ export async function replacePendingApprover(prisma: PrismaClient, input: {
     if (!step) throw new EDocumentsError('STEP_NOT_FOUND', 'ไม่พบ Approval Step', 404);
     if (!canReplaceApprover(step.status)) throw new EDocumentsError('COMPLETED_STEP_IMMUTABLE', 'ห้ามเปลี่ยน Step ที่ดำเนินการแล้ว', 409);
     const replacement = await tx.user.findUnique({ where: { id: input.newApproverId } });
-    if (!replacement?.isActive || !replacement.isApprover || (!replacement.isAllBranches && replacement.branchId !== step.round.memo.branchId)) {
-      throw new EDocumentsError('INVALID_REPLACEMENT', 'ผู้รับแทนต้องเป็น Active Approver ใน Branch เดียวกัน');
+    const hasReplacementPermission = step.stepType === 'REVIEWER' ? replacement?.isReviewer : replacement?.isApprover;
+    if (!replacement?.isActive || !hasReplacementPermission || (!replacement.isAllBranches && replacement.branchId !== step.round.memo.branchId)) {
+      throw new EDocumentsError('INVALID_REPLACEMENT', `ผู้รับแทนต้องเป็น Active ${step.stepType === 'REVIEWER' ? 'Reviewer' : 'Approver'} ใน Branch เดียวกัน`);
     }
     await resolveApprovalAssignment(tx, { memoId: step.round.memoId, stepId: step.id, reason: 'REASSIGNED' });
     const replacedStep = await tx.memoApprovalStep.update({ where: { id: step.id }, data: {

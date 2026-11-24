@@ -28,6 +28,7 @@ type Preview = {
     source: string;
     sources: Array<{ source: string }>;
     status: string;
+    stepType: 'APPROVER' | 'REVIEWER';
   }>;
 };
 
@@ -96,6 +97,7 @@ export function ApprovalWorkflowPanel({
   canSubmit,
   canWithdraw,
   isCurrentApprover,
+  isCurrentReviewer,
   memoTypeName,
   approvalSignatures,
 }: {
@@ -105,6 +107,7 @@ export function ApprovalWorkflowPanel({
   canSubmit: boolean;
   canWithdraw: boolean;
   isCurrentApprover: boolean;
+  isCurrentReviewer: boolean;
   memoTypeName: string | null;
   approvalSignatures: ApprovalSignature[];
 }) {
@@ -149,7 +152,7 @@ export function ApprovalWorkflowPanel({
       const endpoint = action === "revision" ? "request-revision" : action;
       const payload =
         action === "approve"
-          ? { signatureId: selectedSignatureId, idempotencyKey }
+          ? { ...(isCurrentReviewer ? {} : { signatureId: selectedSignatureId }), idempotencyKey }
           : action === "revision"
             ? { reason, idempotencyKey }
             : action === "withdraw"
@@ -169,8 +172,8 @@ export function ApprovalWorkflowPanel({
       setPreview(null);
       setReason("");
       router.refresh();
-    } catch (err: any) {
-      setError(err?.message ?? "เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองอีกครั้ง");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองอีกครั้ง");
     } finally {
       setLoading(false);
     }
@@ -281,7 +284,7 @@ export function ApprovalWorkflowPanel({
                   className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
                 >
                   <FileCheck2 className="h-4 w-4" />
-                  อนุมัติ
+                  {isCurrentReviewer ? 'ตรวจสอบแล้ว' : 'อนุมัติ'}
                 </button>
               </>
             )}
@@ -321,6 +324,7 @@ export function ApprovalWorkflowPanel({
                         <div className="font-bold">{step.approverName}</div>
                         <div className="text-xs text-slate-500">
                           {step.approverPosition ?? "ไม่ระบุตำแหน่ง"} ·{" "}
+                          {step.stepType === 'REVIEWER' ? 'ผู้ตรวจสอบ · ' : 'ผู้อนุมัติ · '}
                           {step.sources
                             .map((source) => source.source)
                             .join(", ")}
@@ -331,7 +335,12 @@ export function ApprovalWorkflowPanel({
                 </div>
               </div>
             )}
-            {dialog === "approve" && (
+            {dialog === "approve" && isCurrentReviewer && (
+              <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
+                ขั้นตอนนี้เป็นการตรวจสอบ ระบบจะบันทึกชื่อและเวลาที่ตรวจสอบโดยไม่ขอลายเซ็นและไม่แสดงลายเซ็นบนเอกสาร
+              </div>
+            )}
+            {dialog === "approve" && !isCurrentReviewer && (
               <div className="mt-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -434,7 +443,7 @@ export function ApprovalWorkflowPanel({
                 disabled={
                   loading ||
                   (dialog === "revision" && reason.trim().length < 3) ||
-                  (dialog === "approve" && !selectedSignatureId)
+                  (dialog === "approve" && !isCurrentReviewer && !selectedSignatureId)
                 }
                 onClick={() => void perform(dialog)}
                 className={`inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold text-white disabled:opacity-50 ${dialog === "revision" ? "bg-violet-600 hover:bg-violet-700" : dialog === "approve" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}`}
@@ -443,7 +452,7 @@ export function ApprovalWorkflowPanel({
                 {dialog === "submit"
                   ? "ยืนยันส่งอนุมัติ"
                   : dialog === "approve"
-                    ? "ยืนยันอนุมัติ"
+                    ? isCurrentReviewer ? "ยืนยันตรวจสอบ" : "ยืนยันอนุมัติ"
                     : dialog === "withdraw"
                       ? "ยืนยันถอน Memo"
                     : "ยืนยันส่งกลับ"}

@@ -10,7 +10,7 @@ export const submitMemoSchema = z.object({
 }).strict();
 
 export const approveMemoSchema = z.object({
-  signatureId: id,
+  signatureId: id.optional(),
   idempotencyKey,
 }).strict();
 
@@ -47,6 +47,7 @@ export const userApprovalConfigSchema = z.object({
   email: z.string().trim().email().max(254).nullable().optional(),
   isActive: z.boolean().optional(),
   isApprover: z.boolean().optional(),
+  isReviewer: z.boolean().optional(),
   isAllBranches: z.boolean().optional(),
 }).strict();
 
@@ -61,7 +62,11 @@ export const createMemoTypeSchema = z.object({
 }).strict();
 
 export const updateMemoTypeSchema = createMemoTypeSchema.partial().extend({ isActive: z.boolean().optional() }).strict();
-export const requiredApproversSchema = z.object({ approverIds: z.array(id).min(1).max(20).refine((items) => new Set(items).size === items.length, 'Duplicate approvers') }).strict();
+export const requiredApproversSchema = z.object({
+  steps: z.array(z.object({ userId: id, stepType: z.enum(['APPROVER', 'REVIEWER']) }).strict()).min(1).max(20)
+    .refine((items) => new Set(items.map((item) => item.userId)).size === items.length, 'Duplicate users'),
+  filterUserIds: z.array(id).max(200).refine((items) => new Set(items).size === items.length, 'Duplicate filter users').default([]),
+}).strict();
 
 export const systemSettingsSchema = z.object({
   itEmail: z.string().trim().email().max(254).nullable().optional(),

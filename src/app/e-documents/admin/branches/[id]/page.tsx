@@ -8,8 +8,8 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ i
   const session = await getSession(); if (session?.role !== 'ADMIN') redirect('/');
   const { id } = await params;
   const [branch, allBranchApprovers] = await Promise.all([
-    prisma.branch.findUnique({ where: { id }, include: { departmentConfigs: { where: { isActive: true }, include: { department: true }, orderBy: { department: { name: 'asc' } } }, users: { orderBy: { username: 'asc' }, select: { id: true, username: true, fullName: true, position: true, isActive: true, isApprover: true, isAllBranches: true, departmentId: true } } } }),
-    prisma.user.findMany({ where: { isAllBranches: true, isActive: true, isApprover: true }, orderBy: { username: 'asc' }, select: { id: true, username: true, fullName: true, position: true, isActive: true, isApprover: true, isAllBranches: true, departmentId: true } }),
+    prisma.branch.findUnique({ where: { id }, include: { departmentConfigs: { where: { isActive: true }, include: { department: true }, orderBy: { department: { name: 'asc' } } }, users: { orderBy: { username: 'asc' }, select: { id: true, username: true, fullName: true, position: true, isActive: true, isApprover: true, isReviewer: true, isAllBranches: true, departmentId: true } } } }),
+    prisma.user.findMany({ where: { isAllBranches: true, isActive: true, OR: [{ isApprover: true }, { isReviewer: true }] }, orderBy: { username: 'asc' }, select: { id: true, username: true, fullName: true, position: true, isActive: true, isApprover: true, isReviewer: true, isAllBranches: true, departmentId: true } }),
   ]);
   if (!branch) notFound();
   const users = [...branch.users, ...allBranchApprovers.filter((globalUser) => !branch.users.some((branchUser) => branchUser.id === globalUser.id))];

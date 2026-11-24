@@ -142,43 +142,46 @@ model BorrowLog {
 }
 
 model User {
-  id                      String                     @id @default(uuid())
-  username                String                     @unique
-  passwordHash            String
-  fullName                String? // ชื่อ - นามสกุล
-  departmentId            String?
-  department              Department?                @relation(fields: [departmentId], references: [id])
-  phone                   String? // เบอร์โทรศัพท์ / ช่องทางติดต่อ
-  role                    String                     @default("STAFF") // ADMIN or STAFF
-  email                   String?
-  position                String?
-  isActive                Boolean                    @default(true)
-  isApprover              Boolean                    @default(false)
-  isAllBranches           Boolean                    @default(false)
-  approvalEmailEnabled    Boolean                    @default(true)
-  approvalEmailMode       String                     @default("IMMEDIATE")
-  approvalEmailDigestTime String                     @default("16:00")
-  branchId                String?
-  branch                  Branch?                    @relation("BranchUsers", fields: [branchId], references: [id], onDelete: SetNull)
-  headedDepartments       Department[]               @relation("DepartmentHod")
-  headedBranchDepartments BranchDepartment[]         @relation("BranchDepartmentHod")
-  managedBranches         Branch[]                   @relation("BranchGm")
-  requiredApprovalRules   MemoTypeRequiredApprover[]
-  approvalSteps           MemoApprovalStep[]
-  delegationsGiven        ApprovalDelegation[]       @relation("Delegator")
-  delegationsReceived     ApprovalDelegation[]       @relation("Delegate")
-  borrowLogs              BorrowLog[]
-  licenseAssignments      LicenseAssignment[]
-  deletedMemos            Memo[]                     @relation("DeletedMemos")
-  signatureTemplates      SignatureTemplate[]
-  approvalSignatures      ApprovalSignature[]
-  memoSignatures          MemoSignature[]            @relation("MemoSignatureApprover")
-  notifications           Notification[]
-  emailDeliveries         EmailDelivery[]
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
+  id                        String                     @id @default(uuid())
+  username                  String                     @unique
+  passwordHash              String
+  fullName                  String? // ชื่อ - นามสกุล
+  departmentId              String?
+  department                Department?                @relation(fields: [departmentId], references: [id])
+  phone                     String? // เบอร์โทรศัพท์ / ช่องทางติดต่อ
+  role                      String                     @default("STAFF") // ADMIN or STAFF
+  email                     String?
+  position                  String?
+  isActive                  Boolean                    @default(true)
+  isApprover                Boolean                    @default(false)
+  isReviewer                Boolean                    @default(false)
+  isAllBranches             Boolean                    @default(false)
+  approvalEmailEnabled      Boolean                    @default(true)
+  approvalEmailMode         String                     @default("IMMEDIATE")
+  approvalEmailDigestTime   String                     @default("16:00")
+  branchId                  String?
+  branch                    Branch?                    @relation("BranchUsers", fields: [branchId], references: [id], onDelete: SetNull)
+  headedDepartments         Department[]               @relation("DepartmentHod")
+  headedBranchDepartments   BranchDepartment[]         @relation("BranchDepartmentHod")
+  managedBranches           Branch[]                   @relation("BranchGm")
+  requiredApprovalRules     MemoTypeRequiredApprover[]
+  memoTypeFilterPermissions MemoTypeFilterPermission[]
+  approvalSteps             MemoApprovalStep[]
+  delegationsGiven          ApprovalDelegation[]       @relation("Delegator")
+  delegationsReceived       ApprovalDelegation[]       @relation("Delegate")
+  borrowLogs                BorrowLog[]
+  licenseAssignments        LicenseAssignment[]
+  deletedMemos              Memo[]                     @relation("DeletedMemos")
+  signatureTemplates        SignatureTemplate[]
+  approvalSignatures        ApprovalSignature[]
+  memoSignatures            MemoSignature[]            @relation("MemoSignatureApprover")
+  notifications             Notification[]
+  emailDeliveries           EmailDelivery[]
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
 
   @@index([branchId, isActive, isApprover])
+  @@index([branchId, isActive, isReviewer])
   @@index([isAllBranches, isActive, isApprover])
 }
 
@@ -491,6 +494,7 @@ model MemoType {
   branchId          String?
   branch            Branch?                    @relation(fields: [branchId], references: [id], onDelete: SetNull)
   requiredApprovers MemoTypeRequiredApprover[]
+  filterPermissions MemoTypeFilterPermission[]
   memos             Memo[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
@@ -505,11 +509,24 @@ model MemoTypeRequiredApprover {
   approverId String
   approver   User     @relation(fields: [approverId], references: [id], onDelete: Restrict)
   sortOrder  Int
+  stepType   String   @default("APPROVER")
   createdAt  DateTime @default(now())
 
   @@unique([memoTypeId, approverId])
   @@unique([memoTypeId, sortOrder])
   @@index([approverId])
+}
+
+model MemoTypeFilterPermission {
+  id         String   @id @default(uuid())
+  memoTypeId String
+  memoType   MemoType @relation(fields: [memoTypeId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([memoTypeId, userId])
+  @@index([userId])
 }
 
 model ApprovalTemplate {
@@ -597,6 +614,7 @@ model MemoApprovalStep {
   approver                 User              @relation(fields: [approverId], references: [id], onDelete: Restrict)
   status                   String            @default("WAITING")
   source                   String
+  stepType                 String            @default("APPROVER")
   sourceMetadata           String
   approverNameSnapshot     String
   approverPositionSnapshot String?

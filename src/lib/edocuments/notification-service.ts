@@ -63,13 +63,13 @@ export async function enqueueEmailDelivery(db: NotificationDb, input: { memoId?:
   } });
 }
 
-type EmailApprover = { id: string; email: string | null; isActive: boolean; isApprover?: boolean; approvalEmailEnabled: boolean; approvalEmailMode: string; approvalEmailDigestTime: string };
+type EmailApprover = { id: string; email: string | null; isActive: boolean; isApprover?: boolean; isReviewer?: boolean; approvalEmailEnabled: boolean; approvalEmailMode: string; approvalEmailDigestTime: string };
 export async function cancelApprovalDigestJobs(db: NotificationDb, approverId: string, reason: string) {
   return db.backgroundJob.updateMany({ where: { type: 'SEND_APPROVAL_DIGEST', payload: { contains: approverId }, status: { in: ['PENDING', 'FAILED'] } }, data: { status: 'CANCELLED', completedAt: new Date(), lockedAt: null, lastErrorCode: reason } });
 }
 export async function ensureApprovalDigestJob(db: NotificationDb, approver: EmailApprover, reference = new Date()) {
   const settings = await getDeliverySettings(db);
-  if (!settings.emailEnabled || !approver.isActive || approver.isApprover === false || !approver.approvalEmailEnabled || approver.approvalEmailMode !== 'DIGEST' || !isValidEmail(approver.email)) return null;
+  if (!settings.emailEnabled || !approver.isActive || (!approver.isApprover && !approver.isReviewer) || !approver.approvalEmailEnabled || approver.approvalEmailMode !== 'DIGEST' || !isValidEmail(approver.email)) return null;
   const availableAt = nextEmailDigestAt(reference, approver.approvalEmailDigestTime);
   const dateKey = bangkokDateKey(availableAt);
   const idempotencyKey = `APPROVAL_DIGEST:${approver.id}:${dateKey}`;

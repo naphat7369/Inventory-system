@@ -10,10 +10,10 @@ export default async function ApproversPage() {
 
   const [users, branches] = await Promise.all([
     prisma.user.findMany({
-      orderBy: [{ isApprover: 'desc' }, { fullName: 'asc' }, { username: 'asc' }],
+      orderBy: [{ isApprover: 'desc' }, { isReviewer: 'desc' }, { fullName: 'asc' }, { username: 'asc' }],
       select: {
         id: true, username: true, fullName: true, position: true, email: true,
-        isActive: true, isApprover: true, isAllBranches: true, branchId: true,
+        isActive: true, isApprover: true, isReviewer: true, isAllBranches: true, branchId: true,
         branch: { select: { name: true, code: true } },
       },
     }),
@@ -31,7 +31,7 @@ export default async function ApproversPage() {
         <header className="mt-4 rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 p-7 text-white shadow-xl">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">E‑Documents access control</p>
           <h1 className="mt-2 text-3xl font-bold">ผู้อนุมัติและขอบเขตสาขา</h1>
-          <p className="mt-2 max-w-2xl text-sm text-blue-100">สิทธิ์ Approver ถูกจัดการที่หน้านี้ ส่วนสาขาจะอ้างอิงจากข้อมูล User โดยตรง และสามารถกรองรายชื่อแยกตามสาขาได้</p>
+          <p className="mt-2 max-w-2xl text-sm text-blue-100">กำหนดสิทธิ์ Approver และ Reviewer แยกจากกัน พร้อมตรวจสอบขอบเขตสาขาของผู้ใช้งาน</p>
         </header>
         <ApproversClient users={users} branches={branches} />
       </div>

@@ -8,6 +8,7 @@ export type ApproverCandidate = {
   branchId: string | null;
   isActive: boolean;
   isApprover: boolean;
+  isReviewer?: boolean;
   isAllBranches?: boolean;
 };
 
@@ -15,6 +16,7 @@ export type CandidateWithSource = {
   approver: ApproverCandidate;
   source: ApprovalSource;
   referenceId?: string;
+  stepType?: 'APPROVER' | 'REVIEWER';
 };
 
 export type ApprovalChainStep = {
@@ -25,6 +27,7 @@ export type ApprovalChainStep = {
   sources: Array<{ source: ApprovalSource; referenceId?: string }>;
   status: 'PENDING' | 'WAITING' | 'SKIPPED_SELF';
   sortOrder: number;
+  stepType: 'APPROVER' | 'REVIEWER';
 };
 
 export class ApprovalRuleError extends Error {
@@ -45,6 +48,23 @@ export type BuildApprovalChainInput = {
   userAdded?: CandidateWithSource[];
   required?: CandidateWithSource[];
 };
+
+export function resolveApprovalBranchId(input: {
+  actorBranchId?: string | null;
+  memoTypeBranchId?: string | null;
+  departmentBranchId?: string | null;
+  workflowUsers?: Array<{ branchId: string | null; isAllBranches?: boolean }>;
+}) {
+  const explicitBranchId = input.actorBranchId ?? input.memoTypeBranchId ?? input.departmentBranchId;
+  if (explicitBranchId) return explicitBranchId;
+
+  const workflowBranchIds = new Set(
+    (input.workflowUsers ?? [])
+      .filter((user) => !user.isAllBranches && Boolean(user.branchId))
+      .map((user) => user.branchId as string),
+  );
+  return workflowBranchIds.size === 1 ? [...workflowBranchIds][0] : null;
+}
 
 /**
  * Canonical chain builder. Candidates are composed in business order and then
@@ -85,8 +105,12 @@ export function buildApprovalChain(input: BuildApprovalChainInput): ApprovalChai
     if (!user.isActive) {
       throw new ApprovalRuleError('APPROVER_INACTIVE', `ผู้อนุมัติ ${user.fullName ?? user.id} ถูกปิดใช้งาน`);
     }
-    if (!user.isApprover) {
-      throw new ApprovalRuleError('APPROVER_PERMISSION_REQUIRED', `ผู้ใช้ ${user.fullName ?? user.id} ไม่มีสิทธิ์ Approver`);
+    const stepType = candidate.stepType ?? 'APPROVER';
+    if (stepType === 'REVIEWER' ? !user.isReviewer : !user.isApprover) {
+      throw new ApprovalRuleError(
+        stepType === 'REVIEWER' ? 'REVIEWER_PERMISSION_REQUIRED' : 'APPROVER_PERMISSION_REQUIRED',
+        `ผู้ใช้ ${user.fullName ?? user.id} ไม่มีสิทธิ์ ${stepType === 'REVIEWER' ? 'Reviewer' : 'Approver'}`,
+      );
     }
     if (!user.isAllBranches && user.branchId !== input.branchId) {
       throw new ApprovalRuleError('APPROVER_WRONG_BRANCH', `ผู้อนุมัติ ${user.fullName ?? user.id} ไม่ได้อยู่ในสาขาเดียวกับ Memo`);
@@ -109,6 +133,7 @@ export function buildApprovalChain(input: BuildApprovalChainInput): ApprovalChai
       sources: [auditSource],
       status: user.id === input.creatorId ? 'SKIPPED_SELF' : 'WAITING',
       sortOrder: byUser.size,
+      stepType,
     });
   }
 

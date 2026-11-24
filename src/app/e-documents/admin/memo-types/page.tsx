@@ -9,22 +9,11 @@ export default async function MemoTypesPage() {
   const session = await getSession();
   if (session?.role !== 'ADMIN') redirect('/');
 
-  const [memoTypes, branches, users] = await Promise.all([
+  const [memoTypes, branches] = await Promise.all([
     prisma.memoType.findMany({
       include: {
-        requiredApprovers: {
-          orderBy: { sortOrder: 'asc' },
-          include: {
-            approver: {
-              select: {
-                id: true, username: true, fullName: true, position: true,
-                isActive: true, isApprover: true, isAllBranches: true,
-                branchId: true, branch: { select: { name: true, code: true } },
-              },
-            },
-          },
-        },
         branch: { select: { name: true, code: true } },
+        _count: { select: { requiredApprovers: true, filterPermissions: true, memos: true } },
       },
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
     }),
@@ -32,15 +21,6 @@ export default async function MemoTypesPage() {
       where: { isActive: true },
       orderBy: { name: 'asc' },
       select: { id: true, name: true, code: true },
-    }),
-    prisma.user.findMany({
-      where: { isActive: true, isApprover: true },
-      orderBy: [{ fullName: 'asc' }, { username: 'asc' }],
-      select: {
-        id: true, fullName: true, username: true, position: true,
-        branchId: true, isAllBranches: true,
-        branch: { select: { name: true, code: true } },
-      },
     }),
   ]);
 
@@ -54,7 +34,7 @@ export default async function MemoTypesPage() {
           <h1 className="mt-1 text-3xl font-bold">ประเภท Memo และผู้อนุมัติบังคับ</h1>
           <p className="mt-2 max-w-2xl text-sm text-blue-100">สร้างประเภทเอกสาร กำหนดขอบเขตสาขา และจัดลำดับ Required Approvers ที่จะถูกบันทึกใน Approval Snapshot</p>
         </header>
-        <MemoTypesClient memoTypes={memoTypes} branches={branches} users={users} />
+        <MemoTypesClient memoTypes={memoTypes} branches={branches} />
       </div>
     </main>
   );

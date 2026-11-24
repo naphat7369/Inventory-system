@@ -23,7 +23,7 @@ type PdfDocument = {
   destroy: () => Promise<void>;
 };
 
-function PdfPages({ url, fileName }: { url: string; fileName: string }) {
+export function PdfPages({ url, fileName }: { url: string; fileName: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
@@ -117,8 +117,6 @@ function OfficeDocument({ url, fileName }: { url: string; fileName: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setHtml('');
-    setError(false);
     fetch(url, { credentials: 'same-origin', signal: controller.signal })
       .then(async (response) => {
         const body = await response.json() as { html?: string };

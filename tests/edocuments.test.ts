@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildApprovalChain, ApprovalRuleError, type ApproverCandidate } from '../src/lib/edocuments/chain.ts';
+import { buildApprovalChain, ApprovalRuleError, resolveApprovalBranchId, type ApproverCandidate } from '../src/lib/edocuments/chain.ts';
 import { bangkokDayRange, resolveDelegation } from '../src/lib/edocuments/delegation.ts';
 import { IdempotencyLedger, emailDeliveryKey, pdfJobKey } from '../src/lib/edocuments/idempotency.ts';
 import { canReplaceApprover, immutableSnapshot, pdfFailed } from '../src/lib/edocuments/lifecycle.ts';
@@ -11,6 +11,17 @@ import { redactAuditValue } from '../src/lib/audit.ts';
 
 const user = (id: string, overrides: Partial<ApproverCandidate> = {}): ApproverCandidate => ({
   id, fullName: id, position: 'Manager', branchId: 'b1', isActive: true, isApprover: true, ...overrides,
+});
+
+test('branchless global memo type infers one branch from its workflow users', () => {
+  assert.equal(resolveApprovalBranchId({ workflowUsers: [
+    { branchId: 'b1', isAllBranches: false },
+    { branchId: null, isAllBranches: true },
+  ] }), 'b1');
+  assert.equal(resolveApprovalBranchId({ workflowUsers: [
+    { branchId: 'b1', isAllBranches: false },
+    { branchId: 'b2', isAllBranches: false },
+  ] }), null);
 });
 
 test('HOD duplicated as required approver becomes one step with both sources', () => {
@@ -26,6 +37,21 @@ test('GM fallback duplicated as required GM is not repeated', () => {
   assert.equal(chain.length, 1);
   assert.equal(chain[0].source, 'GM_FALLBACK');
   assert.equal(chain[0].sources.length, 2);
+});
+
+test('memo type reviewer remains an unsigned reviewer step in the chain snapshot', () => {
+  const chain = buildApprovalChain({
+    creatorId: 'creator', branchId: 'b1', hod: user('hod'),
+    required: [{ approver: user('reviewer', { isApprover: false, isReviewer: true }), source: 'MEMO_TYPE_REQUIRED', referenceId: 'rule-review', stepType: 'REVIEWER' }],
+  });
+  assert.equal(chain[1].approverId, 'reviewer');
+  assert.equal(chain[1].stepType, 'REVIEWER');
+});
+
+test('reviewer permission does not grant approver permission', () => {
+  const reviewerOnly = user('reviewer', { isApprover: false, isReviewer: true });
+  assert.throws(() => buildApprovalChain({ creatorId: 'creator', branchId: 'b1', hod: user('hod'), required: [{ approver: reviewerOnly, source: 'MEMO_TYPE_REQUIRED' }] }),
+    (error: unknown) => error instanceof ApprovalRuleError && error.code === 'APPROVER_PERMISSION_REQUIRED');
 });
 
 test('user-added approver duplicated in template keeps template position and audit sources', () => {
@@ -142,7 +168,8 @@ test('mutating E-Documents payloads require idempotency keys and valid reasons',
   assert.equal(submitMemoSchema.safeParse({ userAddedApproverIds: [], idempotencyKey: 'submit-0001' }).success, true);
   assert.equal(submitMemoSchema.safeParse({ userAddedApproverIds: [] }).success, false);
   assert.equal(approveMemoSchema.safeParse({ signatureId: 'signature-1', idempotencyKey: 'approve-0001' }).success, true);
-  assert.equal(approveMemoSchema.safeParse({ idempotencyKey: 'approve-0001' }).success, false);
+  // Reviewer steps deliberately omit a signature; approver steps enforce one in the service.
+  assert.equal(approveMemoSchema.safeParse({ idempotencyKey: 'approve-0001' }).success, true);
   assert.equal(reassignApproverSchema.safeParse({ newApproverId: 'u2', reason: '', idempotencyKey: 'replace-0001' }).success, false);
   assert.equal(requestRevisionSchema.safeParse({ reason: 'กรุณาแก้ไขยอดเงิน', idempotencyKey: 'revision-0001' }).success, true);
   assert.equal(requestRevisionSchema.safeParse({ reason: '', idempotencyKey: 'revision-0001' }).success, false);

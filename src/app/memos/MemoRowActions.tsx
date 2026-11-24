@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { Download, Eye, Loader2, Pencil, Printer, Trash2, X } from 'lucide-react';
 import { DeleteMemoModal } from './DeleteMemoModal';
 import { MemoEmailAction } from './MemoEmailAction';
+import { PdfPages } from './[id]/AttachmentDocumentPreview';
 
 interface MemoRowActionsProps {
   memoId: string;
@@ -40,7 +41,6 @@ export function MemoRowActions({
   const [pdfOpen, setPdfOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [requestingPdf, setRequestingPdf] = useState(false);
-  const pdfFrameRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     if (!pdfOpen && !deleteOpen) return;
@@ -141,7 +141,7 @@ export function MemoRowActions({
                 <p className="mt-0.5 truncate text-xs text-slate-500">{documentNo || 'ยังไม่ออกเลข'} · {subject}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <button type="button" onClick={() => pdfFrameRef.current?.contentWindow?.print()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" title="พิมพ์ PDF">
+                <button type="button" onClick={() => window.open(`/api/memos/${memoId}/official-pdf?view=1`, '_blank', 'noopener,noreferrer')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" title="เปิด PDF เพื่อพิมพ์">
                   <Printer className="h-4 w-4" /> <span className="hidden sm:inline">พิมพ์</span>
                 </button>
                 <a href={`/api/memos/${memoId}/official-pdf`} className="inline-flex items-center gap-2 rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white hover:bg-sky-800" title="ดาวน์โหลด Official PDF">
@@ -152,8 +152,8 @@ export function MemoRowActions({
                 </button>
               </div>
             </header>
-            <div className="min-h-0 flex-1 bg-slate-700 p-1 sm:p-3">
-              <iframe ref={pdfFrameRef} src={`/api/memos/${memoId}/official-pdf?view=1`} title={`Official PDF ${documentNo || subject}`} className="h-full w-full rounded-md border-0 bg-white" />
+            <div className="min-h-0 flex-1 overflow-auto bg-slate-700 p-1 sm:p-3">
+              <PdfPages url={`/api/memos/${memoId}/official-pdf?view=1`} fileName={`Official PDF ${documentNo || subject}`} />
             </div>
           </section>
         </div>,

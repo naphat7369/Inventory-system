@@ -16,12 +16,20 @@ function formatBangkok(value: Date) {
   }).format(value);
 }
 
-export default async function ApprovalInboxPage({ searchParams }: { searchParams: Promise<{ view?: string; branchId?: string; departmentId?: string }> }) {
+export default async function ApprovalInboxPage({ searchParams }: { searchParams: Promise<{ view?: string; branchId?: string; departmentId?: string; memoTypeId?: string }> }) {
   const session = await getSession();
   if (!session?.id) redirect('/login');
-  const currentUser = await prisma.user.findUnique({ where: { id: String(session.id) }, select: { isActive: true, isApprover: true } });
-  if (!currentUser?.isActive || !currentUser.isApprover) redirect('/memos');
+  const currentUser = await prisma.user.findUnique({ where: { id: String(session.id) }, select: { isActive: true, isApprover: true, isReviewer: true } });
+  if (!currentUser?.isActive || (!currentUser.isApprover && !currentUser.isReviewer)) redirect('/memos');
   const requested = await searchParams;
+  const memoTypes = await prisma.memoType.findMany({
+    where: { OR: [
+      { filterPermissions: { some: { userId: String(session.id) } } },
+      { memos: { some: { approvalRounds: { some: { steps: { some: { approverId: String(session.id) } } } } } } },
+    ] },
+    select: { id: true, name: true }, orderBy: { name: 'asc' },
+  });
+  const memoTypeId = requested.memoTypeId && memoTypes.some((type) => type.id === requested.memoTypeId) ? requested.memoTypeId : '';
   const view = ['pending', 'history', 'all'].includes(requested.view ?? '') ? requested.view! : 'pending';
   const status = view === 'pending' ? 'PENDING' : view === 'history' ? { in: ['APPROVED', 'REVISION_REQUESTED'] } : undefined;
 
@@ -48,13 +56,14 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
   const departmentId = requested.departmentId && allDepartments.some((item) => item.id === requested.departmentId && (!branchId || item.branchId === branchId)) ? requested.departmentId : '';
   const departments = branchId ? allDepartments.filter((item) => item.branchId === branchId) : allDepartments;
   const memoScope = {
+    ...(memoTypeId ? { memoTypeId } : {}),
     ...(departmentId ? { departmentId } : {}),
     ...(branchId ? { branchId } : {}),
   };
 
   const [steps, pendingCount] = await Promise.all([
     prisma.memoApprovalStep.findMany({
-      where: { approverId: String(session.id), ...(status ? { status } : {}), ...(branchId || departmentId ? { round: { memo: memoScope } } : {}) },
+      where: { approverId: String(session.id), ...(status ? { status } : {}), ...(branchId || departmentId || memoTypeId ? { round: { memo: memoScope } } : {}) },
       include: {
         round: { include: { memo: { include: { department: true, branch: true, memoType: true } } } },
       },
@@ -76,12 +85,14 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
             const query = new URLSearchParams({ view: key });
             if (branchId) query.set('branchId', branchId);
             if (departmentId) query.set('departmentId', departmentId);
+            if (memoTypeId) query.set('memoTypeId', memoTypeId);
             return <Link key={key} href={`/memos/approvals?${query.toString()}`} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${view === key ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}><Icon className="h-4 w-4"/>{label}{key === 'pending' && pendingCount > 0 && <span className={`${view === key ? 'bg-white/20' : 'bg-rose-100 text-rose-700'} rounded-full px-2 py-0.5 text-xs`}>{pendingCount}</span>}</Link>;
           })}
         </nav>
 
         <form method="GET" className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
           <input type="hidden" name="view" value={view}/>
+          <label className="text-xs font-bold text-slate-500">Memo type<select name="memoTypeId" defaultValue={memoTypeId} className="mt-1 w-full rounded-xl border p-2.5 dark:bg-slate-950"><option value="">ทุกประเภท</option>{memoTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-500"><span className="mb-1.5 flex items-center gap-1"><Building2 className="h-3.5 w-3.5"/>สาขา</span><select name="branchId" defaultValue={branchId} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"><option value="">ทุกสาขาที่มีสิทธิ์</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name} ({branch.code})</option>)}</select></label>
           <label className="text-xs font-bold text-slate-500"><span className="mb-1.5 block">แผนก</span><select name="departmentId" defaultValue={departmentId} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"><option value="">ทุกแผนกที่มีสิทธิ์</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
           <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"><Filter className="h-4 w-4"/>กรอง</button>
@@ -92,7 +103,7 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {steps.map((step) => {
               const memo = step.round.memo;
-              return <Link href={`/memos/${memo.id}`} key={step.id} className="grid gap-3 p-5 transition hover:bg-blue-50/50 dark:hover:bg-blue-950/20 md:grid-cols-[minmax(0,1fr)_180px_160px_auto] md:items-center"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="truncate font-bold">{memo.subject}</span><StatusBadge status={step.status}/></div><div className="mt-1 text-xs text-slate-500">{memo.documentNo ?? 'ยังไม่ออกเลข'} · {memo.branch?.name ?? 'ไม่ระบุสาขา'} / {memo.department.name} · {memo.memoType?.name ?? 'ไม่ระบุประเภท'}</div></div><div className="text-sm"><span className="text-xs text-slate-400">รอบ / ลำดับ</span><div className="font-semibold">รอบ {step.round.roundNumber} · ขั้นที่ {step.sortOrder + 1}</div></div><div className="text-sm"><span className="text-xs text-slate-400">ได้รับงาน</span><div>{formatBangkok(step.createdAt)}</div></div><span className="text-sm font-bold text-blue-600">เปิดเอกสาร →</span></Link>;
+              return <Link href={`/memos/${memo.id}`} key={step.id} className="grid gap-3 p-5 transition hover:bg-blue-50/50 dark:hover:bg-blue-950/20 md:grid-cols-[minmax(0,1fr)_180px_160px_auto] md:items-center"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="truncate font-bold">{memo.subject}</span><StatusBadge status={step.status}/><span className="rounded-full bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-700">{step.stepType === 'REVIEWER' ? 'ผู้ตรวจสอบ' : 'ผู้อนุมัติ'}</span></div><div className="mt-1 text-xs text-slate-500">{memo.documentNo ?? 'ยังไม่ออกเลข'} · {memo.branch?.name ?? 'ไม่ระบุสาขา'} / {memo.department.name} · {memo.memoType?.name ?? 'ไม่ระบุประเภท'}</div></div><div className="text-sm"><span className="text-xs text-slate-400">รอบ / ลำดับ</span><div className="font-semibold">รอบ {step.round.roundNumber} · ขั้นที่ {step.sortOrder + 1}</div></div><div className="text-sm"><span className="text-xs text-slate-400">ได้รับงาน</span><div>{formatBangkok(step.createdAt)}</div></div><span className="text-sm font-bold text-blue-600">เปิดเอกสาร →</span></Link>;
             })}
             {!steps.length && <div className="p-14 text-center"><Inbox className="mx-auto h-11 w-11 text-slate-300"/><h2 className="mt-3 font-bold">ไม่มีรายการในกล่องนี้</h2><p className="mt-1 text-sm text-slate-500">เมื่อมีเอกสารถึงคิวของคุณ ระบบจะแสดงที่นี่</p></div>}
           </div>

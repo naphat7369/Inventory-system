@@ -326,7 +326,7 @@ async function processDigestJob(job) {
     await prisma.backgroundJob.update({ where: { id: job.id }, data: { status: 'PAUSED', lockedAt: null, lastErrorCode: 'FEATURE_DISABLED' } });
     return;
   }
-  const valid = approver?.isActive && approver.isApprover && approver.approvalEmailEnabled
+  const valid = approver?.isActive && (approver.isApprover || approver.isReviewer) && approver.approvalEmailEnabled
     && approver.approvalEmailMode === 'DIGEST' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(approver.email || '');
   if (!valid || pendingCount === 0) {
     await prisma.backgroundJob.update({ where: { id: job.id }, data: { status: 'CANCELLED', completedAt: new Date(), lockedAt: null, lastErrorCode: pendingCount === 0 ? 'NO_PENDING_APPROVALS' : 'FEATURE_DISABLED' } });

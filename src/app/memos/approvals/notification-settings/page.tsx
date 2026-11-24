@@ -9,9 +9,9 @@ export default async function ApprovalNotificationSettingsPage() {
   if (!session?.id) redirect('/login');
   const user = await prisma.user.findUnique({
     where: { id: String(session.id) },
-    select: { isActive: true, isApprover: true, email: true, approvalEmailEnabled: true, approvalEmailMode: true, approvalEmailDigestTime: true },
+    select: { isActive: true, isApprover: true, isReviewer: true, email: true, approvalEmailEnabled: true, approvalEmailMode: true, approvalEmailDigestTime: true },
   });
-  if (!user?.isActive || !user.isApprover) redirect('/memos');
+  if (!user?.isActive || (!user.isApprover && !user.isReviewer)) redirect('/memos');
   return <main className="min-h-full bg-slate-50 p-5 dark:bg-slate-950 md:p-8">
     <div className="mx-auto max-w-3xl">
       <header className="mb-5 rounded-3xl bg-gradient-to-br from-indigo-700 via-blue-700 to-slate-900 p-7 text-white shadow-xl">

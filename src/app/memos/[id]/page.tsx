@@ -161,7 +161,8 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
 
   const canDelete = isAdmin || isOwner;
   const canEdit = (isAdmin || isOwner) && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
-  const isCurrentApprover = latestRound?.status === 'ACTIVE' && latestRound.steps.some((step) => step.status === 'PENDING' && step.approverId === currentUser.id);
+  const currentStep = latestRound?.status === 'ACTIVE' ? latestRound.steps.find((step) => step.status === 'PENDING' && step.approverId === currentUser.id) : undefined;
+  const isCurrentApprover = Boolean(currentStep);
   const canSubmit = isOwner && ['DRAFT', 'REVISION_REQUESTED', 'WITHDRAWN'].includes(memo.approvalStatus);
   const canWithdraw = (isOwner || isAdmin) && ['SUBMITTED', 'IN_REVIEW'].includes(memo.approvalStatus);
   const backFallbackHref = isApprovalParticipant && !isOwner ? '/memos/approvals' : '/memos';
@@ -201,6 +202,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
           canSubmit={canSubmit}
           canWithdraw={canWithdraw}
           isCurrentApprover={Boolean(isCurrentApprover)}
+          isCurrentReviewer={currentStep?.stepType === 'REVIEWER'}
           memoTypeName={memo.memoType?.name ?? null}
           approvalSignatures={currentUser.approvalSignatures.map((signature) => ({
             id: signature.id,
@@ -214,7 +216,7 @@ export default async function MemoDetailPage({ params }: { params: Promise<{ id:
         {latestRound && (
           <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="font-bold">Approval Timeline</h2><p className="text-xs text-slate-500">รอบที่ {latestRound.roundNumber} · Snapshot ผู้อนุมัติของเอกสารฉบับนี้</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{latestRound.status}</span></div>
-            <div className="mt-5 space-y-3">{latestRound.steps.map((step, index) => <div key={step.id} className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-start gap-3"><div className={`grid h-9 w-9 place-items-center rounded-full ${step.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : step.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : step.status === 'REVISION_REQUESTED' ? 'bg-violet-100 text-violet-700' : step.status === 'SKIPPED_SELF' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>{step.status === 'APPROVED' ? <CheckCircle2 className="h-4 w-4"/> : step.status === 'PENDING' ? <Clock3 className="h-4 w-4"/> : step.status === 'REVISION_REQUESTED' ? <RotateCcw className="h-4 w-4"/> : step.status === 'SKIPPED_SELF' ? <SkipForward className="h-4 w-4"/> : <CircleDashed className="h-4 w-4"/>}</div><div className="pb-3"><div className="font-bold">{index + 1}. {step.approverNameSnapshot}</div><div className="text-xs text-slate-500">{step.approverPositionSnapshot ?? 'ไม่ระบุตำแหน่ง'} · {step.source}</div>{step.actedAt && <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-slate-400"><Clock3 className="h-3 w-3"/><span>{formatBangkokShort(step.actedAt)}</span></div>}{step.decisionReason && <div className="mt-2 rounded-lg bg-violet-50 p-2 text-sm text-violet-800 dark:bg-violet-950/30 dark:text-violet-200">เหตุผล: {step.decisionReason}</div>}</div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{step.status}</span></div>)}</div>
+            <div className="mt-5 space-y-3">{latestRound.steps.map((step, index) => <div key={step.id} className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-start gap-3"><div className={`grid h-9 w-9 place-items-center rounded-full ${step.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : step.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : step.status === 'REVISION_REQUESTED' ? 'bg-violet-100 text-violet-700' : step.status === 'SKIPPED_SELF' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>{step.status === 'APPROVED' ? <CheckCircle2 className="h-4 w-4"/> : step.status === 'PENDING' ? <Clock3 className="h-4 w-4"/> : step.status === 'REVISION_REQUESTED' ? <RotateCcw className="h-4 w-4"/> : step.status === 'SKIPPED_SELF' ? <SkipForward className="h-4 w-4"/> : <CircleDashed className="h-4 w-4"/>}</div><div className="pb-3"><div className="font-bold">{index + 1}. {step.approverNameSnapshot}</div><div className="text-xs text-slate-500">{step.approverPositionSnapshot ?? 'ไม่ระบุตำแหน่ง'} · {step.stepType === 'REVIEWER' ? 'ผู้ตรวจสอบ (ไม่ลงลายเซ็น)' : 'ผู้อนุมัติ'} · {step.source}</div>{step.actedAt && <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-slate-400"><Clock3 className="h-3 w-3"/><span>{formatBangkokShort(step.actedAt)}</span></div>}{step.decisionReason && <div className="mt-2 rounded-lg bg-violet-50 p-2 text-sm text-violet-800 dark:bg-violet-950/30 dark:text-violet-200">เหตุผล: {step.decisionReason}</div>}</div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{step.status}</span></div>)}</div>
           </section>
         )}
 

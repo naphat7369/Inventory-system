@@ -27,6 +27,7 @@ export function Sidebar({ user }: { user: JWTPayload }) {
   }, [user, pathname]);
 
   let links = [];
+  const canProcessMemos = Boolean(user?.isApprover || user?.isReviewer);
 
   if (user?.role === 'ADMIN') {
     links = [
@@ -36,8 +37,8 @@ export function Sidebar({ user }: { user: JWTPayload }) {
       { name: 'ยืม-คืน (Borrows)', href: '/borrows', icon: ArrowLeftRight },
       { name: 'Licenses', href: '/licenses', icon: Key },
       { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText, section: 'เอกสารและการอนุมัติ' },
-      ...(user?.isApprover ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
-      ...(user?.isApprover ? [{ name: 'ตั้งค่าอีเมลแจ้งเตือน', href: '/memos/approvals/notification-settings', icon: Mail }] : []),
+      ...(canProcessMemos ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
+      ...(canProcessMemos ? [{ name: 'ตั้งค่าอีเมลแจ้งเตือน', href: '/memos/approvals/notification-settings', icon: Mail }] : []),
       { name: 'ลายเซ็นของฉัน', href: '/memos/signatures', icon: PenLine },
       { name: 'Audit & Operations', href: '/e-documents/admin/audit-logs', icon: ShieldCheck },
       { name: 'เอกสารต่ออายุ (Renewals)', href: '/renewals', icon: FileText, badge: expiringCount },
@@ -50,8 +51,8 @@ export function Sidebar({ user }: { user: JWTPayload }) {
     links = [
       { name: 'ขอยืมอุปกรณ์ (Borrow Form)', href: '/borrows', icon: ArrowLeftRight },
       { name: 'แบบฟอร์มบันทึกข้อความ', href: '/memos', icon: FileText },
-      ...(user?.isApprover ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
-      ...(user?.isApprover ? [{ name: 'ตั้งค่าอีเมลแจ้งเตือน', href: '/memos/approvals/notification-settings', icon: Mail }] : []),
+      ...(canProcessMemos ? [{ name: 'กล่องงานอนุมัติ', href: '/memos/approvals', icon: FileCheck2, badge: Number(user.pendingApprovalCount ?? 0) }] : []),
+      ...(canProcessMemos ? [{ name: 'ตั้งค่าอีเมลแจ้งเตือน', href: '/memos/approvals/notification-settings', icon: Mail }] : []),
       { name: 'ลายเซ็นของฉัน', href: '/memos/signatures', icon: PenLine },
     ];
   }

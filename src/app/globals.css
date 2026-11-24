@@ -91,6 +91,27 @@ body {
   font-family: inherit !important;
 }
 
+.memo-rich-text-editor table,
+.memo-content-page-blocks table,
+.memo-content table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0.75rem 0;
+}
+
+.memo-rich-text-editor th,
+.memo-rich-text-editor td,
+.memo-content-page-blocks th,
+.memo-content-page-blocks td,
+.memo-content th,
+.memo-content td {
+  border: 1px solid #64748b;
+  padding: 0.35rem;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
 /* Signature Element: Barcode-style divider pattern */
 .barcode-divider {
   background-image: repeating-linear-gradient(

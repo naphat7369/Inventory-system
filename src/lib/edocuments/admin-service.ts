@@ -38,7 +38,7 @@ export async function updateBranch(prisma: PrismaClient, actorId: string, branch
 }
 
 export async function updateUserApprovalConfig(prisma: PrismaClient, actorId: string, userId: string, input: {
-  branchId?: string | null; departmentId?: string | null; position?: string | null; email?: string | null; isActive?: boolean; isApprover?: boolean; isAllBranches?: boolean;
+  branchId?: string | null; departmentId?: string | null; position?: string | null; email?: string | null; isActive?: boolean; isApprover?: boolean; isReviewer?: boolean; isAllBranches?: boolean;
 }) {
   await requireAdmin(prisma, actorId);
   const existing = await prisma.user.findUnique({ where: { id: userId } });
@@ -56,7 +56,8 @@ export async function updateUserApprovalConfig(prisma: PrismaClient, actorId: st
     : { ...input, email: input.email === undefined ? undefined : normalizeEmail(input.email) || null };
   const emailChanged = input.email !== undefined && normalizeEmail(input.email) !== normalizeEmail(existing.email);
   const approvalStateChanged = (input.isActive !== undefined && input.isActive !== existing.isActive)
-    || (input.isApprover !== undefined && input.isApprover !== existing.isApprover);
+    || (input.isApprover !== undefined && input.isApprover !== existing.isApprover)
+    || (input.isReviewer !== undefined && input.isReviewer !== existing.isReviewer);
   return prisma.$transaction(async tx => {
     if (emailChanged || approvalStateChanged) await cancelApprovalDigestJobs(tx, userId, emailChanged ? 'APPROVER_EMAIL_CHANGED' : 'APPROVER_STATUS_CHANGED');
     const user = await tx.user.update({ where: { id: userId }, data: normalizedInput });
@@ -135,21 +136,35 @@ export async function deleteMemoType(prisma: PrismaClient, actorId: string, memo
   return { id: memoTypeId, deleted: true };
 }
 
-export async function setRequiredApprovers(prisma: PrismaClient, actorId: string, memoTypeId: string, approverIds: string[]) {
+export async function setRequiredApprovers(prisma: PrismaClient, actorId: string, memoTypeId: string, steps: Array<{ userId: string; stepType: 'APPROVER' | 'REVIEWER' }>, filterUserIds: string[]) {
   await requireAdmin(prisma, actorId);
   const memoType = await prisma.memoType.findUnique({ where: { id: memoTypeId } });
   if (!memoType) throw new EDocumentsError('MEMO_TYPE_NOT_FOUND', 'ไม่พบ Memo Type', 404);
-  const users = await prisma.user.findMany({ where: { id: { in: approverIds } } });
-  if (users.length !== approverIds.length || users.some((user) => !user.isActive || !user.isApprover || (memoType.branchId ? (!user.isAllBranches && user.branchId !== memoType.branchId) : !user.isAllBranches))) {
-    throw new EDocumentsError('INVALID_REQUIRED_APPROVER', 'Required Approver ทุกคนต้อง Active มีสิทธิ์ Approver และอยู่ใน Branch ที่ถูกต้อง');
+  const stepUserIds = steps.map((step) => step.userId);
+  const users = await prisma.user.findMany({ where: { id: { in: stepUserIds } } });
+  const userMap = new Map(users.map((user) => [user.id, user]));
+  const invalidStep = steps.find((step) => {
+    const user = userMap.get(step.userId);
+    return !user || !user.isActive || (step.stepType === 'REVIEWER' ? !user.isReviewer : !user.isApprover)
+      || (memoType.branchId ? (!user.isAllBranches && user.branchId !== memoType.branchId) : false);
+  });
+  if (invalidStep) {
+    throw new EDocumentsError('INVALID_REQUIRED_APPROVER', 'ผู้อนุมัติต้องมีสิทธิ์ Approver ผู้ตรวจสอบต้องมีสิทธิ์ Reviewer และทุกคนต้องอยู่ในขอบเขตสาขาที่ถูกต้อง');
   }
-  const oldValue = await prisma.memoTypeRequiredApprover.findMany({ where: { memoTypeId }, orderBy: { sortOrder: 'asc' } });
+  const filterUsers = await prisma.user.count({ where: { id: { in: filterUserIds }, isActive: true, OR: [{ isApprover: true }, { isReviewer: true }] } });
+  if (filterUsers !== filterUserIds.length) throw new EDocumentsError('INVALID_FILTER_USER', 'ผู้ใช้ที่ได้รับสิทธิ์กรองต้อง Active และมีสิทธิ์ Approver หรือ Reviewer');
+  const oldValue = await prisma.memoType.findUnique({ where: { id: memoTypeId }, include: { requiredApprovers: true, filterPermissions: true } });
   const result = await prisma.$transaction(async (tx) => {
     await tx.memoTypeRequiredApprover.deleteMany({ where: { memoTypeId } });
-    await tx.memoTypeRequiredApprover.createMany({ data: approverIds.map((approverId, sortOrder) => ({ memoTypeId, approverId, sortOrder })) });
-    return tx.memoTypeRequiredApprover.findMany({ where: { memoTypeId }, orderBy: { sortOrder: 'asc' }, include: { approver: true } });
+    await tx.memoTypeFilterPermission.deleteMany({ where: { memoTypeId } });
+    await tx.memoTypeRequiredApprover.createMany({ data: steps.map((step, sortOrder) => ({ memoTypeId, approverId: step.userId, stepType: step.stepType, sortOrder })) });
+    if (filterUserIds.length) await tx.memoTypeFilterPermission.createMany({ data: filterUserIds.map((userId) => ({ memoTypeId, userId })) });
+    return tx.memoType.findUnique({ where: { id: memoTypeId }, include: {
+      requiredApprovers: { orderBy: { sortOrder: 'asc' }, include: { approver: true } },
+      filterPermissions: { include: { user: true } },
+    } });
   });
-  await audit(prisma, actorId, 'UPDATED_REQUIRED_APPROVERS', 'MEMO_TYPE', memoTypeId, oldValue, result);
+  await audit(prisma, actorId, 'UPDATED_MEMO_TYPE_WORKFLOW', 'MEMO_TYPE', memoTypeId, oldValue, result);
   return result;
 }
 

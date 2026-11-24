@@ -21,6 +21,15 @@ export type Signature = {
   sources?: Array<{ source: string; referenceId?: string }>;
 };
 
+type ApprovalWorkflowPreviewStep = {
+  approverId: string;
+  approverName: string;
+  approverPosition?: string | null;
+  stepType: 'APPROVER' | 'REVIEWER';
+  status: 'PENDING' | 'WAITING' | 'SKIPPED_SELF';
+  sortOrder: number;
+};
+
 function memoAttachmentUrl(memoId: string, suffix = '') {
   return `/api/memos/${memoId}/attachments${suffix}`;
 }
@@ -177,6 +186,8 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
   const [isLoadingApprovalSignatures, setIsLoadingApprovalSignatures] = useState(false);
   const [approvalSignatureError, setApprovalSignatureError] = useState('');
   const [approvalSignatureSource, setApprovalSignatureSource] = useState<string | null>(null);
+  const [approvalWorkflow, setApprovalWorkflow] = useState<ApprovalWorkflowPreviewStep[]>([]);
+  const approvalPreviewRequestRef = useRef(0);
 
   // Template States
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
@@ -318,6 +329,7 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
 
   const applyApprovalSignatures = async (typeId: string, deptId: string) => {
     if (!typeId || !deptId) return;
+    const requestId = ++approvalPreviewRequestRef.current;
     setIsLoadingApprovalSignatures(true);
     setApprovalSignatureError('');
     try {
@@ -325,24 +337,52 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
       const response = await fetch(`/api/e-documents/signature-preview?${params.toString()}`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'ไม่สามารถสร้างรายการลายเซ็นจาก Approval Chain ได้');
+      if (requestId !== approvalPreviewRequestRef.current) return;
       setSignatures((body.signatures as Signature[]).map((signature, index) => ({ ...signature, role: normalizeSignatureRole(signature.role), sortOrder: index })));
+      setApprovalWorkflow(body.chain as ApprovalWorkflowPreviewStep[]);
       setSelectedTemplateId('');
       setApprovalSignatureSource(`${body.memoType.name} · ${body.branch.name}`);
       handleChange();
     } catch (error) {
+      if (requestId !== approvalPreviewRequestRef.current) return;
       setApprovalSignatureError(error instanceof Error ? error.message : 'ไม่สามารถสร้างรายการลายเซ็นจาก Approval Chain ได้');
       setApprovalSignatureSource(null);
+      setApprovalWorkflow([]);
     } finally {
-      setIsLoadingApprovalSignatures(false);
+      if (requestId === approvalPreviewRequestRef.current) setIsLoadingApprovalSignatures(false);
     }
+  };
+
+  const resetToManualSignatures = () => {
+    setSignatures((current) => {
+      const systemSignatures = current.filter((signature, index) => {
+        if (index === 0 || signature.source === 'CREATOR') return true;
+        if (signature.source === 'HOD' || signature.source === 'GM_FALLBACK') return true;
+        return signature.sources?.some((source) => source.source === 'HOD' || source.source === 'GM_FALLBACK') ?? false;
+      });
+      const next = systemSignatures.map((signature, index) => ({ ...signature, sortOrder: index }));
+      while (next.length < DEFAULT_SIGNATURES.length) {
+        const index = next.length;
+        next.push({ ...DEFAULT_SIGNATURES[index], sortOrder: index });
+      }
+      return next;
+    });
+    setSelectedTemplateId('');
   };
 
   const handleMemoTypeChange = (typeId: string) => {
     setMemoTypeId(typeId);
     setApprovalSignatureError('');
     setApprovalSignatureSource(null);
+    setApprovalWorkflow([]);
     handleChange();
-    if (typeId) void applyApprovalSignatures(typeId, departmentId);
+    if (typeId) {
+      void applyApprovalSignatures(typeId, departmentId);
+    } else {
+      approvalPreviewRequestRef.current += 1;
+      setIsLoadingApprovalSignatures(false);
+      resetToManualSignatures();
+    }
   };
 
   const handleDepartmentChange = (newDeptId: string) => {
@@ -351,8 +391,11 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
     const dept = departments.find(d => d.id === newDeptId);
     const selectedType = memoTypes.find((type) => type.id === memoTypeId);
     if (selectedType?.branchId && selectedType.branchId !== dept?.branchId) {
+      approvalPreviewRequestRef.current += 1;
+      setIsLoadingApprovalSignatures(false);
       setMemoTypeId('');
       setApprovalSignatureSource(null);
+      setApprovalWorkflow([]);
     } else if (memoTypeId) {
       void applyApprovalSignatures(memoTypeId, newDeptId);
     }
@@ -777,6 +820,28 @@ export function MemoForm({ departments, initialData, isEdit, userDepartmentId, i
             {isLoadingApprovalSignatures && <p className="mt-2 flex items-center gap-2 text-xs font-semibold text-blue-600"><Loader2 className="h-4 w-4 animate-spin"/>กำลังนำ Approval Chain ไปสร้างรายการลายเซ็น...</p>}
             {approvalSignatureSource && !isLoadingApprovalSignatures && <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">✓ นำรายชื่อผู้ลงนามจาก {approvalSignatureSource} มาใส่ด้านท้ายเอกสารแล้ว</p>}
             {approvalSignatureError && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{approvalSignatureError}</p>}
+            {approvalWorkflow.length > 0 && !isLoadingApprovalSignatures && (
+              <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-sm font-bold text-blue-900 dark:text-blue-200">ลำดับ Workflow ที่ระบบจะใช้</p>
+                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-300">{approvalWorkflow.length} ขั้นตอน</span>
+                </div>
+                <div className="space-y-2">
+                  {approvalWorkflow.map((step, index) => (
+                    <div key={`${step.approverId}-${index}`} className="flex items-center gap-3 rounded-lg border border-blue-100 bg-white px-3 py-2 dark:border-blue-900 dark:bg-slate-900">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-bold text-white">{index + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{step.approverName}</p>
+                        <p className="truncate text-xs text-slate-500">{step.approverPosition || 'ไม่ระบุตำแหน่ง'}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${step.stepType === 'REVIEWER' ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'}`}>
+                        {step.stepType === 'REVIEWER' ? 'ผู้ตรวจสอบ · ไม่ลงลายเซ็น' : 'ผู้อนุมัติ'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

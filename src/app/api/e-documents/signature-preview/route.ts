@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { ApprovalRuleError, buildApprovalChain } from '@/lib/edocuments/chain';
+import { ApprovalRuleError, buildApprovalChain, resolveApprovalBranchId } from '@/lib/edocuments/chain';
 import { EDocumentsError } from '@/lib/edocuments/errors';
 import { eDocumentsErrorResponse } from '@/lib/edocuments/http';
 
@@ -27,7 +27,12 @@ export async function GET(request: Request) {
     ]);
     if (!creator?.isActive) throw new EDocumentsError('USER_NOT_FOUND', 'ไม่พบผู้ใช้งานที่เปิดใช้งาน', 404);
     if (!department) throw new EDocumentsError('DEPARTMENT_NOT_FOUND', 'ไม่พบ Department ที่เปิดใช้งาน', 404);
-    const branchId = creator.branchId ?? memoType?.branchId ?? department.branchId;
+    const branchId = resolveApprovalBranchId({
+      actorBranchId: creator.branchId,
+      memoTypeBranchId: memoType?.branchId,
+      departmentBranchId: department.branchId,
+      workflowUsers: memoType?.requiredApprovers.map((rule) => rule.approver),
+    });
     if (!branchId) throw new EDocumentsError('BRANCH_REQUIRED', 'กรุณากำหนด Branch ให้ผู้ใช้งานหรือ Memo Type');
     const branchDepartment = await prisma.branchDepartment.findUnique({
       where: { branchId_departmentId: { branchId, departmentId } },
@@ -46,10 +51,11 @@ export async function GET(request: Request) {
         gmFallback: branchDepartment.branch.generalManager,
         required: memoType.requiredApprovers.map((rule) => ({
           approver: rule.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: rule.id,
+          stepType: rule.stepType === 'REVIEWER' ? 'REVIEWER' as const : 'APPROVER' as const,
         })),
       });
       const approvalSignatures = chain
-        .filter((step) => step.status !== 'SKIPPED_SELF')
+        .filter((step) => step.status !== 'SKIPPED_SELF' && step.stepType !== 'REVIEWER')
         .map((step) => ({
           role: step.source === 'HOD' || step.source === 'GM_FALLBACK' ? 'พิจารณาโดย' : 'อนุมัติโดย',
           name: step.approverName,

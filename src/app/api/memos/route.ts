@@ -3,6 +3,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { DEFAULT_S_HOTEL_LOGO_URL } from '@/lib/constants';
 import { validateRequiredMemoSignatures } from '@/lib/memo-signature-rules';
+import { resolveApprovalBranchId } from '@/lib/edocuments/chain';
 
 const prisma = new PrismaClient();
 
@@ -145,13 +146,18 @@ export async function POST(request: Request) {
     }
 
     let finalBranchId: string | null = currentUser.branchId ?? department.branchId ?? null;
-    let selectedMemoType: { branchId: string | null; requiredApprovers: Array<{ approverId: string }> } | null = null;
+    let selectedMemoType: { branchId: string | null; requiredApprovers: Array<{ approverId: string; stepType: string; approver: { branchId: string | null; isAllBranches: boolean } }> } | null = null;
     if (memoTypeId) {
       selectedMemoType = await prisma.memoType.findFirst({
         where: { id: memoTypeId, isActive: true },
-        include: { requiredApprovers: { select: { approverId: true } } },
+        include: { requiredApprovers: { select: { approverId: true, stepType: true, approver: { select: { branchId: true, isAllBranches: true } } } } },
       });
-      finalBranchId = currentUser.branchId ?? selectedMemoType?.branchId ?? department.branchId ?? null;
+      finalBranchId = resolveApprovalBranchId({
+        actorBranchId: currentUser.branchId,
+        memoTypeBranchId: selectedMemoType?.branchId,
+        departmentBranchId: department.branchId,
+        workflowUsers: selectedMemoType?.requiredApprovers.map((rule) => rule.approver),
+      });
       if (!selectedMemoType || (selectedMemoType.branchId && selectedMemoType.branchId !== finalBranchId)) {
         return NextResponse.json({ error: 'Memo Type is inactive or unavailable for this branch' }, { status: 400 });
       }
@@ -167,7 +173,7 @@ export async function POST(request: Request) {
       signatures: signatures ?? [],
       creatorId: currentUser.id,
       headApproverId,
-      requiredApproverIds: selectedMemoType?.requiredApprovers?.map((item) => item.approverId) ?? [],
+      requiredApproverIds: selectedMemoType?.requiredApprovers?.filter((item) => item.stepType !== 'REVIEWER').map((item) => item.approverId) ?? [],
     });
     if (signatureRuleError) return NextResponse.json({ error: signatureRuleError }, { status: 400 });
     // const branchDepartment = finalBranchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId: finalBranchId, departmentId: finalDepartmentId } } }) : null;

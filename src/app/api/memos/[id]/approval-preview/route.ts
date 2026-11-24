@@ -50,6 +50,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           })),
         required: (memo.memoType?.requiredApprovers ?? []).map((rule) => ({
           approver: rule.approver, source: 'MEMO_TYPE_REQUIRED', referenceId: rule.id,
+          stepType: rule.stepType === 'REVIEWER' ? 'REVIEWER' as const : 'APPROVER' as const,
         })),
       });
       return NextResponse.json({

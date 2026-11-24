@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Building2, CheckCircle2, Clock3, FileCheck2, Filter, Inbox, RotateCcw } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, FileCheck2, FileType2, Filter, Inbox, Network, RotateCcw } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
@@ -90,13 +90,21 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
           })}
         </nav>
 
-        <form method="GET" className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
+        <form method="GET" className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <input type="hidden" name="view" value={view}/>
-          <label className="text-xs font-bold text-slate-500">Memo type<select name="memoTypeId" defaultValue={memoTypeId} className="mt-1 w-full rounded-xl border p-2.5 dark:bg-slate-950"><option value="">ทุกประเภท</option>{memoTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label>
-          <label className="text-xs font-bold text-slate-500"><span className="mb-1.5 flex items-center gap-1"><Building2 className="h-3.5 w-3.5"/>สาขา</span><select name="branchId" defaultValue={branchId} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"><option value="">ทุกสาขาที่มีสิทธิ์</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name} ({branch.code})</option>)}</select></label>
-          <label className="text-xs font-bold text-slate-500"><span className="mb-1.5 block">แผนก</span><select name="departmentId" defaultValue={departmentId} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"><option value="">ทุกแผนกที่มีสิทธิ์</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
-          <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"><Filter className="h-4 w-4"/>กรอง</button>
-          <Link href={`/memos/approvals?view=${view}`} className="rounded-xl border border-slate-300 px-4 py-2.5 text-center text-sm font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">ล้าง</Link>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div><h2 className="font-bold text-slate-800 dark:text-slate-100">ตัวกรองรายการ</h2><p className="text-xs text-slate-500">เลือกประเภท Memo สาขา และแผนกที่ต้องการดู</p></div>
+            {(memoTypeId || branchId || departmentId) && <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">กำลังใช้ตัวกรอง</span>}
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="text-xs font-bold text-slate-500"><span className="mb-1.5 flex items-center gap-1.5"><FileType2 className="h-3.5 w-3.5"/>ประเภท Memo</span><select name="memoTypeId" defaultValue={memoTypeId} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"><option value="">ทุกประเภทที่มีสิทธิ์</option>{memoTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label>
+            <label className="text-xs font-bold text-slate-500"><span className="mb-1.5 flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5"/>สาขา</span><select name="branchId" defaultValue={branchId} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"><option value="">ทุกสาขาที่มีสิทธิ์</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name} ({branch.code})</option>)}</select></label>
+            <label className="text-xs font-bold text-slate-500"><span className="mb-1.5 flex items-center gap-1.5"><Network className="h-3.5 w-3.5"/>แผนก</span><select name="departmentId" defaultValue={departmentId} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"><option value="">ทุกแผนกที่มีสิทธิ์</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
+          </div>
+          <div className="mt-4 flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
+            <Link href={`/memos/approvals?view=${view}`} className="rounded-xl border border-slate-300 px-4 py-2.5 text-center text-sm font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">ล้างตัวกรอง</Link>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"><Filter className="h-4 w-4"/>ใช้ตัวกรอง</button>
+          </div>
         </form>
 
         <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">

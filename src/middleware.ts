@@ -15,22 +15,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isProtectedPath = path !== '/login';
+  const sessionCookie = request.cookies.get('session')?.value;
+  if (!sessionCookie) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
-  if (isProtectedPath) {
-    const sessionCookie = request.cookies.get('session')?.value;
-    const session = await verifySession(sessionCookie);
+  const session = await verifySession(sessionCookie);
+  if (!session) {
+    const response = NextResponse.redirect(new URL('/login?reason=session-expired', request.url));
+    response.cookies.delete('session');
+    return response;
+  }
 
-    if (!session) {
-      const response = NextResponse.redirect(new URL('/login?reason=session-expired', request.url));
-      response.cookies.delete('session');
-      return response;
-    }
-
-    // STAFF can use the borrow portal and Memo/E-Documents pages exposed in their sidebar.
-    if (session.role !== 'ADMIN' && !path.startsWith('/borrows') && !path.startsWith('/memos')) {
-      return NextResponse.redirect(new URL(session.isApprover || session.isReviewer ? '/memos/approvals' : '/memos', request.url));
-    }
+  // STAFF can use the borrow portal and Memo/E-Documents pages exposed in their sidebar.
+  if (session.role !== 'ADMIN' && !path.startsWith('/borrows') && !path.startsWith('/memos')) {
+    return NextResponse.redirect(new URL(session.isApprover || session.isReviewer ? '/memos/approvals' : '/memos', request.url));
   }
 
   return NextResponse.next();

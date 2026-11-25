@@ -1,5 +1,7 @@
 'use client';
 
+import { BranchPicker } from './BranchPicker';
+
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, User } from 'lucide-react';
 import { updateUser } from '@/app/actions';
@@ -25,6 +27,7 @@ interface EditUserModalProps {
     role: string;
     branchId?: string | null;
     isAllBranches?: boolean;
+    approvalBranchIds?: string[];
     isActive?: boolean;
     position?: string | null;
     email?: string | null;
@@ -41,6 +44,7 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], branche
   const [departmentId, setDepartmentId] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('STAFF');
+  const [approvalBranchIds, setApprovalBranchIds] = useState<string[]>([]);
   const [branchId, setBranchId] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [position, setPosition] = useState('');
@@ -57,6 +61,7 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], branche
       setDepartmentId(user.departmentId || '');
       setPhone(user.phone || '');
       setRole(user.role || 'STAFF');
+      setApprovalBranchIds(user.approvalBranchIds ?? []);
       setBranchId(user.isAllBranches ? '__ALL__' : (user.branchId || ''));
       setIsActive(user.isActive !== false);
       setPosition(user.position || '');
@@ -88,6 +93,7 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], branche
         role,
         branchId: branchId === '__ALL__' ? null : (branchId || null),
         isAllBranches: branchId === '__ALL__',
+        approvalBranchIds: branchId === '__ALL__' ? [] : approvalBranchIds.filter((id) => branches.some((branch) => branch.id === id)),
         isActive,
         position: position || null,
         email: email || null,
@@ -175,7 +181,13 @@ export function EditUserModal({ isOpen, onClose, user, departments = [], branche
           </div>
 
           {/* Department */}
-          <div><label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">สาขา (Branch)</label><select value={branchId} onChange={(e) => { setBranchId(e.target.value); setDepartmentId(''); }} className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm"><option value="">-- ไม่ระบุสาขา --</option><option value="__ALL__">ทุกสาขา (สำนักงานใหญ่ / ผู้บริหารส่วนกลาง)</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}</select></div>
+          <BranchPicker branches={branches} selected={branchId === '__ALL__' ? ['__ALL__'] : [...(branchId ? [branchId] : []), ...approvalBranchIds.filter((id) => id !== branchId)]}
+            onChange={(ids) => {
+              const [primary = '', ...extra] = ids;
+              if (primary !== branchId) setDepartmentId('');
+              setBranchId(primary);
+              setApprovalBranchIds(extra);
+            }}/>
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               แผนก / หน่วยงานที่สังกัด (Department)

@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { canApproveInBranch } from './chain';
 import { requireAdmin } from './authorization';
 import { EDocumentsError } from './errors';
 import { serializeAuditValue } from '../audit';
@@ -38,7 +39,7 @@ export async function updateBranch(prisma: PrismaClient, actorId: string, branch
 }
 
 export async function updateUserApprovalConfig(prisma: PrismaClient, actorId: string, userId: string, input: {
-  branchId?: string | null; departmentId?: string | null; position?: string | null; email?: string | null; isActive?: boolean; isApprover?: boolean; isReviewer?: boolean; isAllBranches?: boolean;
+  branchId?: string | null; departmentId?: string | null; position?: string | null; email?: string | null; isActive?: boolean; isApprover?: boolean; isReviewer?: boolean; isAllBranches?: boolean; approvalBranchIds?: string[];
 }) {
   await requireAdmin(prisma, actorId);
   const existing = await prisma.user.findUnique({ where: { id: userId } });
@@ -51,9 +52,13 @@ export async function updateUserApprovalConfig(prisma: PrismaClient, actorId: st
     const branchDepartment = branchId ? await prisma.branchDepartment.findUnique({ where: { branchId_departmentId: { branchId, departmentId } } }) : null;
     if (!department || (branchId && !branchDepartment?.isActive)) throw new EDocumentsError('DEPARTMENT_WRONG_BRANCH', 'แผนกไม่อยู่ในสาขาที่เลือก');
   }
+  const approvalBranchIds = input.approvalBranchIds && [...new Set(input.approvalBranchIds)];
+  if (approvalBranchIds?.length && await prisma.branch.count({ where: { id: { in: approvalBranchIds }, isActive: true } }) !== approvalBranchIds.length) {
+    throw new EDocumentsError('BRANCH_NOT_FOUND', 'กรุณาเลือกเฉพาะสาขาที่เปิดใช้งาน');
+  }
   const normalizedInput = input.isAllBranches
     ? { ...input, email: input.email === undefined ? undefined : normalizeEmail(input.email) || null, branchId: null, departmentId: null }
-    : { ...input, email: input.email === undefined ? undefined : normalizeEmail(input.email) || null };
+    : { ...input, approvalBranchIds, email: input.email === undefined ? undefined : normalizeEmail(input.email) || null };
   const emailChanged = input.email !== undefined && normalizeEmail(input.email) !== normalizeEmail(existing.email);
   const approvalStateChanged = (input.isActive !== undefined && input.isActive !== existing.isActive)
     || (input.isApprover !== undefined && input.isApprover !== existing.isApprover)
@@ -146,7 +151,7 @@ export async function setRequiredApprovers(prisma: PrismaClient, actorId: string
   const invalidStep = steps.find((step) => {
     const user = userMap.get(step.userId);
     return !user || !user.isActive || (step.stepType === 'REVIEWER' ? !user.isReviewer : !user.isApprover)
-      || (memoType.branchId ? (!user.isAllBranches && user.branchId !== memoType.branchId) : false);
+      || (memoType.branchId && !canApproveInBranch(user, memoType.branchId));
   });
   if (invalidStep) {
     throw new EDocumentsError('INVALID_REQUIRED_APPROVER', 'ผู้อนุมัติต้องมีสิทธิ์ Approver ผู้ตรวจสอบต้องมีสิทธิ์ Reviewer และทุกคนต้องอยู่ในขอบเขตสาขาที่ถูกต้อง');

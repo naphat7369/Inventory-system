@@ -17,7 +17,7 @@ export default async function MemoTypeEditPage({ params }: { params: Promise<{ i
           orderBy: { sortOrder: 'asc' },
           include: { approver: { select: {
             id: true, username: true, fullName: true, position: true,
-            isActive: true, isApprover: true, isReviewer: true, isAllBranches: true,
+            isActive: true, isApprover: true, isReviewer: true, isAllBranches: true, approvalBranchIds: true,
             branchId: true, branch: { select: { name: true, code: true } },
           } } },
         },
@@ -30,7 +30,7 @@ export default async function MemoTypeEditPage({ params }: { params: Promise<{ i
       where: { isActive: true }, orderBy: [{ fullName: 'asc' }, { username: 'asc' }],
       select: {
         id: true, fullName: true, username: true, position: true,
-        branchId: true, isAllBranches: true, isApprover: true, isReviewer: true,
+        branchId: true, isAllBranches: true, approvalBranchIds: true, isApprover: true, isReviewer: true,
         branch: { select: { name: true, code: true } },
       },
     }),

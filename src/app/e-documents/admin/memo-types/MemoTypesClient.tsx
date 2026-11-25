@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent, type ReactElement, type ReactNode } from 'react';
 import Link from 'next/link';
+import { canApproveInBranch } from '@/lib/edocuments/chain';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle, ArrowDown, ArrowUp, Building2, CheckCircle2,
@@ -11,7 +12,7 @@ import {
 type Branch = { id: string; name: string; code: string };
 type User = {
   id: string; fullName: string | null; username: string; position: string | null;
-  branchId: string | null; isAllBranches: boolean; isApprover: boolean; isReviewer: boolean;
+  branchId: string | null; isAllBranches: boolean; approvalBranchIds: string[]; isApprover: boolean; isReviewer: boolean;
   branch: { name: string; code: string } | null;
 };
 type ExistingApprover = User & { isActive: boolean; isApprover: boolean };
@@ -92,7 +93,7 @@ export function MemoTypesClient({ memoTypes, branches }: { memoTypes: SummaryIte
 
 export function MemoTypeEditor({ item, branches, users }: { item: Item; branches: Branch[]; users: User[] }) {
   const eligibleUsers = users.filter((user) => (user.isApprover || user.isReviewer) && (item.branchId
-    ? (user.isAllBranches || user.branchId === item.branchId)
+    ? canApproveInBranch(user, item.branchId)
     : true));
   return <div className="mt-6 space-y-5"><MemoTypeSettings item={item} branches={branches}/><ApproverOrder item={item} eligibleUsers={eligibleUsers} allUsers={users}/></div>;
 }

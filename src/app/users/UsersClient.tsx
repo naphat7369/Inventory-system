@@ -1,5 +1,7 @@
 'use client';
 
+import { BranchPicker } from './BranchPicker';
+
 import React, { useMemo, useState } from 'react';
 import { Users, Trash2, Shield, User, Edit3, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { createUser, deleteUser } from '@/app/actions';
@@ -17,6 +19,7 @@ interface UserItem {
   branch?: string | null;
   branchId?: string | null;
   isAllBranches?: boolean;
+  approvalBranchIds?: string[];
   isActive?: boolean;
   isApprover?: boolean;
   position?: string | null;
@@ -40,6 +43,7 @@ interface UsersClientProps {
 }
 
 export function UsersClient({ users, departments = [], branches = [], currentUserId }: UsersClientProps) {
+  const [newUserBranches, setNewUserBranches] = useState<string[]>([]);
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,7 +78,7 @@ export function UsersClient({ users, departments = [], branches = [], currentUse
       const matchesApprover = approverFilter === 'ALL'
         || (approverFilter === 'APPROVER' ? user.isApprover === true : user.isApprover !== true);
       const matchesBranch = branchFilter === 'ALL'
-        || (branchFilter === '__ALL__' ? user.isAllBranches === true : user.branchId === branchFilter);
+        || (branchFilter === '__ALL__' ? user.isAllBranches === true : (user.branchId === branchFilter || user.approvalBranchIds?.includes(branchFilter)));
       const matchesDepartment = departmentFilter === 'ALL'
         || (departmentFilter === '__NONE__' ? !user.departmentId : user.departmentId === departmentFilter);
 
@@ -131,10 +135,7 @@ export function UsersClient({ users, departments = [], branches = [], currentUse
             </h2>
             <form action={async (formData) => { await createUser(formData); }} className="space-y-4">
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">สาขา (Branch)</label>
-                <select name="branchId" className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm"><option value="">-- ไม่ระบุสาขา --</option><option value="__ALL__">ทุกสาขา (สำนักงานใหญ่ / ผู้บริหารส่วนกลาง)</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}</select>
-              </div>
+              <BranchPicker branches={branches} selected={newUserBranches} onChange={setNewUserBranches} formFields/>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -341,7 +342,7 @@ export function UsersClient({ users, departments = [], branches = [], currentUse
 
                       <td className="p-4">
                         <span className="inline-flex items-center text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
-                          {u.isAllBranches ? 'ทุกสาขา' : (u.branch || 'ไม่ระบุสาขา')} · {u.department || 'ไม่ระบุแผนก'}
+                          {u.isAllBranches ? 'ทุกสาขา' : ([u.branch, ...branches.filter((branch) => branch.id !== u.branchId && u.approvalBranchIds?.includes(branch.id)).map((branch) => branch.name)].filter(Boolean).join(', ') || 'ไม่ระบุสาขา')} · {u.department || 'ไม่ระบุแผนก'}
                         </span>
                       </td>
 

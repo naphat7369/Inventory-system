@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { formatInTimeZone } from 'date-fns-tz';
-import { buildApprovalChain, ApprovalRuleError, type CandidateWithSource } from './chain';
+import { canApproveInBranch, buildApprovalChain, ApprovalRuleError, type CandidateWithSource } from './chain';
 import { pdfJobKey, runIdempotentTransaction } from './idempotency';
 import { assertMemoTransition, canReplaceApprover } from './lifecycle';
 import { EDocumentsError } from './errors';
@@ -205,6 +205,9 @@ export async function approveCurrentStep(prisma: PrismaClient, input: {
     if (step.approverId !== input.actorId) throw new EDocumentsError('NOT_CURRENT_APPROVER', 'ยังไม่ถึงคิวของผู้ใช้นี้', 403);
     const actor = await tx.user.findUnique({ where: { id: input.actorId } });
     const confirmedAt = new Date();
+    if (actor && memo.branchId && !canApproveInBranch(actor, memo.branchId)) {
+      throw new EDocumentsError('APPROVER_WRONG_BRANCH', 'คุณไม่มีสิทธิ์ดำเนินการในสาขาของ Memo นี้', 403);
+    }
     const isReviewer = step.stepType === 'REVIEWER';
     if (!actor?.isActive || (isReviewer ? !actor.isReviewer : !actor.isApprover)) {
       throw new EDocumentsError(isReviewer ? 'REVIEWER_INACTIVE' : 'APPROVER_INACTIVE', isReviewer ? 'ผู้ตรวจสอบถูกปิดใช้งานหรือไม่มีสิทธิ์ Reviewer' : 'ผู้อนุมัติถูกปิดใช้งานหรือไม่มีสิทธิ์ Approver', 403);
@@ -269,6 +272,9 @@ export async function requestMemoRevision(prisma: PrismaClient, input: {
     if (!step) throw new EDocumentsError('PENDING_STEP_NOT_FOUND', 'ไม่มี Step ที่รอดำเนินการ', 409);
     if (step.approverId !== input.actorId) throw new EDocumentsError('NOT_CURRENT_APPROVER', 'ยังไม่ถึงคิวของผู้ใช้นี้', 403);
     const actor = await tx.user.findUnique({ where: { id: input.actorId } });
+    if (actor && memo.branchId && !canApproveInBranch(actor, memo.branchId)) {
+      throw new EDocumentsError('APPROVER_WRONG_BRANCH', 'คุณไม่มีสิทธิ์ดำเนินการในสาขาของ Memo นี้', 403);
+    }
     const isReviewer = step.stepType === 'REVIEWER';
     if (!actor?.isActive || (isReviewer ? !actor.isReviewer : !actor.isApprover)) throw new EDocumentsError(isReviewer ? 'REVIEWER_INACTIVE' : 'APPROVER_INACTIVE', isReviewer ? 'ผู้ใช้ไม่มีสิทธิ์ Reviewer' : 'ผู้ใช้ไม่มีสิทธิ์ Approver', 403);
 
@@ -330,7 +336,7 @@ export async function replacePendingApprover(prisma: PrismaClient, input: {
     if (!canReplaceApprover(step.status)) throw new EDocumentsError('COMPLETED_STEP_IMMUTABLE', 'ห้ามเปลี่ยน Step ที่ดำเนินการแล้ว', 409);
     const replacement = await tx.user.findUnique({ where: { id: input.newApproverId } });
     const hasReplacementPermission = step.stepType === 'REVIEWER' ? replacement?.isReviewer : replacement?.isApprover;
-    if (!replacement?.isActive || !hasReplacementPermission || (!replacement.isAllBranches && replacement.branchId !== step.round.memo.branchId)) {
+    if (!replacement?.isActive || !hasReplacementPermission || !canApproveInBranch(replacement, step.round.memo.branchId)) {
       throw new EDocumentsError('INVALID_REPLACEMENT', `ผู้รับแทนต้องเป็น Active ${step.stepType === 'REVIEWER' ? 'Reviewer' : 'Approver'} ใน Branch เดียวกัน`);
     }
     await resolveApprovalAssignment(tx, { memoId: step.round.memoId, stepId: step.id, reason: 'REASSIGNED' });

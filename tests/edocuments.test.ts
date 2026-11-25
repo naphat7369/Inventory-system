@@ -48,6 +48,17 @@ test('memo type reviewer remains an unsigned reviewer step in the chain snapshot
   assert.equal(chain[1].stepType, 'REVIEWER');
 });
 
+test('approval chain accepts an extra branch but rejects unassigned branches', () => {
+  const reviewer = user('reviewer', { isApprover: false, isReviewer: true, approvalBranchIds: ['b2'] });
+  const required = [{ approver: reviewer, source: 'MEMO_TYPE_REQUIRED', stepType: 'REVIEWER' }] as const;
+  assert.equal(buildApprovalChain({
+    creatorId: 'creator', branchId: 'b2', hod: user('hod', { isAllBranches: true }), required: [...required],
+  })[1].stepType, 'REVIEWER');
+  assert.throws(() => buildApprovalChain({
+    creatorId: 'creator', branchId: 'b3', hod: user('hod', { isAllBranches: true }), required: [...required],
+  }), (error: unknown) => error instanceof ApprovalRuleError && error.code === 'APPROVER_WRONG_BRANCH');
+});
+
 test('reviewer permission does not grant approver permission', () => {
   const reviewerOnly = user('reviewer', { isApprover: false, isReviewer: true });
   assert.throws(() => buildApprovalChain({ creatorId: 'creator', branchId: 'b1', hod: user('hod'), required: [{ approver: reviewerOnly, source: 'MEMO_TYPE_REQUIRED' }] }),

@@ -13,7 +13,7 @@ export default async function ApproversPage() {
       orderBy: [{ isApprover: 'desc' }, { isReviewer: 'desc' }, { fullName: 'asc' }, { username: 'asc' }],
       select: {
         id: true, username: true, fullName: true, position: true, email: true,
-        isActive: true, isApprover: true, isReviewer: true, isAllBranches: true, branchId: true,
+        isActive: true, isApprover: true, isReviewer: true, isAllBranches: true, approvalBranchIds: true, branchId: true,
         branch: { select: { name: true, code: true } },
       },
     }),

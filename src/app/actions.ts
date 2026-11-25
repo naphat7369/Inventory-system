@@ -475,6 +475,7 @@ export async function getUsers() {
       isActive: true,
       isApprover: true,
       isAllBranches: true,
+      approvalBranchIds: true,
       branchId: true,
       branch: { select: { id: true, name: true, code: true } },
       createdAt: true,
@@ -495,6 +496,7 @@ export async function getUsers() {
     isActive: u.isActive,
     isApprover: u.isApprover,
     isAllBranches: u.isAllBranches,
+    approvalBranchIds: u.approvalBranchIds,
     branchId: u.branchId,
     branch: u.branch?.name || null,
     createdAt: u.createdAt,
@@ -514,6 +516,12 @@ export async function createUser(formData: FormData) {
   const branchScope = (formData.get('branchId') as string)?.trim() || '';
   const isAllBranches = branchScope === '__ALL__';
   const branchId = isAllBranches ? null : branchScope || null;
+  const approvalBranchIds = isAllBranches ? [] : [...new Set(
+    formData.getAll('approvalBranchIds').filter((id): id is string => typeof id === 'string' && Boolean(id) && id !== branchId),
+  )];
+  if (approvalBranchIds.length && await prisma.branch.count({ where: { id: { in: approvalBranchIds }, isActive: true } }) !== approvalBranchIds.length) {
+    return { error: 'กรุณาเลือกเฉพาะสาขาที่เปิดใช้งาน' };
+  }
   const position = (formData.get('position') as string)?.trim() || null;
   const email = (formData.get('email') as string)?.trim() || null;
 
@@ -554,6 +562,7 @@ export async function createUser(formData: FormData) {
       role,
       branchId,
       isAllBranches,
+      approvalBranchIds,
       position,
       email,
     },
@@ -575,6 +584,7 @@ export async function updateUser(
     role?: string;
     branchId?: string | null;
     isAllBranches?: boolean;
+    approvalBranchIds?: string[];
     isActive?: boolean;
     position?: string | null;
     email?: string | null;
@@ -615,6 +625,13 @@ export async function updateUser(
   }
   if (data.phone !== undefined) updateData.phone = data.phone ? data.phone.trim() : null;
   if (data.role) updateData.role = data.role;
+  if (data.approvalBranchIds !== undefined) {
+    const primaryBranchId = data.branchId === undefined ? existingUser.branchId : data.branchId;
+    const ids = [...new Set(data.approvalBranchIds)].filter((id) => id !== primaryBranchId);
+    const count = await prisma.branch.count({ where: { id: { in: ids }, isActive: true } });
+    if (count !== ids.length) return { success: false, error: 'กรุณาเลือกเฉพาะสาขาที่เปิดใช้งาน' };
+    updateData.approvalBranchIds = ids;
+  }
   if (data.branchId !== undefined) updateData.branchId = data.branchId || null;
   if (data.isAllBranches !== undefined) {
     updateData.isAllBranches = data.isAllBranches;

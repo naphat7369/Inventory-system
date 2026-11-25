@@ -19,7 +19,10 @@ function formatBangkok(value: Date) {
 export default async function ApprovalInboxPage({ searchParams }: { searchParams: Promise<{ view?: string; branchId?: string; departmentId?: string; memoTypeId?: string }> }) {
   const session = await getSession();
   if (!session?.id) redirect('/login');
-  const currentUser = await prisma.user.findUnique({ where: { id: String(session.id) }, select: { isActive: true, isApprover: true, isReviewer: true } });
+  const currentUser = await prisma.user.findUnique({
+    where: { id: String(session.id) },
+    select: { isActive: true, isApprover: true, isReviewer: true, branchId: true, approvalBranchIds: true, isAllBranches: true },
+  });
   if (!currentUser?.isActive || (!currentUser.isApprover && !currentUser.isReviewer)) redirect('/memos');
   const requested = await searchParams;
   const memoTypes = await prisma.memoType.findMany({
@@ -38,17 +41,20 @@ export default async function ApprovalInboxPage({ searchParams }: { searchParams
     select: { round: { select: { memo: { select: {
       departmentId: true,
       branchId: true,
-      branch: { select: { id: true, name: true, code: true } },
       department: { select: { id: true, name: true } },
     } } } } },
   });
-  const branchMap = new Map<string, { id: string; name: string; code: string }>();
+  const branchIds = [...currentUser.approvalBranchIds, ...(currentUser.branchId ? [currentUser.branchId] : [])];
+  const permittedBranches = await prisma.branch.findMany({
+    where: { isActive: true, ...(currentUser.isAllBranches ? {} : { id: { in: branchIds } }) },
+    select: { id: true, name: true, code: true },
+  });
+  const branchMap = new Map(permittedBranches.map((branch) => [branch.id, branch]));
   const departmentMap = new Map<string, { id: string; name: string; branchId: string | null }>();
   scopeRows.forEach(({ round }) => {
     const department = round.memo.department;
     const memoBranchId = round.memo.branchId;
     departmentMap.set(`${memoBranchId ?? 'none'}:${department.id}`, { id: department.id, name: department.name, branchId: memoBranchId });
-    if (round.memo.branch) branchMap.set(round.memo.branch.id, round.memo.branch);
   });
   const branches = [...branchMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));
   const allDepartments = [...departmentMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));

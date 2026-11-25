@@ -15,6 +15,7 @@ type ApproverUser = {
   isReviewer: boolean;
   isAllBranches: boolean;
   branchId: string | null;
+  approvalBranchIds: string[];
   branch: { name: string; code: string } | null;
 };
 
@@ -26,8 +27,8 @@ export function ApproversClient({ users, branches }: { users: ApproverUser[]; br
     return users.filter((user) => {
       const matchesBranch = branchFilter === '__ALL_USERS__'
         || (branchFilter === '__ALL_BRANCHES__' && user.isAllBranches)
-        || (branchFilter === '__UNASSIGNED__' && !user.isAllBranches && !user.branchId)
-        || (!branchFilter.startsWith('__') && user.branchId === branchFilter);
+        || (branchFilter === '__UNASSIGNED__' && !user.isAllBranches && !user.branchId && !user.approvalBranchIds.length)
+        || (!branchFilter.startsWith('__') && (user.branchId === branchFilter || user.approvalBranchIds.includes(branchFilter)));
       const matchesQuery = !value || [user.fullName, user.username, user.position, user.email]
         .some((item) => item?.toLowerCase().includes(value));
       return matchesBranch && matchesQuery;

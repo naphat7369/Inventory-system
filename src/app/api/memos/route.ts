@@ -146,11 +146,11 @@ export async function POST(request: Request) {
     }
 
     let finalBranchId: string | null = currentUser.branchId ?? department.branchId ?? null;
-    let selectedMemoType: { branchId: string | null; requiredApprovers: Array<{ approverId: string; stepType: string; approver: { branchId: string | null; isAllBranches: boolean } }> } | null = null;
+    let selectedMemoType: { branchId: string | null; requiredApprovers: Array<{ approverId: string; stepType: string; approver: { branchId: string | null; isAllBranches: boolean; approvalBranchIds: string[] } }> } | null = null;
     if (memoTypeId) {
       selectedMemoType = await prisma.memoType.findFirst({
         where: { id: memoTypeId, isActive: true },
-        include: { requiredApprovers: { select: { approverId: true, stepType: true, approver: { select: { branchId: true, isAllBranches: true } } } } },
+        include: { requiredApprovers: { select: { approverId: true, stepType: true, approver: { select: { branchId: true, isAllBranches: true, approvalBranchIds: true } } } } },
       });
       finalBranchId = resolveApprovalBranchId({
         actorBranchId: currentUser.branchId,

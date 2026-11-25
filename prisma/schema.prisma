@@ -154,6 +154,7 @@ model User {
   position                  String?
   isActive                  Boolean                    @default(true)
   isApprover                Boolean                    @default(false)
+  approvalBranchIds         String[]                   @default([])
   isReviewer                Boolean                    @default(false)
   isAllBranches             Boolean                    @default(false)
   approvalEmailEnabled      Boolean                    @default(true)

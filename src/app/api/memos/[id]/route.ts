@@ -107,7 +107,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       effectiveMemoTypeId
         ? prisma.memoType.findFirst({
             where: { id: effectiveMemoTypeId, isActive: true },
-            include: { requiredApprovers: { select: { approverId: true, stepType: true, approver: { select: { branchId: true, isAllBranches: true } } } } },
+            include: { requiredApprovers: { select: { approverId: true, stepType: true, approver: { select: { branchId: true, isAllBranches: true, approvalBranchIds: true } } } } },
           })
         : Promise.resolve(null),
     ]);

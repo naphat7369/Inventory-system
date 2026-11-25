@@ -10,7 +10,12 @@ export type ApproverCandidate = {
   isApprover: boolean;
   isReviewer?: boolean;
   isAllBranches?: boolean;
+  approvalBranchIds?: string[];
 };
+
+export function canApproveInBranch(user: Pick<ApproverCandidate, 'branchId' | 'isAllBranches' | 'approvalBranchIds'>, branchId: string | null) {
+  return Boolean(user.isAllBranches || (branchId && (user.branchId === branchId || user.approvalBranchIds?.includes(branchId))));
+}
 
 export type CandidateWithSource = {
   approver: ApproverCandidate;
@@ -53,17 +58,18 @@ export function resolveApprovalBranchId(input: {
   actorBranchId?: string | null;
   memoTypeBranchId?: string | null;
   departmentBranchId?: string | null;
-  workflowUsers?: Array<{ branchId: string | null; isAllBranches?: boolean }>;
+  workflowUsers?: Array<Pick<ApproverCandidate, 'branchId' | 'isAllBranches' | 'approvalBranchIds'>>;
 }) {
   const explicitBranchId = input.actorBranchId ?? input.memoTypeBranchId ?? input.departmentBranchId;
   if (explicitBranchId) return explicitBranchId;
 
-  const workflowBranchIds = new Set(
-    (input.workflowUsers ?? [])
-      .filter((user) => !user.isAllBranches && Boolean(user.branchId))
-      .map((user) => user.branchId as string),
-  );
-  return workflowBranchIds.size === 1 ? [...workflowBranchIds][0] : null;
+  const scopedUsers = (input.workflowUsers ?? []).filter((user) => !user.isAllBranches);
+  const first = scopedUsers[0];
+  if (!first) return null;
+  const candidates = new Set(first.approvalBranchIds ?? []);
+  if (first.branchId) candidates.add(first.branchId);
+  const matching = [...candidates].filter((id) => scopedUsers.every((user) => canApproveInBranch(user, id)));
+  return matching.length === 1 ? matching[0] : null;
 }
 
 /**
@@ -112,7 +118,7 @@ export function buildApprovalChain(input: BuildApprovalChainInput): ApprovalChai
         `ผู้ใช้ ${user.fullName ?? user.id} ไม่มีสิทธิ์ ${stepType === 'REVIEWER' ? 'Reviewer' : 'Approver'}`,
       );
     }
-    if (!user.isAllBranches && user.branchId !== input.branchId) {
+    if (!canApproveInBranch(user, input.branchId)) {
       throw new ApprovalRuleError('APPROVER_WRONG_BRANCH', `ผู้อนุมัติ ${user.fullName ?? user.id} ไม่ได้อยู่ในสาขาเดียวกับ Memo`);
     }
 

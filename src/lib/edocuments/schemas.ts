@@ -48,6 +48,7 @@ export const userApprovalConfigSchema = z.object({
   isActive: z.boolean().optional(),
   isApprover: z.boolean().optional(),
   isReviewer: z.boolean().optional(),
+  approvalBranchIds: z.array(id).optional(),
   isAllBranches: z.boolean().optional(),
 }).strict();
 
